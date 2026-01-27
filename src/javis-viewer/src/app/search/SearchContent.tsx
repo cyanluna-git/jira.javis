@@ -105,7 +105,7 @@ function ConfluenceResultCard({ result }: { result: ConfluenceResult }) {
           <div className="flex items-center gap-2 mb-1">
             <FileText className="w-4 h-4 text-orange-600 flex-shrink-0" />
             <Link
-              href={`/confluence?id=${result.id}`}
+              href={`/confluence?pageId=${result.id}`}
               className="text-orange-600 hover:underline font-medium text-sm"
             >
               {result.title}
