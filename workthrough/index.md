@@ -5,6 +5,9 @@ hero:
   text: 개발 작업 기록
   tagline: AI 에이전트가 정리한 개발 문서
 features:
+  - title: Sprint Compare 구현
+    details: 2개 스프린트 성과 비교 (차트, 레이더)
+    link: /2026-01-27_21_00_sprint-compare
   - title: Dashboard 구현
     details: 프로젝트 대시보드 페이지 (차트, 통계)
     link: /2026-01-27_20_30_dashboard-implementation
