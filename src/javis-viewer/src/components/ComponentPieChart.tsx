@@ -13,6 +13,8 @@ import type { SprintIssue } from '@/types/sprint';
 
 interface Props {
   issues: SprintIssue[];
+  selectedComponents?: Set<string>;
+  onComponentClick?: (componentName: string) => void;
 }
 
 const COLORS = [
@@ -34,7 +36,7 @@ interface ChartData {
   percentage: string;
 }
 
-export default function ComponentPieChart({ issues }: Props) {
+export default function ComponentPieChart({ issues, selectedComponents, onComponentClick }: Props) {
   const chartData = useMemo<ChartData[]>(() => {
     const componentMap = new Map<string, number>();
 
@@ -87,13 +89,19 @@ export default function ComponentPieChart({ issues }: Props) {
               dataKey="value"
               label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
               labelLine={{ stroke: '#9ca3af', strokeWidth: 1 }}
+              onClick={(data) => onComponentClick?.(data.name)}
+              style={{ cursor: onComponentClick ? 'pointer' : 'default' }}
             >
-              {chartData.map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
+              {chartData.map((entry, index) => {
+                const isSelected = !selectedComponents || selectedComponents.size === 0 || selectedComponents.has(entry.name);
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                    opacity={isSelected ? 1 : 0.3}
+                  />
+                );
+              })}
             </Pie>
             <Tooltip
               formatter={(value, name) => [`${value} issues`, name]}
@@ -109,16 +117,25 @@ export default function ComponentPieChart({ issues }: Props) {
       </div>
       {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-2 justify-center">
-        {chartData.map((entry, index) => (
-          <div key={entry.name} className="flex items-center gap-1.5 text-sm">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: COLORS[index % COLORS.length] }}
-            />
-            <span className="text-gray-700">{entry.name}</span>
-            <span className="text-gray-400">({entry.value})</span>
-          </div>
-        ))}
+        {chartData.map((entry, index) => {
+          const isSelected = !selectedComponents || selectedComponents.size === 0 || selectedComponents.has(entry.name);
+          return (
+            <button
+              key={entry.name}
+              onClick={() => onComponentClick?.(entry.name)}
+              className={`flex items-center gap-1.5 text-sm px-2 py-1 rounded-lg transition-all ${
+                onComponentClick ? 'hover:bg-gray-100 cursor-pointer' : ''
+              } ${isSelected ? '' : 'opacity-40'}`}
+            >
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+              />
+              <span className="text-gray-700">{entry.name}</span>
+              <span className="text-gray-400">({entry.value})</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
