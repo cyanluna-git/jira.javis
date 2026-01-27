@@ -5,6 +5,9 @@ hero:
   text: 개발 작업 기록
   tagline: AI 에이전트가 정리한 개발 문서
 features:
+  - title: 통합 검색 구현
+    details: Jira + Confluence 통합 검색
+    link: /2026-01-27_21_30_integrated-search
   - title: Sprint Compare 구현
     details: 2개 스프린트 성과 비교 (차트, 레이더)
     link: /2026-01-27_21_00_sprint-compare
