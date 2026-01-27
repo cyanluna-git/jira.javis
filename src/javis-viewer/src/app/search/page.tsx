@@ -83,8 +83,8 @@ async function searchConfluence(query: string, limit: number): Promise<Confluenc
       SELECT
         id,
         title,
-        space_key,
-        space_key as space_name,
+        space_id,
+        space_id as space_name,
         raw_data->>'_expandable' as updated,
         COALESCE(
           SUBSTRING(raw_data->'body'->'storage'->>'value' FROM 1 FOR 200),
@@ -107,7 +107,7 @@ async function searchConfluence(query: string, limit: number): Promise<Confluenc
       type: 'confluence' as const,
       id: row.id,
       title: row.title,
-      spaceKey: row.space_key,
+      spaceKey: row.space_id,
       spaceName: row.space_name,
       updated: row.updated || '',
       excerpt: row.excerpt?.replace(/<[^>]*>/g, '').substring(0, 150) || '',
