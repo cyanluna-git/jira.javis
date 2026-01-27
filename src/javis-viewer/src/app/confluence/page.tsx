@@ -2,6 +2,7 @@ import Link from "next/link";
 import pool from "@/lib/db";
 import { ArrowLeft, FileText, ChevronRight } from "lucide-react";
 import clsx from "clsx";
+import { ConfluenceRenderer } from "@/components/ConfluenceRenderer";
 
 export const dynamic = 'force-dynamic';
 
@@ -80,10 +81,7 @@ export default async function ConfluencePage({
                 </a>
             </div>
             <div className="flex-1 overflow-y-auto p-8 bg-white">
-              <div 
-                className="prose prose-blue max-w-4xl mx-auto"
-                dangerouslySetInnerHTML={{ __html: activePage.body_storage }}
-              />
+              <ConfluenceRenderer content={activePage.body_storage} />
             </div>
           </>
         ) : (
