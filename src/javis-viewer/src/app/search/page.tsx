@@ -35,27 +35,37 @@ interface SearchResults {
   total: number;
 }
 
+// Escape ILIKE special characters to prevent wildcard injection
+function escapeIlike(str: string): string {
+  return str.replace(/[%_\\]/g, '\\$&');
+}
+
 async function searchJira(query: string, page: number): Promise<SearchResults> {
   if (!query || query.length < 2) return { results: [], total: 0 };
 
   const client = await pool.connect();
   try {
-    const searchPattern = `%${query}%`;
     const offset = (page - 1) * PAGE_SIZE;
+    // Use plainto_tsquery for safe handling of special characters
+    const searchPattern = `%${escapeIlike(query)}%`;
 
-    // Get total count
+    // Set lower similarity threshold for Korean text matching
+    await client.query("SELECT set_limit(0.1)");
+
+    // Get total count using FTS with trigram fallback
+    // plainto_tsquery safely handles special characters in user input
     const countRes = await client.query(`
       SELECT COUNT(*) as total
       FROM jira_issues
       WHERE
-        key ILIKE $1
-        OR summary ILIKE $1
-        OR raw_data->'fields'->>'description' ILIKE $1
-    `, [searchPattern]);
+        search_vector @@ plainto_tsquery('simple', $1)
+        OR key ILIKE $2
+        OR similarity(summary, $1) > 0.1
+    `, [query, searchPattern]);
 
     const total = parseInt(countRes.rows[0].total);
 
-    // Get paginated results
+    // Get paginated results with relevance ranking
     const res = await client.query(`
       SELECT
         key,
@@ -65,20 +75,23 @@ async function searchJira(query: string, page: number): Promise<SearchResults> {
         raw_data->'fields'->'assignee'->>'displayName' as assignee,
         raw_data->'fields'->>'updated' as updated,
         CASE
-          WHEN key ILIKE $1 THEN 'key'
-          WHEN summary ILIKE $1 THEN 'summary'
-          ELSE 'description'
-        END as match_field
+          WHEN key ILIKE $2 THEN 'key'
+          WHEN search_vector @@ plainto_tsquery('simple', $1) THEN 'content'
+          ELSE 'similar'
+        END as match_field,
+        ts_rank(search_vector, plainto_tsquery('simple', $1)) as rank,
+        similarity(summary, $1) as sim
       FROM jira_issues
       WHERE
-        key ILIKE $1
-        OR summary ILIKE $1
-        OR raw_data->'fields'->>'description' ILIKE $1
+        search_vector @@ plainto_tsquery('simple', $1)
+        OR key ILIKE $2
+        OR similarity(summary, $1) > 0.1
       ORDER BY
-        CASE WHEN key ILIKE $1 THEN 0 ELSE 1 END,
+        CASE WHEN key ILIKE $2 THEN 0 ELSE 1 END,
+        GREATEST(rank, sim) DESC,
         (raw_data->'fields'->>'updated')::timestamp DESC
-      LIMIT $2 OFFSET $3
-    `, [searchPattern, PAGE_SIZE, offset]);
+      LIMIT $3 OFFSET $4
+    `, [query, searchPattern, PAGE_SIZE, offset]);
 
     return {
       results: res.rows.map(row => ({
@@ -103,24 +116,29 @@ async function searchConfluence(query: string, page: number): Promise<SearchResu
 
   const client = await pool.connect();
   try {
-    const searchPattern = `%${query}%`;
     const offset = (page - 1) * PAGE_SIZE;
+    const searchPattern = `%${escapeIlike(query)}%`;
 
-    // Get total count
+    // Set lower similarity threshold for Korean text matching
+    await client.query("SELECT set_limit(0.1)");
+
+    // Get total count using FTS with trigram fallback
+    // plainto_tsquery safely handles special characters in user input
     const countRes = await client.query(`
       SELECT COUNT(*) as total
       FROM confluence_v2_content
       WHERE
         type = 'page'
         AND (
-          title ILIKE $1
-          OR raw_data->'body'->'storage'->>'value' ILIKE $1
+          search_vector @@ plainto_tsquery('simple', $1)
+          OR similarity(title, $1) > 0.1
+          OR title ILIKE $2
         )
-    `, [searchPattern]);
+    `, [query, searchPattern]);
 
     const total = parseInt(countRes.rows[0].total);
 
-    // Get paginated results
+    // Get paginated results with relevance ranking
     const res = await client.query(`
       SELECT
         id,
@@ -129,21 +147,25 @@ async function searchConfluence(query: string, page: number): Promise<SearchResu
         space_id as space_name,
         raw_data->>'_expandable' as updated,
         COALESCE(
-          SUBSTRING(raw_data->'body'->'storage'->>'value' FROM 1 FOR 200),
+          SUBSTRING(body_storage FROM 1 FOR 200),
           ''
-        ) as excerpt
+        ) as excerpt,
+        ts_rank(search_vector, plainto_tsquery('simple', $1)) as rank,
+        similarity(title, $1) as sim
       FROM confluence_v2_content
       WHERE
         type = 'page'
         AND (
-          title ILIKE $1
-          OR raw_data->'body'->'storage'->>'value' ILIKE $1
+          search_vector @@ plainto_tsquery('simple', $1)
+          OR similarity(title, $1) > 0.1
+          OR title ILIKE $2
         )
       ORDER BY
-        CASE WHEN title ILIKE $1 THEN 0 ELSE 1 END,
+        CASE WHEN title ILIKE $2 THEN 0 ELSE 1 END,
+        GREATEST(rank, sim) DESC,
         title
-      LIMIT $2 OFFSET $3
-    `, [searchPattern, PAGE_SIZE, offset]);
+      LIMIT $3 OFFSET $4
+    `, [query, searchPattern, PAGE_SIZE, offset]);
 
     return {
       results: res.rows.map(row => ({
