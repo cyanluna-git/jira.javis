@@ -24,7 +24,7 @@ export default async function JiraPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans">
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto px-4">
         <div className="mb-8 flex items-center gap-4">
             <Link href="/" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
