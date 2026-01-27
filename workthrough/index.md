@@ -5,6 +5,9 @@ hero:
   text: 개발 작업 기록
   tagline: AI 에이전트가 정리한 개발 문서
 features:
+  - title: Full-Text Search
+    details: PostgreSQL GIN 인덱스 + 한국어 Trigram
+    link: /2026-01-28_00_15_full-text-search
   - title: 세션 요약
     details: Javis Viewer 기능 완성 (13 commits)
     link: /2026-01-27_23_45_session-summary
