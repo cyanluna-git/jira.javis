@@ -44,6 +44,7 @@ export default function VisionDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [showNewMilestoneModal, setShowNewMilestoneModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -169,6 +170,30 @@ export default function VisionDetailPage({ params }: PageProps) {
     }
   };
 
+  const handleSyncEpics = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/roadmap/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        alert(`Synced ${result.synced} epic(s), updated ${result.milestones_updated} milestone(s)`);
+        fetchVision();
+      } else {
+        alert('Failed to sync epics');
+      }
+    } catch (error) {
+      console.error('Error syncing epics:', error);
+      alert('Error syncing epics');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading || !vision) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -238,6 +263,14 @@ export default function VisionDetailPage({ params }: PageProps) {
                 </>
               ) : (
                 <>
+                  <button
+                    onClick={handleSyncEpics}
+                    disabled={syncing}
+                    className="flex items-center gap-2 px-3 py-2 text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                    {syncing ? 'Syncing...' : 'Sync Epics'}
+                  </button>
                   <button
                     onClick={() => setEditing(true)}
                     className="flex items-center gap-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -428,7 +461,7 @@ export default function VisionDetailPage({ params }: PageProps) {
         ) : (
           <div className="space-y-3">
             {vision.milestones.map((milestone) => (
-              <MilestoneCard key={milestone.id} milestone={milestone} />
+              <MilestoneCard key={milestone.id} milestone={milestone} onEpicLinked={fetchVision} />
             ))}
           </div>
         )}
@@ -449,8 +482,8 @@ export default function VisionDetailPage({ params }: PageProps) {
                   required
                   value={newMilestone.title}
                   onChange={(e) => setNewMilestone({ ...newMilestone, title: e.target.value })}
-                  placeholder="MVP Launch"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="예: MVP 출시"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                 />
               </div>
 
@@ -460,7 +493,8 @@ export default function VisionDetailPage({ params }: PageProps) {
                   value={newMilestone.description || ''}
                   onChange={(e) => setNewMilestone({ ...newMilestone, description: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="마일스톤에 대한 상세 설명"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                 />
               </div>
 
@@ -472,7 +506,7 @@ export default function VisionDetailPage({ params }: PageProps) {
                     value={newMilestone.quarter || ''}
                     onChange={(e) => setNewMilestone({ ...newMilestone, quarter: e.target.value })}
                     placeholder="2026-Q1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                   />
                 </div>
                 <div>

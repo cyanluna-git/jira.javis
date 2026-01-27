@@ -258,6 +258,7 @@ export default function RoadmapPage() {
                         key={milestone.id}
                         milestone={milestone}
                         showVisionTitle={true}
+                        onEpicLinked={fetchData}
                       />
                     ))}
                   </div>
@@ -284,8 +285,8 @@ export default function RoadmapPage() {
                     required
                     value={newVision.project_key}
                     onChange={(e) => setNewVision({ ...newVision, project_key: e.target.value.toUpperCase() })}
-                    placeholder="ASP"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="EUV"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                   />
                 </div>
                 <div>
@@ -306,8 +307,8 @@ export default function RoadmapPage() {
                   required
                   value={newVision.title}
                   onChange={(e) => setNewVision({ ...newVision, title: e.target.value })}
-                  placeholder="Autonomous Operation System"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="예: 자율 운영 시스템 구축"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                 />
               </div>
 
@@ -317,7 +318,8 @@ export default function RoadmapPage() {
                   value={newVision.description}
                   onChange={(e) => setNewVision({ ...newVision, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="비전에 대한 상세 설명"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                 />
               </div>
 
@@ -328,8 +330,8 @@ export default function RoadmapPage() {
                     type="text"
                     value={newVision.north_star_metric}
                     onChange={(e) => setNewVision({ ...newVision, north_star_metric: e.target.value })}
-                    placeholder="Monthly Active Users"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="예: 월간 활성 사용자"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                   />
                 </div>
                 <div>
@@ -339,7 +341,7 @@ export default function RoadmapPage() {
                     value={newVision.north_star_target}
                     onChange={(e) => setNewVision({ ...newVision, north_star_target: e.target.value })}
                     placeholder="10000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                   />
                 </div>
               </div>
