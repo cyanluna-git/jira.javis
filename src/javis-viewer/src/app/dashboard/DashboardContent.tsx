@@ -221,7 +221,7 @@ export default function DashboardContent({
           </h3>
           {velocityData.length > 0 ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={256} minWidth={0}>
                 <LineChart data={velocityData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
@@ -252,7 +252,7 @@ export default function DashboardContent({
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Status Distribution</h3>
           {statusDistribution.length > 0 ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={256} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={statusDistribution}
@@ -295,7 +295,7 @@ export default function DashboardContent({
           </h3>
           {workloadData.length > 0 ? (
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={288} minWidth={0}>
                 <BarChart
                   data={workloadData}
                   layout="vertical"

@@ -256,7 +256,7 @@ export default function CompareContent({
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Metrics Comparison</h3>
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={288} minWidth={0}>
                   <BarChart data={comparisonData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis type="number" tick={{ fontSize: 12, fill: '#6b7280' }} />
@@ -280,7 +280,7 @@ export default function CompareContent({
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance Radar</h3>
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={288} minWidth={0}>
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#e5e7eb" />
                     <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: '#374151' }} />
@@ -314,7 +314,7 @@ export default function CompareContent({
                 Completed Points by Assignee
               </h3>
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={288} minWidth={0}>
                   <BarChart data={assigneeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} />
@@ -344,7 +344,7 @@ export default function CompareContent({
                 Component Completion Rate Comparison
               </h3>
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={288} minWidth={0}>
                   <BarChart data={componentData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} />

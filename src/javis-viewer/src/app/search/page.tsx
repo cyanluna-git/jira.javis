@@ -81,26 +81,25 @@ async function searchConfluence(query: string, limit: number): Promise<Confluenc
     const searchPattern = `%${query}%`;
     const res = await client.query(`
       SELECT
-        c.id,
-        c.title,
-        c.space_key,
-        COALESCE(s.name, c.space_key) as space_name,
-        c.raw_data->>'_expandable' as updated,
+        id,
+        title,
+        space_key,
+        space_key as space_name,
+        raw_data->>'_expandable' as updated,
         COALESCE(
-          SUBSTRING(c.raw_data->'body'->'storage'->>'value' FROM 1 FOR 200),
+          SUBSTRING(raw_data->'body'->'storage'->>'value' FROM 1 FOR 200),
           ''
         ) as excerpt
-      FROM confluence_v2_content c
-      LEFT JOIN confluence_v2_spaces s ON c.space_key = s.key
+      FROM confluence_v2_content
       WHERE
-        c.type = 'page'
+        type = 'page'
         AND (
-          c.title ILIKE $1
-          OR c.raw_data->'body'->'storage'->>'value' ILIKE $1
+          title ILIKE $1
+          OR raw_data->'body'->'storage'->>'value' ILIKE $1
         )
       ORDER BY
-        CASE WHEN c.title ILIKE $1 THEN 0 ELSE 1 END,
-        c.title
+        CASE WHEN title ILIKE $1 THEN 0 ELSE 1 END,
+        title
       LIMIT $2
     `, [searchPattern, limit]);
 
