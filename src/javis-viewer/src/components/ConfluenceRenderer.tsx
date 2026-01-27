@@ -164,7 +164,7 @@ function MacroRenderer({ element }: { element: Element }) {
 
     case 'anchor':
       const anchorName = getParameter(element, '');
-      return <span id={anchorName} />;
+      return <span id={anchorName || undefined} />;
 
     case 'excerpt':
     case 'excerpt-include':
