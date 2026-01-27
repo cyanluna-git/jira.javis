@@ -1,0 +1,31 @@
+# Security & Credentials
+.env
+*.key
+*.pem
+secrets.yaml
+
+# Data & Database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Archives & Large Files
+archive/
+archive/confluence/
+*.tar.gz
+*.zip
+confluence_export/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
