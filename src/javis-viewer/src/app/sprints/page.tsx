@@ -1,6 +1,6 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, GitCompare } from "lucide-react";
 import SprintContent from "./SprintContent";
 
 export const dynamic = 'force-dynamic';
@@ -115,6 +115,13 @@ export default async function SprintsPage({ searchParams }: PageProps) {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">Sprint Board</h1>
+          <Link
+            href="/sprints/compare"
+            className="ml-auto flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+          >
+            <GitCompare className="w-4 h-4" />
+            Compare Sprints
+          </Link>
         </div>
 
         <SprintContent
