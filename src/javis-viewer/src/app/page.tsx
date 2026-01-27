@@ -1,6 +1,6 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { Database, FileText, CheckSquare, LayoutGrid, BarChart3 } from "lucide-react";
+import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +30,20 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans">
-      <header className="mb-12 text-center">
+      <header className="mb-8 text-center">
         <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Javis Knowledge Base</h1>
         <p className="text-gray-600">Local mirror of Jira & Confluence data</p>
       </header>
+
+      {/* Search Bar */}
+      <div className="max-w-2xl mx-auto mb-10">
+        <Link href="/search" className="block">
+          <div className="flex items-center gap-3 bg-white px-5 py-4 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer">
+            <Search className="w-5 h-5 text-gray-400" />
+            <span className="text-gray-400">Search Jira issues and Confluence pages...</span>
+          </div>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {/* Dashboard Card */}
