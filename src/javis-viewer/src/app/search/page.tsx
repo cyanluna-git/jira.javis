@@ -5,6 +5,8 @@ import SearchContent from "./SearchContent";
 
 export const dynamic = 'force-dynamic';
 
+const PAGE_SIZE = 20;
+
 interface JiraResult {
   type: 'jira';
   key: string;
@@ -28,12 +30,32 @@ interface ConfluenceResult {
 
 type SearchResult = JiraResult | ConfluenceResult;
 
-async function searchJira(query: string, limit: number): Promise<JiraResult[]> {
-  if (!query || query.length < 2) return [];
+interface SearchResults {
+  results: SearchResult[];
+  total: number;
+}
+
+async function searchJira(query: string, page: number): Promise<SearchResults> {
+  if (!query || query.length < 2) return { results: [], total: 0 };
 
   const client = await pool.connect();
   try {
     const searchPattern = `%${query}%`;
+    const offset = (page - 1) * PAGE_SIZE;
+
+    // Get total count
+    const countRes = await client.query(`
+      SELECT COUNT(*) as total
+      FROM jira_issues
+      WHERE
+        key ILIKE $1
+        OR summary ILIKE $1
+        OR raw_data->'fields'->>'description' ILIKE $1
+    `, [searchPattern]);
+
+    const total = parseInt(countRes.rows[0].total);
+
+    // Get paginated results
     const res = await client.query(`
       SELECT
         key,
@@ -55,30 +77,50 @@ async function searchJira(query: string, limit: number): Promise<JiraResult[]> {
       ORDER BY
         CASE WHEN key ILIKE $1 THEN 0 ELSE 1 END,
         (raw_data->'fields'->>'updated')::timestamp DESC
-      LIMIT $2
-    `, [searchPattern, limit]);
+      LIMIT $2 OFFSET $3
+    `, [searchPattern, PAGE_SIZE, offset]);
 
-    return res.rows.map(row => ({
-      type: 'jira' as const,
-      key: row.key,
-      summary: row.summary,
-      status: row.status,
-      project: row.project,
-      assignee: row.assignee,
-      updated: row.updated,
-      matchField: row.match_field,
-    }));
+    return {
+      results: res.rows.map(row => ({
+        type: 'jira' as const,
+        key: row.key,
+        summary: row.summary,
+        status: row.status,
+        project: row.project,
+        assignee: row.assignee,
+        updated: row.updated,
+        matchField: row.match_field,
+      })),
+      total,
+    };
   } finally {
     client.release();
   }
 }
 
-async function searchConfluence(query: string, limit: number): Promise<ConfluenceResult[]> {
-  if (!query || query.length < 2) return [];
+async function searchConfluence(query: string, page: number): Promise<SearchResults> {
+  if (!query || query.length < 2) return { results: [], total: 0 };
 
   const client = await pool.connect();
   try {
     const searchPattern = `%${query}%`;
+    const offset = (page - 1) * PAGE_SIZE;
+
+    // Get total count
+    const countRes = await client.query(`
+      SELECT COUNT(*) as total
+      FROM confluence_v2_content
+      WHERE
+        type = 'page'
+        AND (
+          title ILIKE $1
+          OR raw_data->'body'->'storage'->>'value' ILIKE $1
+        )
+    `, [searchPattern]);
+
+    const total = parseInt(countRes.rows[0].total);
+
+    // Get paginated results
     const res = await client.query(`
       SELECT
         id,
@@ -100,57 +142,70 @@ async function searchConfluence(query: string, limit: number): Promise<Confluenc
       ORDER BY
         CASE WHEN title ILIKE $1 THEN 0 ELSE 1 END,
         title
-      LIMIT $2
-    `, [searchPattern, limit]);
+      LIMIT $2 OFFSET $3
+    `, [searchPattern, PAGE_SIZE, offset]);
 
-    return res.rows.map(row => ({
-      type: 'confluence' as const,
-      id: row.id,
-      title: row.title,
-      spaceKey: row.space_id,
-      spaceName: row.space_name,
-      updated: row.updated || '',
-      excerpt: row.excerpt?.replace(/<[^>]*>/g, '').substring(0, 150) || '',
-    }));
+    return {
+      results: res.rows.map(row => ({
+        type: 'confluence' as const,
+        id: row.id,
+        title: row.title,
+        spaceKey: row.space_id,
+        spaceName: row.space_name,
+        updated: row.updated || '',
+        excerpt: row.excerpt?.replace(/<[^>]*>/g, '').substring(0, 150) || '',
+      })),
+      total,
+    };
   } finally {
     client.release();
   }
 }
 
 interface Props {
-  searchParams: Promise<{ q?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; page?: string }>;
 }
 
 export default async function SearchPage({ searchParams }: Props) {
   const params = await searchParams;
   const query = params.q || '';
-  const filter = params.filter || 'all'; // 'all' | 'jira' | 'confluence'
+  const filter = params.filter || 'all';
+  const page = params.page ? parseInt(params.page) : 1;
 
   try {
-    let jiraResults: JiraResult[] = [];
-    let confluenceResults: ConfluenceResult[] = [];
+    let jiraResults: SearchResult[] = [];
+    let confluenceResults: SearchResult[] = [];
+    let jiraTotal = 0;
+    let confluenceTotal = 0;
 
     if (query.length >= 2) {
-      const limit = filter === 'all' ? 15 : 30;
-
-      // Execute searches in parallel for better performance
       if (filter === 'all') {
-        [jiraResults, confluenceResults] = await Promise.all([
-          searchJira(query, limit),
-          searchConfluence(query, limit),
+        const [jiraData, confData] = await Promise.all([
+          searchJira(query, page),
+          searchConfluence(query, page),
         ]);
+        jiraResults = jiraData.results;
+        confluenceResults = confData.results;
+        jiraTotal = jiraData.total;
+        confluenceTotal = confData.total;
       } else if (filter === 'jira') {
-        jiraResults = await searchJira(query, limit);
+        const data = await searchJira(query, page);
+        jiraResults = data.results;
+        jiraTotal = data.total;
       } else if (filter === 'confluence') {
-        confluenceResults = await searchConfluence(query, limit);
+        const data = await searchConfluence(query, page);
+        confluenceResults = data.results;
+        confluenceTotal = data.total;
       }
     }
 
-    // Combine and sort results for 'all' filter
-    let combinedResults: SearchResult[] = [];
-    if (filter === 'all') {
-      combinedResults = [...jiraResults, ...confluenceResults];
-    }
+    const totalResults = filter === 'all'
+      ? jiraTotal + confluenceTotal
+      : filter === 'jira'
+        ? jiraTotal
+        : confluenceTotal;
+
+    const totalPages = Math.ceil(totalResults / PAGE_SIZE);
 
     return (
       <div className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -165,9 +220,14 @@ export default async function SearchPage({ searchParams }: Props) {
           <SearchContent
             initialQuery={query}
             initialFilter={filter}
+            currentPage={page}
+            totalPages={totalPages}
+            totalResults={totalResults}
             jiraResults={jiraResults}
             confluenceResults={confluenceResults}
-            combinedResults={combinedResults}
+            jiraTotal={jiraTotal}
+            confluenceTotal={confluenceTotal}
+            pageSize={PAGE_SIZE}
           />
         </div>
       </div>
