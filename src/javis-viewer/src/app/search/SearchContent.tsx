@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, CheckSquare, FileText, ExternalLink, Filter } from 'lucide-react';
+import { Search, CheckSquare, FileText, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface JiraResult {
   type: 'jira';
@@ -31,9 +31,14 @@ type SearchResult = JiraResult | ConfluenceResult;
 interface Props {
   initialQuery: string;
   initialFilter: string;
-  jiraResults: JiraResult[];
-  confluenceResults: ConfluenceResult[];
-  combinedResults: SearchResult[];
+  currentPage: number;
+  totalPages: number;
+  totalResults: number;
+  jiraResults: SearchResult[];
+  confluenceResults: SearchResult[];
+  jiraTotal: number;
+  confluenceTotal: number;
+  pageSize: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -123,12 +128,109 @@ function ConfluenceResultCard({ result }: { result: ConfluenceResult }) {
   );
 }
 
+function Pagination({
+  currentPage,
+  totalPages,
+  query,
+  filter,
+}: {
+  currentPage: number;
+  totalPages: number;
+  query: string;
+  filter: string;
+}) {
+  if (totalPages <= 1) return null;
+
+  const buildUrl = (page: number) => {
+    const params = new URLSearchParams();
+    params.set('q', query);
+    if (filter !== 'all') params.set('filter', filter);
+    if (page > 1) params.set('page', String(page));
+    return `/search?${params.toString()}`;
+  };
+
+  const pages: (number | 'ellipsis')[] = [];
+  const showPages = 5;
+
+  if (totalPages <= showPages + 2) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+
+    if (currentPage <= 3) {
+      end = Math.min(showPages, totalPages - 1);
+    } else if (currentPage >= totalPages - 2) {
+      start = Math.max(2, totalPages - showPages + 1);
+    }
+
+    if (start > 2) pages.push('ellipsis');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('ellipsis');
+
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1 mt-6">
+      <Link
+        href={buildUrl(currentPage - 1)}
+        className={`p-2 rounded-lg border ${
+          currentPage === 1
+            ? 'border-gray-200 text-gray-300 pointer-events-none'
+            : 'border-gray-300 text-gray-600 hover:bg-gray-100'
+        }`}
+        aria-disabled={currentPage === 1}
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </Link>
+
+      {pages.map((page, idx) =>
+        page === 'ellipsis' ? (
+          <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
+        ) : (
+          <Link
+            key={page}
+            href={buildUrl(page)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+              page === currentPage
+                ? 'bg-blue-600 text-white'
+                : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            {page}
+          </Link>
+        )
+      )}
+
+      <Link
+        href={buildUrl(currentPage + 1)}
+        className={`p-2 rounded-lg border ${
+          currentPage === totalPages
+            ? 'border-gray-200 text-gray-300 pointer-events-none'
+            : 'border-gray-300 text-gray-600 hover:bg-gray-100'
+        }`}
+        aria-disabled={currentPage === totalPages}
+      >
+        <ChevronRight className="w-4 h-4" />
+      </Link>
+    </div>
+  );
+}
+
 export default function SearchContent({
   initialQuery,
   initialFilter,
+  currentPage,
+  totalPages,
+  totalResults,
   jiraResults,
   confluenceResults,
-  combinedResults,
+  jiraTotal,
+  confluenceTotal,
+  pageSize,
 }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
@@ -146,7 +248,6 @@ export default function SearchContent({
 
   const handleFilterChange = useCallback((newFilter: string) => {
     setFilter(newFilter);
-    // Use current query state for more responsive UX
     const searchQuery = query.length >= 2 ? query : initialQuery;
     if (searchQuery.length >= 2) {
       const params = new URLSearchParams();
@@ -156,11 +257,9 @@ export default function SearchContent({
     }
   }, [query, initialQuery, router]);
 
-  const totalResults = filter === 'all'
-    ? combinedResults.length
-    : filter === 'jira'
-      ? jiraResults.length
-      : confluenceResults.length;
+  const combinedResults = [...jiraResults, ...confluenceResults];
+  const startIdx = (currentPage - 1) * pageSize + 1;
+  const endIdx = Math.min(currentPage * pageSize, totalResults);
 
   return (
     <div className="space-y-6">
@@ -192,15 +291,15 @@ export default function SearchContent({
         <Filter className="w-4 h-4 text-gray-500" />
         <div className="flex gap-2">
           {[
-            { value: 'all', label: 'All', count: combinedResults.length },
-            { value: 'jira', label: 'Jira', count: jiraResults.length },
-            { value: 'confluence', label: 'Confluence', count: confluenceResults.length },
+            { value: 'all', label: 'All', count: jiraTotal + confluenceTotal },
+            { value: 'jira', label: 'Jira', count: jiraTotal },
+            { value: 'confluence', label: 'Confluence', count: confluenceTotal },
           ].map((f) => (
             <button
               key={f.value}
               onClick={() => handleFilterChange(f.value)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === f.value
+                initialFilter === f.value
                   ? 'bg-blue-100 text-blue-700'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
@@ -230,36 +329,43 @@ export default function SearchContent({
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Found {totalResults} result{totalResults !== 1 ? 's' : ''} for &quot;{initialQuery}&quot;
+            Showing {startIdx}-{endIdx} of {totalResults} results for &quot;{initialQuery}&quot;
           </p>
 
-          {filter === 'all' && (
+          {initialFilter === 'all' && (
             <div className="space-y-3">
-              {combinedResults.map((result) => (
+              {combinedResults.map((result) =>
                 result.type === 'jira' ? (
                   <JiraResultCard key={result.key} result={result} />
                 ) : (
                   <ConfluenceResultCard key={result.id} result={result} />
                 )
-              ))}
+              )}
             </div>
           )}
 
-          {filter === 'jira' && (
+          {initialFilter === 'jira' && (
             <div className="space-y-3">
               {jiraResults.map((result) => (
-                <JiraResultCard key={result.key} result={result} />
+                <JiraResultCard key={(result as JiraResult).key} result={result as JiraResult} />
               ))}
             </div>
           )}
 
-          {filter === 'confluence' && (
+          {initialFilter === 'confluence' && (
             <div className="space-y-3">
               {confluenceResults.map((result) => (
-                <ConfluenceResultCard key={result.id} result={result} />
+                <ConfluenceResultCard key={(result as ConfluenceResult).id} result={result as ConfluenceResult} />
               ))}
             </div>
           )}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            query={initialQuery}
+            filter={initialFilter}
+          />
         </div>
       )}
     </div>
