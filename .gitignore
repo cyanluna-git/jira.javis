@@ -6,6 +6,7 @@ secrets.yaml
 
 # Data & Database
 data/
+!data/db/backups/javis_brain_backup_20260127.dump
 *.db
 *.sqlite
 *.sqlite3
