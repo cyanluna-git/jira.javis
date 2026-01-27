@@ -5,6 +5,9 @@ hero:
   text: 개발 작업 기록
   tagline: AI 에이전트가 정리한 개발 문서
 features:
+  - title: Dashboard 필터
+    details: 프로젝트/기간별 필터링
+    link: /2026-01-27_22_00_dashboard-filters
   - title: 통합 검색 구현
     details: Jira + Confluence 통합 검색
     link: /2026-01-27_21_30_integrated-search
