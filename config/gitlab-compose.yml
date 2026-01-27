@@ -1,0 +1,30 @@
+version: '3.6'
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    hostname: '10.82.37.79'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://10.82.37.79'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        # Memory optimization for 4GB RAM
+        puma['worker_processes'] = 0
+        sidekiq['max_concurrency'] = 5
+        prometheus_monitoring['enable'] = false
+        gitlab_kas['enable'] = false
+        registry['enable'] = false
+        mattermost['enable'] = false
+        gitlab_rails['env'] = {
+          'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000'
+        }
+    ports:
+      - '80:80'
+      - '443:443'
+      - '2222:22'
+    volumes:
+      - '/mnt/disk2/gitlab/config:/etc/gitlab'
+      - '/mnt/disk2/gitlab/logs:/var/log/gitlab'
+      - '/mnt/disk2/gitlab/data:/var/opt/gitlab'
+    shm_size: '256m'

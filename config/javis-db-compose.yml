@@ -1,0 +1,19 @@
+name: gerald-javis
+
+services:
+  javis-db:
+    image: pgvector/pgvector:pg16
+    container_name: javis_db
+    restart: always
+    environment:
+      POSTGRES_USER: javis
+      POSTGRES_PASSWORD: ${JAVIS_DB_PASSWORD:-javis_password}
+      POSTGRES_DB: javis_brain
+    ports:
+      - "5432:5432"
+    volumes:
+      - javis_postgres_data:/var/lib/postgresql/data
+    shm_size: 1g
+
+volumes:
+  javis_postgres_data:
