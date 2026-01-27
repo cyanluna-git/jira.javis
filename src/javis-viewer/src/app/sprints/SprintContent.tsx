@@ -1,8 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { Calendar, Target, ChevronRight, ChevronDown, Filter, Users } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState, useCallback, useEffect } from 'react';
+import { Calendar, Target, ChevronRight, ChevronDown, Users, Box, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import SprintCard from './SprintCard';
 import SprintIssueRow from './SprintIssueRow';
 import IssueDetailModal from '@/components/IssueDetailModal';
@@ -19,7 +19,12 @@ interface Props {
   selectedSprintId: number | null;
   selectedSprint: Sprint | null;
   stateFilter: string;
+  initialAssignees?: string[];
+  initialComponents?: string[];
 }
+
+type SortField = 'key' | 'status' | 'points' | 'assignee';
+type SortOrder = 'asc' | 'desc';
 
 export default function SprintContent({
   boards,
@@ -29,11 +34,50 @@ export default function SprintContent({
   selectedSprintId,
   selectedSprint,
   stateFilter,
+  initialAssignees = [],
+  initialComponents = [],
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [selectedIssue, setSelectedIssue] = useState<SprintIssue | null>(null);
   const [showAssigneeFilter, setShowAssigneeFilter] = useState(false);
-  const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set());
+  const [showComponentFilter, setShowComponentFilter] = useState(false);
+  const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set(initialAssignees));
+  const [selectedComponents, setSelectedComponents] = useState<Set<string>>(new Set(initialComponents));
+  const [sortField, setSortField] = useState<SortField>('key');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
+  // Sync state with URL params when they change (e.g. browser back/forward)
+  // Using join() to prevent unnecessary re-runs from array reference changes
+  useEffect(() => {
+    setSelectedAssignees(new Set(initialAssignees));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAssignees.join(',')]);
+
+  useEffect(() => {
+    setSelectedComponents(new Set(initialComponents));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialComponents.join(',')]);
+
+  // URL 업데이트 헬퍼
+  const updateUrl = useCallback((assignees: Set<string>, components: Set<string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (assignees.size > 0) {
+      params.set('assignees', Array.from(assignees).join(','));
+    } else {
+      params.delete('assignees');
+    }
+
+    if (components.size > 0) {
+      params.set('components', Array.from(components).join(','));
+    } else {
+      params.delete('components');
+    }
+
+    router.replace(`/sprints?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
 
   // Filter sprints by state
   const filteredSprints = useMemo(() => {
@@ -53,14 +97,81 @@ export default function SprintContent({
       .sort((a, b) => b.count - a.count);
   }, [issues]);
 
-  // Filter issues by selected assignees
-  const filteredIssues = useMemo(() => {
-    if (selectedAssignees.size === 0) return issues;
-    return issues.filter(issue => {
-      const name = issue.raw_data?.fields?.assignee?.displayName || 'Unassigned';
-      return selectedAssignees.has(name);
+  // Extract components from issues
+  const components = useMemo(() => {
+    const map = new Map<string, number>();
+    issues.forEach(issue => {
+      const comps = issue.raw_data?.fields?.components || [];
+      if (comps.length === 0) {
+        map.set('No Component', (map.get('No Component') || 0) + 1);
+      } else {
+        comps.forEach((c: any) => {
+          const name = c.name || 'Unknown';
+          map.set(name, (map.get(name) || 0) + 1);
+        });
+      }
     });
-  }, [issues, selectedAssignees]);
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [issues]);
+
+  // Filter issues by selected assignees and components
+  const filteredIssues = useMemo(() => {
+    return issues.filter(issue => {
+      // Assignee filter
+      if (selectedAssignees.size > 0) {
+        const name = issue.raw_data?.fields?.assignee?.displayName || 'Unassigned';
+        if (!selectedAssignees.has(name)) return false;
+      }
+
+      // Component filter
+      if (selectedComponents.size > 0) {
+        const comps = issue.raw_data?.fields?.components || [];
+        const compNames = comps.length > 0
+          ? comps.map((c: any) => c.name || 'Unknown')
+          : ['No Component'];
+        const hasMatch = compNames.some((name: string) => selectedComponents.has(name));
+        if (!hasMatch) return false;
+      }
+
+      return true;
+    });
+  }, [issues, selectedAssignees, selectedComponents]);
+
+  // Sort issues
+  const sortedIssues = useMemo(() => {
+    return [...filteredIssues].sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+
+      switch (sortField) {
+        case 'key':
+          aVal = a.key;
+          bVal = b.key;
+          break;
+        case 'status':
+          aVal = a.status;
+          bVal = b.status;
+          break;
+        case 'points':
+          aVal = a.raw_data?.fields?.customfield_10016 || a.raw_data?.fields?.storyPoints || 0;
+          bVal = b.raw_data?.fields?.customfield_10016 || b.raw_data?.fields?.storyPoints || 0;
+          break;
+        case 'assignee':
+          aVal = a.raw_data?.fields?.assignee?.displayName || 'zzz';
+          bVal = b.raw_data?.fields?.assignee?.displayName || 'zzz';
+          break;
+      }
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      const comparison = String(aVal).localeCompare(String(bVal));
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredIssues, sortField, sortOrder]);
 
   // Count issues by status category with points
   const issueStats = useMemo<IssueStats>(() => {
@@ -134,12 +245,50 @@ export default function SprintContent({
       } else {
         next.add(name);
       }
+      updateUrl(next, selectedComponents);
       return next;
     });
   };
 
   const clearAssigneeFilter = () => {
     setSelectedAssignees(new Set());
+    updateUrl(new Set(), selectedComponents);
+  };
+
+  const toggleComponent = (name: string) => {
+    setSelectedComponents(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      updateUrl(selectedAssignees, next);
+      return next;
+    });
+  };
+
+  const clearComponentFilter = () => {
+    setSelectedComponents(new Set());
+    updateUrl(selectedAssignees, new Set());
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />;
+    }
+    return sortOrder === 'asc'
+      ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" />
+      : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />;
   };
 
   return (
@@ -152,7 +301,7 @@ export default function SprintContent({
           <select
             value={selectedBoardId?.toString() || ''}
             onChange={(e) => handleBoardChange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
           >
             <option value="">Select a board...</option>
             {boards.map(board => (
@@ -335,65 +484,129 @@ export default function SprintContent({
             )}
 
             {/* Component Pie Chart */}
-            <ComponentPieChart issues={filteredIssues} />
+            <ComponentPieChart
+              issues={filteredIssues}
+              selectedComponents={selectedComponents}
+              onComponentClick={toggleComponent}
+            />
           </div>
 
           {/* Component Progress Chart */}
-          <ComponentProgressChart issues={filteredIssues} />
+          <ComponentProgressChart
+            issues={filteredIssues}
+            selectedComponents={selectedComponents}
+            onComponentClick={toggleComponent}
+          />
 
           {/* Issues Table */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            {/* Assignee Filter */}
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setShowAssigneeFilter(!showAssigneeFilter)}
-                  className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-                >
-                  <Users className="w-4 h-4" />
-                  Assignee Filter
-                  {selectedAssignees.size > 0 && (
-                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                      {selectedAssignees.size}
-                    </span>
-                  )}
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${showAssigneeFilter ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {selectedAssignees.size > 0 && (
+            {/* Filters */}
+            <div className="p-4 border-b border-gray-200 bg-gray-50 space-y-3">
+              {/* Assignee Filter */}
+              <div>
+                <div className="flex items-center justify-between">
                   <button
-                    onClick={clearAssigneeFilter}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    onClick={() => setShowAssigneeFilter(!showAssigneeFilter)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
                   >
-                    Clear
+                    <Users className="w-4 h-4" />
+                    Assignee Filter
+                    {selectedAssignees.size > 0 && (
+                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                        {selectedAssignees.size}
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${showAssigneeFilter ? 'rotate-180' : ''}`}
+                    />
                   </button>
+                  {selectedAssignees.size > 0 && (
+                    <button
+                      onClick={clearAssigneeFilter}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {showAssigneeFilter && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {assignees.map(({ name, count }) => (
+                      <label
+                        key={name}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer border transition-colors ${
+                          selectedAssignees.has(name)
+                            ? 'bg-blue-50 border-blue-300 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedAssignees.has(name)}
+                          onChange={() => toggleAssignee(name)}
+                          className="sr-only"
+                        />
+                        <span className="text-sm">{name}</span>
+                        <span className="text-xs text-gray-500">({count})</span>
+                      </label>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {showAssigneeFilter && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {assignees.map(({ name, count }) => (
-                    <label
-                      key={name}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer border transition-colors ${
-                        selectedAssignees.has(name)
-                          ? 'bg-blue-50 border-blue-300 text-blue-700'
-                          : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                      }`}
+              {/* Component Filter */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowComponentFilter(!showComponentFilter)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    <Box className="w-4 h-4" />
+                    Component Filter
+                    {selectedComponents.size > 0 && (
+                      <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">
+                        {selectedComponents.size}
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${showComponentFilter ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {selectedComponents.size > 0 && (
+                    <button
+                      onClick={clearComponentFilter}
+                      className="text-sm text-orange-600 hover:text-orange-800"
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedAssignees.has(name)}
-                        onChange={() => toggleAssignee(name)}
-                        className="sr-only"
-                      />
-                      <span className="text-sm">{name}</span>
-                      <span className="text-xs text-gray-500">({count})</span>
-                    </label>
-                  ))}
+                      Clear
+                    </button>
+                  )}
                 </div>
-              )}
+
+                {showComponentFilter && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {components.map(({ name, count }) => (
+                      <label
+                        key={name}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer border transition-colors ${
+                          selectedComponents.has(name)
+                            ? 'bg-orange-50 border-orange-300 text-orange-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedComponents.has(name)}
+                          onChange={() => toggleComponent(name)}
+                          className="sr-only"
+                        />
+                        <span className="text-sm">{name}</span>
+                        <span className="text-xs text-gray-500">({count})</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Table */}
@@ -402,16 +615,48 @@ export default function SprintContent({
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-3 font-semibold text-gray-700 w-10"></th>
-                    <th className="px-4 py-3 font-semibold text-gray-700 w-28">Key</th>
+                    <th className="px-4 py-3 font-semibold text-gray-700 w-28">
+                      <button
+                        onClick={() => handleSort('key')}
+                        className="flex items-center gap-1.5 hover:text-blue-600"
+                      >
+                        Key
+                        <SortIcon field="key" />
+                      </button>
+                    </th>
                     <th className="px-4 py-3 font-semibold text-gray-700">Summary</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700 w-32">Status</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700 w-24">Points</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700 w-40">Assignee</th>
+                    <th className="px-4 py-3 font-semibold text-gray-700 w-32">
+                      <button
+                        onClick={() => handleSort('status')}
+                        className="flex items-center gap-1.5 hover:text-blue-600"
+                      >
+                        Status
+                        <SortIcon field="status" />
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-700 w-24">
+                      <button
+                        onClick={() => handleSort('points')}
+                        className="flex items-center gap-1.5 hover:text-blue-600"
+                      >
+                        Points
+                        <SortIcon field="points" />
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-700 w-40">
+                      <button
+                        onClick={() => handleSort('assignee')}
+                        className="flex items-center gap-1.5 hover:text-blue-600"
+                      >
+                        Assignee
+                        <SortIcon field="assignee" />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredIssues.length > 0 ? (
-                    filteredIssues.map(issue => (
+                  {sortedIssues.length > 0 ? (
+                    sortedIssues.map(issue => (
                       <SprintIssueRow
                         key={issue.key}
                         issue={issue}

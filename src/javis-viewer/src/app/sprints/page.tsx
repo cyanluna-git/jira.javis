@@ -82,7 +82,13 @@ async function getSprintIssues(sprintId: number): Promise<SprintIssue[]> {
 }
 
 interface PageProps {
-  searchParams: Promise<{ board?: string; sprint?: string; state?: string }>;
+  searchParams: Promise<{
+    board?: string;
+    sprint?: string;
+    state?: string;
+    assignees?: string;
+    components?: string;
+  }>;
 }
 
 export default async function SprintsPage({ searchParams }: PageProps) {
@@ -90,6 +96,8 @@ export default async function SprintsPage({ searchParams }: PageProps) {
   const boardId = params.board ? parseInt(params.board) : null;
   const sprintId = params.sprint ? parseInt(params.sprint) : null;
   const stateFilter = params.state || 'all';
+  const initialAssignees = params.assignees ? params.assignees.split(',').filter(Boolean) : [];
+  const initialComponents = params.components ? params.components.split(',').filter(Boolean) : [];
 
   // Fetch data based on URL params
   const boards = await getBoards();
@@ -117,6 +125,8 @@ export default async function SprintsPage({ searchParams }: PageProps) {
           selectedSprintId={sprintId}
           selectedSprint={selectedSprint}
           stateFilter={stateFilter}
+          initialAssignees={initialAssignees}
+          initialComponents={initialComponents}
         />
       </div>
     </div>

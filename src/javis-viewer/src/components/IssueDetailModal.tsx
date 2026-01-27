@@ -1,6 +1,6 @@
 'use client';
 
-import { X, User, Tag, Calendar, MessageSquare, AlertCircle } from 'lucide-react';
+import { X, User, Tag, Calendar, MessageSquare, AlertCircle, ExternalLink } from 'lucide-react';
 import { AdfRenderer } from './AdfRenderer';
 import type { SprintIssue } from '@/types/sprint';
 
@@ -21,6 +21,22 @@ export default function IssueDetailModal({ issue, onClose }: Props) {
   const comments = fields.comment?.comments || [];
   const attachments = fields.attachment || [];
 
+  // Extract JIRA URL from raw_data.self
+  const getJiraUrl = (): string | null => {
+    const selfUrl = issue.raw_data?.self;
+    if (selfUrl) {
+      try {
+        const url = new URL(selfUrl);
+        return `${url.origin}/browse/${issue.key}`;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const jiraUrl = getJiraUrl();
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -38,6 +54,17 @@ export default function IssueDetailModal({ issue, onClose }: Props) {
               <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusStyle(issue.status)}`}>
                 {issue.status}
               </span>
+              {jiraUrl && (
+                <a
+                  href={jiraUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  JIRA에서 열기
+                </a>
+              )}
             </div>
             <h2 className="text-xl font-bold text-gray-900 truncate">{issue.summary}</h2>
           </div>

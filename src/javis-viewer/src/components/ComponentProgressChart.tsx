@@ -16,6 +16,8 @@ import type { SprintIssue } from '@/types/sprint';
 
 interface Props {
   issues: SprintIssue[];
+  selectedComponents?: Set<string>;
+  onComponentClick?: (componentName: string) => void;
 }
 
 interface ComponentStatus {
@@ -39,7 +41,7 @@ function getStatusCategory(status: string): 'todo' | 'inProgress' | 'done' {
   return 'todo';
 }
 
-export default function ComponentProgressChart({ issues }: Props) {
+export default function ComponentProgressChart({ issues, selectedComponents, onComponentClick }: Props) {
   const chartData = useMemo<ComponentStatus[]>(() => {
     const componentMap = new Map<string, { todo: number; inProgress: number; done: number }>();
 
@@ -132,22 +134,31 @@ export default function ComponentProgressChart({ issues }: Props) {
 
       {/* Progress Summary */}
       <div className="mt-4 space-y-2">
-        {chartData.map((comp) => (
-          <div key={comp.name} className="flex items-center gap-3">
-            <div className="w-24 text-sm text-gray-700 truncate" title={comp.fullName}>
-              {comp.name}
-            </div>
-            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${comp.donePercent}%` }}
-              />
-            </div>
-            <div className="w-12 text-right text-sm font-medium text-gray-600">
-              {comp.donePercent}%
-            </div>
-          </div>
-        ))}
+        {chartData.map((comp) => {
+          const isSelected = !selectedComponents || selectedComponents.size === 0 || selectedComponents.has(comp.fullName);
+          return (
+            <button
+              key={comp.name}
+              onClick={() => onComponentClick?.(comp.fullName)}
+              className={`flex items-center gap-3 w-full text-left p-1 rounded transition-all ${
+                onComponentClick ? 'hover:bg-gray-50 cursor-pointer' : ''
+              } ${isSelected ? '' : 'opacity-40'}`}
+            >
+              <div className="w-24 text-sm text-gray-700 truncate" title={comp.fullName}>
+                {comp.name}
+              </div>
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${comp.donePercent}%` }}
+                />
+              </div>
+              <div className="w-12 text-right text-sm font-medium text-gray-600">
+                {comp.donePercent}%
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bug, CheckSquare, Bookmark, Zap, HelpCircle, User } from 'lucide-react';
+import { Bug, CheckSquare, Bookmark, Zap, HelpCircle, User, ExternalLink } from 'lucide-react';
 import type { SprintIssue } from '@/types/sprint';
 
 interface Props {
@@ -43,10 +43,30 @@ export default function SprintIssueRow({ issue, onSelect }: Props) {
 
   const icon = issueTypeIcons[issueType] || <HelpCircle className="w-4 h-4 text-gray-400" />;
 
+  // Extract JIRA base URL from raw_data.self
+  const getJiraUrl = (): string | null => {
+    const selfUrl = issue.raw_data?.self;
+    if (selfUrl) {
+      try {
+        const url = new URL(selfUrl);
+        return `${url.origin}/browse/${issue.key}`;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const jiraUrl = getJiraUrl();
+
   const handleClick = () => {
     if (onSelect) {
       onSelect(issue);
     }
+  };
+
+  const handleJiraLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -63,9 +83,23 @@ export default function SprintIssueRow({ issue, onSelect }: Props) {
 
       {/* Key */}
       <td className="px-4 py-3">
-        <span className="font-medium text-blue-600 hover:underline cursor-pointer">
-          {issue.key}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-medium text-blue-600">
+            {issue.key}
+          </span>
+          {jiraUrl && (
+            <a
+              href={jiraUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleJiraLinkClick}
+              className="p-1 hover:bg-blue-100 rounded transition-colors"
+              title="Open in JIRA"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
+            </a>
+          )}
+        </div>
       </td>
 
       {/* Summary with tags */}
