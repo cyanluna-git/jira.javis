@@ -370,7 +370,7 @@ function HeadingNode({ node, attachments }: { node: AdfNode; attachments: Attach
     'text-sm font-bold mb-2 mt-2',
   ];
 
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
   return (
     <Tag className={classes[level - 1]}>
