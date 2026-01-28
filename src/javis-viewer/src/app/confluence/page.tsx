@@ -185,7 +185,7 @@ function ConfluencePageContent() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-8 bg-white">
-              <ConfluenceRenderer content={activePage.body_storage} />
+              <ConfluenceRenderer content={activePage.body_storage} pageId={activePage.id} />
             </div>
           </>
         ) : (
