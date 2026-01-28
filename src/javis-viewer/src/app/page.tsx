@@ -1,6 +1,7 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map } from "lucide-react";
+import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones } from "lucide-react";
+import { getServiceDeskStats } from "@/lib/service-desk";
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,17 @@ async function getStats() {
       // Table doesn't exist yet
     }
 
+    // Get PSSM service desk stats using shared function
+    let serviceDeskTotal = 0;
+    let serviceDeskOpen = 0;
+    try {
+      const sdStats = await getServiceDeskStats();
+      serviceDeskTotal = sdStats.total;
+      serviceDeskOpen = sdStats.open;
+    } catch {
+      // Query failed
+    }
+
     return {
       jiraCount: jiraRes.rows[0].count,
       confluenceCount: confRes.rows[0].count,
@@ -49,10 +61,12 @@ async function getStats() {
       visionCount,
       milestoneCount,
       inProgressMilestones,
+      serviceDeskTotal,
+      serviceDeskOpen,
     };
   } catch (e) {
     console.error(e);
-    return { jiraCount: 0, confluenceCount: 0, sprintCount: 0, boardCount: 0, opsCount: 0, pendingOpsCount: 0, visionCount: 0, milestoneCount: 0, inProgressMilestones: 0 };
+    return { jiraCount: 0, confluenceCount: 0, sprintCount: 0, boardCount: 0, opsCount: 0, pendingOpsCount: 0, visionCount: 0, milestoneCount: 0, inProgressMilestones: 0, serviceDeskTotal: 0, serviceDeskOpen: 0 };
   } finally {
     client.release();
   }
@@ -193,6 +207,27 @@ export default async function Home() {
             </div>
             <div className="text-gray-400 text-sm font-medium">
               {stats.inProgressMilestones > 0 ? `${stats.inProgressMilestones} in progress` : `${stats.milestoneCount} milestones`}
+            </div>
+          </div>
+        </Link>
+
+        {/* Service Desk Card */}
+        <Link href="/service-desk" className="group block">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-rose-100 p-3 rounded-xl">
+                <Headphones className="w-8 h-8 text-rose-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 group-hover:text-rose-600 transition-colors">Service Desk</h2>
+                <p className="text-gray-500 text-sm">PSSM Ticket Queue</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900 mb-2">
+              {stats.serviceDeskTotal}
+            </div>
+            <div className="text-gray-400 text-sm font-medium">
+              {stats.serviceDeskOpen > 0 ? `${stats.serviceDeskOpen} open` : 'Tickets'}
             </div>
           </div>
         </Link>
