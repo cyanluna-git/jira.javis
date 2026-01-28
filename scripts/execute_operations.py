@@ -607,6 +607,7 @@ class ConfluenceArchiveHandler(OperationHandler):
 
     def execute(self) -> bool:
         target_ids = self.operation['target_ids']
+        op_data = self.operation.get('operation_data', {})
 
         success_count = 0
 
@@ -623,6 +624,9 @@ class ConfluenceArchiveHandler(OperationHandler):
             before_data = response.json()
             current_title = before_data.get('title', '')
             current_version = before_data.get('version', {}).get('number', 1)
+
+            # Use custom new_title if provided, otherwise prefix with [ARCHIVED]
+            new_title = op_data.get('new_title', f'[ARCHIVED] {current_title}')
 
             if current_title.startswith('[ARCHIVED]'):
                 print(f"    Page already archived")
@@ -643,7 +647,7 @@ class ConfluenceArchiveHandler(OperationHandler):
             payload = {
                 'id': page_id,
                 'status': 'current',
-                'title': f'[ARCHIVED] {current_title}',
+                'title': new_title,
                 'version': {
                     'number': current_version + 1,
                     'message': 'Archived via Javis'
@@ -665,6 +669,263 @@ class ConfluenceArchiveHandler(OperationHandler):
         return success_count == len(target_ids)
 
 
+class ConfluenceCreateFolderHandler(OperationHandler):
+    """Handle Confluence folder creation operations."""
+
+    def execute(self) -> bool:
+        op_data = self.operation['operation_data']
+
+        parent_id = op_data.get('parent_id')
+        folder_name = op_data.get('folder_name')
+        space_id = op_data.get('space_id')
+
+        if not parent_id or not folder_name:
+            print("  Error: Missing parent_id or folder_name")
+            return False
+
+        print(f"  Creating folder: {folder_name}...")
+
+        if self.dry_run:
+            print(f"    [DRY-RUN] Would create folder")
+            return True
+
+        # Create the page as a folder
+        payload = {
+            'spaceId': space_id,
+            'status': 'current',
+            'title': folder_name,
+            'parentId': parent_id,
+            'body': {
+                'representation': 'storage',
+                'value': f'<p>Auto-generated folder for {folder_name}</p>'
+            }
+        }
+
+        response = confluence_request('POST', '/wiki/api/v2/pages', json=payload)
+
+        if response and response.ok:
+            after_data = response.json()
+            new_page_id = after_data.get('id')
+            self.save_history('confluence', new_page_id, {}, after_data, ['created'])
+            print(f"    Created folder: {folder_name} (ID: {new_page_id})")
+            return True
+        else:
+            # Check if folder already exists
+            if response and response.status_code == 400:
+                print(f"    Folder may already exist: {folder_name}")
+                return True
+            print(f"    Error: {response.text if response else 'No response'}")
+            return False
+
+
+class ConfluenceRestructureHandler(OperationHandler):
+    """Handle Confluence page restructure (move with rename) operations."""
+
+    def _find_folder_by_name(self, parent_id: str, folder_name: str) -> Optional[str]:
+        """Find folder ID by name with pagination support."""
+        cursor = None
+        max_pages = 10  # Safety limit
+
+        for _ in range(max_pages):
+            url = f'/wiki/api/v2/pages/{parent_id}/children'
+            if cursor:
+                url += f'?cursor={cursor}'
+
+            response = confluence_request('GET', url)
+            if not response or not response.ok:
+                break
+
+            data = response.json()
+            children = data.get('results', [])
+
+            for child in children:
+                if child.get('title') == folder_name:
+                    return child.get('id')
+
+            # Check for next page
+            links = data.get('_links', {})
+            next_link = links.get('next')
+            if not next_link:
+                break
+
+            # Extract cursor from next link
+            import re
+            cursor_match = re.search(r'cursor=([^&]+)', next_link)
+            if cursor_match:
+                cursor = cursor_match.group(1)
+            else:
+                break
+
+        return None
+
+    def execute(self) -> bool:
+        op_data = self.operation['operation_data']
+
+        target_folder_name = op_data.get('target_folder_name')
+        target_folder_id = op_data.get('target_folder_id')
+        parent_id = op_data.get('parent_id')
+        moves = op_data.get('moves', [])
+
+        if not moves:
+            print("  Error: No moves specified")
+            return False
+
+        # If target_folder_id not provided, try to find by name with pagination
+        if not target_folder_id and target_folder_name and parent_id:
+            target_folder_id = self._find_folder_by_name(parent_id, target_folder_name)
+
+        if not target_folder_id:
+            print(f"  Error: Could not find target folder: {target_folder_name}")
+            return False
+
+        print(f"  Moving {len(moves)} pages to {target_folder_name}...")
+
+        success_count = 0
+
+        for move in moves:
+            page_id = move.get('page_id')
+            new_title = move.get('new_title')  # None if no rename needed
+
+            print(f"    Moving {page_id}...")
+
+            # Get current page
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}')
+
+            if not response or not response.ok:
+                print(f"      Error fetching page")
+                continue
+
+            before_data = response.json()
+            current_title = before_data.get('title', '')
+            current_version = before_data.get('version', {}).get('number', 1)
+
+            # Determine final title
+            final_title = new_title if new_title else current_title
+
+            if self.dry_run:
+                if new_title:
+                    print(f"      [DRY-RUN] Would move and rename to '{final_title}'")
+                else:
+                    print(f"      [DRY-RUN] Would move (keep title)")
+                success_count += 1
+                continue
+
+            # Build update payload
+            payload = {
+                'id': page_id,
+                'status': 'current',
+                'title': final_title,
+                'parentId': target_folder_id,
+                'version': {
+                    'number': current_version + 1,
+                    'message': f'Restructured to {target_folder_name} via Javis'
+                }
+            }
+
+            response = confluence_request('PUT', f'/wiki/api/v2/pages/{page_id}', json=payload)
+
+            if response and response.ok:
+                after_data = response.json()
+                changed_fields = ['parentId']
+                if new_title:
+                    changed_fields.append('title')
+                self.save_history('confluence', page_id, before_data, after_data, changed_fields)
+
+                if new_title:
+                    print(f"      Moved and renamed to '{final_title}'")
+                else:
+                    print(f"      Moved successfully")
+                success_count += 1
+            else:
+                print(f"      Error: {response.text if response else 'No response'}")
+
+            time.sleep(0.3)
+
+        return success_count == len(moves)
+
+
+class ConfluenceAddLinkHandler(OperationHandler):
+    """Handle adding related document links to Confluence pages."""
+
+    def execute(self) -> bool:
+        op_data = self.operation['operation_data']
+
+        page_ids = op_data.get('page_ids', [])
+        page_titles = op_data.get('page_titles', [])
+        link_type = op_data.get('link_type', 'related')
+
+        if len(page_ids) < 2:
+            print("  Error: Need at least 2 pages to link")
+            return False
+
+        print(f"  Adding related links between {len(page_ids)} pages...")
+
+        if self.dry_run:
+            print(f"    [DRY-RUN] Would add related links")
+            return True
+
+        success_count = 0
+
+        # For each page, add a "Related Documents" section with links to others
+        for i, page_id in enumerate(page_ids):
+            # Get current page
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}', params={
+                'body-format': 'storage'
+            })
+
+            if not response or not response.ok:
+                print(f"    Error fetching page {page_id}")
+                continue
+
+            before_data = response.json()
+            current_body = before_data.get('body', {}).get('storage', {}).get('value', '')
+            current_version = before_data.get('version', {}).get('number', 1)
+
+            # Build related links section
+            other_pages = [(pid, ptitle) for j, (pid, ptitle) in enumerate(zip(page_ids, page_titles)) if j != i]
+            links_html = '<h2>Related Documents</h2><ul>'
+            for other_id, other_title in other_pages:
+                links_html += f'<li><ac:link><ri:page ri:content-id="{other_id}"/><ac:plain-text-link-body><![CDATA[{other_title}]]></ac:plain-text-link-body></ac:link></li>'
+            links_html += '</ul>'
+
+            # Check if already has Related Documents section
+            if 'Related Documents' in current_body:
+                print(f"    Page {page_id} already has Related Documents section")
+                success_count += 1
+                continue
+
+            # Append to body
+            new_body = current_body + '\n<hr/>\n' + links_html
+
+            payload = {
+                'id': page_id,
+                'status': 'current',
+                'title': before_data.get('title'),
+                'body': {
+                    'representation': 'storage',
+                    'value': new_body
+                },
+                'version': {
+                    'number': current_version + 1,
+                    'message': 'Added related document links via Javis'
+                }
+            }
+
+            response = confluence_request('PUT', f'/wiki/api/v2/pages/{page_id}', json=payload)
+
+            if response and response.ok:
+                after_data = response.json()
+                self.save_history('confluence', page_id, before_data, after_data, ['body'])
+                print(f"    Added links to page {page_id}")
+                success_count += 1
+            else:
+                print(f"    Error: {response.text if response else 'No response'}")
+
+            time.sleep(0.3)
+
+        return success_count == len(page_ids)
+
+
 # --- Handler Registry ---
 
 HANDLERS = {
@@ -675,10 +936,12 @@ HANDLERS = {
     # Confluence handlers
     ('confluence', 'merge'): ConfluenceMergeHandler,
     ('confluence', 'update'): ConfluenceUpdateHandler,
-    ('confluence', 'restructure'): ConfluenceMoveHandler,
+    ('confluence', 'restructure'): ConfluenceRestructureHandler,
     ('confluence', 'move'): ConfluenceMoveHandler,
     ('confluence', 'label'): ConfluenceLabelHandler,
     ('confluence', 'archive'): ConfluenceArchiveHandler,
+    ('confluence', 'create_folder'): ConfluenceCreateFolderHandler,
+    ('confluence', 'add_link'): ConfluenceAddLinkHandler,
 }
 
 

@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS content_operations (
   CONSTRAINT valid_target_type CHECK (target_type IN ('jira', 'confluence')),
   CONSTRAINT valid_operation_type CHECK (operation_type IN (
     'merge', 'restructure', 'summarize', 'update_field',
-    'bulk_transition', 'link_issues', 'archive', 'move'
+    'bulk_transition', 'link_issues', 'archive', 'move',
+    'create_folder', 'add_link'
   ))
 );
 

@@ -37,6 +37,7 @@ COMMANDS = {
     'context': 'cli.context',
     'tag': 'cli.tag',
     'sync': 'cli.sync',
+    'restructure': 'sprint_restructure.cli',
 }
 
 HELP_TEXT = """
@@ -47,6 +48,7 @@ Commands:
   context     View current work context
   tag         Manage lightweight issue tags
   sync        Sync data from external sources
+  restructure Reorganize Confluence pages by document type
 
 Examples:
   javis suggest                     Get 3 work suggestions
@@ -54,6 +56,9 @@ Examples:
   javis context --attention         Show items needing attention
   javis tag ASP-123 urgent          Tag an issue
   javis sync all                    Sync all data sources
+  javis restructure analyze -p "Sprint-Tumalo"    Analyze pages
+  javis restructure propose -p "Sprint-Tumalo"    Generate proposal
+  javis restructure plan -p "Sprint-Tumalo"       Create operations
 
 Use 'javis <command> --help' for detailed help on each command.
 """
