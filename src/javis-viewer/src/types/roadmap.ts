@@ -4,6 +4,8 @@ export type VisionStatus = 'active' | 'achieved' | 'archived';
 export type MilestoneStatus = 'planned' | 'in_progress' | 'completed' | 'delayed' | 'blocked';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type StreamCategory = 'backend' | 'frontend' | 'infra' | 'design' | 'qa';
+export type RiskType = 'delay' | 'blocker' | 'resource_conflict' | 'dependency_block' | 'velocity_drop';
+export type RiskStatus = 'open' | 'acknowledged' | 'mitigated' | 'resolved' | 'false_positive';
 
 // Vision - Top level strategic goal (Why)
 export interface Vision {
@@ -176,4 +178,62 @@ export const STREAM_CATEGORY_COLORS: Record<StreamCategory, string> = {
   infra: '#6B7280',    // gray
   design: '#EC4899',   // pink
   qa: '#10B981',       // green
+};
+
+// Risk Types for AI Risk Detection
+export interface Risk {
+  id: string;
+  milestone_id: string;
+  stream_id: string | null;
+  epic_key: string | null;
+  risk_type: RiskType;
+  severity: RiskLevel;
+  title: string;
+  description: string | null;
+  detected_at: string;
+  status: RiskStatus;
+  resolved_at: string | null;
+  resolution_note: string | null;
+  ai_suggestion: string | null;
+  confidence_score: number | null;
+  trigger_data: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RiskWithContext extends Risk {
+  milestone_title?: string;
+  stream_name?: string;
+  vision_title?: string;
+}
+
+export interface RiskSummary {
+  total_risks: number;
+  open_risks: number;
+  by_severity: Record<RiskLevel, number>;
+  by_type: Record<RiskType, number>;
+}
+
+export const RISK_TYPE_LABELS: Record<RiskType, string> = {
+  delay: '일정 지연',
+  blocker: '차단 이슈',
+  resource_conflict: '리소스 충돌',
+  dependency_block: '의존성 차단',
+  velocity_drop: '속도 저하',
+};
+
+export const RISK_TYPE_ICONS: Record<RiskType, string> = {
+  delay: 'clock',
+  blocker: 'x-circle',
+  resource_conflict: 'users',
+  dependency_block: 'git-branch',
+  velocity_drop: 'trending-down',
+};
+
+export const RISK_STATUS_LABELS: Record<RiskStatus, string> = {
+  open: '열림',
+  acknowledged: '인지됨',
+  mitigated: '완화됨',
+  resolved: '해결됨',
+  false_positive: '오탐',
 };

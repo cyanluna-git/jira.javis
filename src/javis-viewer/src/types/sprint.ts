@@ -21,6 +21,10 @@ export interface SprintIssue {
   status: string;
   project: string;
   raw_data: any;
+  // Bidirectional sync fields
+  local_modified_at?: string | null;
+  local_modified_fields?: string[] | null;
+  last_synced_at?: string | null;
 }
 
 export interface Assignee {

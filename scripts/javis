@@ -1,0 +1,6 @@
+#!/bin/bash
+# Javis CLI wrapper
+# Add to PATH or create alias: alias javis='python3 /path/to/scripts/javis_cli.py'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec python3 "$SCRIPT_DIR/javis_cli.py" "$@"
