@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Search, X, RotateCw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ServiceDeskTicketRow from '@/components/ServiceDeskTicketRow';
 import {
   type BusinessUnit,
@@ -10,8 +10,24 @@ import {
   type ServiceDeskTicket,
   type ServiceDeskPagination,
   BUSINESS_UNIT_LABELS,
-  CHART_COLORS,
 } from '@/types/service-desk';
+
+// Dynamic import for Recharts (reduces initial bundle size by ~200KB)
+const ServiceDeskCharts = dynamic(() => import('./ServiceDeskCharts'), {
+  loading: () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm h-80 animate-pulse">
+        <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+        <div className="h-64 bg-gray-100 rounded"></div>
+      </div>
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm h-80 animate-pulse">
+        <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+        <div className="h-64 bg-gray-100 rounded"></div>
+      </div>
+    </div>
+  ),
+  ssr: false,
+});
 
 interface Props {
   initialData: ServiceDeskResponse & {
@@ -238,65 +254,8 @@ export default function ServiceDeskContent({ initialData }: Props) {
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Status Pie Chart */}
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-          <h3 className="font-semibold text-gray-700 mb-4">Status Distribution</h3>
-          <div className="h-64">
-            {stats.byStatus.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.byStatus}
-                    dataKey="count"
-                    nameKey="status"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={({ name, value }) => `${name} (${value})`}
-                    labelLine={false}
-                  >
-                    {stats.byStatus.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                No data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Component Bar Chart */}
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-          <h3 className="font-semibold text-gray-700 mb-4">Tickets by Component</h3>
-          <div className="h-64">
-            {stats.byComponent.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stats.byComponent.slice(0, 8)}
-                  layout="vertical"
-                  margin={{ left: 100 }}
-                >
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="component" width={100} tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                No data available
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Charts - Dynamically loaded to reduce initial bundle */}
+      <ServiceDeskCharts data={{ byStatus: stats.byStatus, byComponent: stats.byComponent }} />
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" ref={dropdownRef}>
