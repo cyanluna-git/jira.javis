@@ -17,14 +17,12 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
   const [searchKey, setSearchKey] = useState('');
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
-  const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Extract unique projects, components, and versions
-  const { projects, components, versions } = useMemo(() => {
+  // Extract unique projects and components
+  const { projects, components } = useMemo(() => {
     const projectSet = new Set<string>();
     const componentSet = new Set<string>();
-    const versionSet = new Set<string>();
 
     issues.forEach(issue => {
       projectSet.add(issue.project);
@@ -33,26 +31,25 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
       comps.forEach((comp: any) => {
         if (comp.name) componentSet.add(comp.name);
       });
-
-      const vers = issue.raw_data?.fields?.fixVersions || [];
-      vers.forEach((ver: any) => {
-        if (ver.name) versionSet.add(ver.name);
-      });
     });
 
     return {
       projects: Array.from(projectSet).sort(),
       components: Array.from(componentSet).sort(),
-      versions: Array.from(versionSet).sort(),
     };
   }, [issues]);
 
   // Filter issues
   const filteredIssues = useMemo(() => {
     return issues.filter(issue => {
-      // Search by key
-      if (searchKey && !issue.key.toLowerCase().includes(searchKey.toLowerCase())) {
-        return false;
+      // Search by key or summary
+      if (searchKey) {
+        const searchLower = searchKey.toLowerCase();
+        const matchKey = issue.key.toLowerCase().includes(searchLower);
+        const matchSummary = issue.summary.toLowerCase().includes(searchLower);
+        if (!matchKey && !matchSummary) {
+          return false;
+        }
       }
 
       // Filter by project
@@ -67,16 +64,9 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
         if (!hasMatchingComponent) return false;
       }
 
-      // Filter by version/sprint
-      if (selectedVersions.length > 0) {
-        const issueVersions = (issue.raw_data?.fields?.fixVersions || []).map((v: any) => v.name);
-        const hasMatchingVersion = selectedVersions.some(ver => issueVersions.includes(ver));
-        if (!hasMatchingVersion) return false;
-      }
-
       return true;
     });
-  }, [issues, searchKey, selectedProjects, selectedComponents, selectedVersions]);
+  }, [issues, searchKey, selectedProjects, selectedComponents]);
 
   const toggleProject = (project: string) => {
     setSelectedProjects(prev =>
@@ -94,22 +84,13 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
     );
   };
 
-  const toggleVersion = (version: string) => {
-    setSelectedVersions(prev =>
-      prev.includes(version)
-        ? prev.filter(v => v !== version)
-        : [...prev, version]
-    );
-  };
-
   const clearFilters = () => {
     setSearchKey('');
     setSelectedProjects([]);
     setSelectedComponents([]);
-    setSelectedVersions([]);
   };
 
-  const hasActiveFilters = searchKey || selectedProjects.length > 0 || selectedComponents.length > 0 || selectedVersions.length > 0;
+  const hasActiveFilters = searchKey || selectedProjects.length > 0 || selectedComponents.length > 0;
 
   return (
     <>
@@ -121,7 +102,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by key (e.g., EUV-3284)"
+              placeholder="Search by key or summary"
               value={searchKey}
               onChange={(e) => setSearchKey(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -141,7 +122,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
             <span className="font-medium">Filters</span>
             {hasActiveFilters && (
               <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
-                {(selectedProjects.length + selectedComponents.length + selectedVersions.length) || '•'}
+                {(selectedProjects.length + selectedComponents.length) || '•'}
               </span>
             )}
           </button>
@@ -161,7 +142,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
         {/* Filter Panel */}
         {showFilters && (
           <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Project Filter */}
               <div>
                 <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -224,42 +205,6 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
                   )}
                 </div>
               </div>
-
-              {/* Version/Sprint Filter */}
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-green-500 rounded"></span>
-                  Version/Sprint
-                </h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {versions.length > 0 ? (
-                    versions.map(version => {
-                      const count = issues.filter(i =>
-                        (i.raw_data?.fields?.fixVersions || []).some((v: any) => v.name === version)
-                      ).length;
-                      return (
-                        <label
-                          key={version}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedVersions.includes(version)}
-                            onChange={() => toggleVersion(version)}
-                            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                          />
-                          <span className="text-gray-700 text-sm">{version}</span>
-                          <span className="ml-auto text-sm text-gray-400">
-                            ({count})
-                          </span>
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <p className="text-gray-400 text-sm italic">No versions found</p>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -285,11 +230,6 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
               {selectedComponents.map(comp => (
                 <span key={comp} className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
                   {comp}
-                </span>
-              ))}
-              {selectedVersions.map(ver => (
-                <span key={ver} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                  {ver}
                 </span>
               ))}
             </div>
