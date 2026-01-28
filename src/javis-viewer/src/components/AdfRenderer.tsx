@@ -95,12 +95,20 @@ function AdfNodeComponent({ node, attachments = [] }: { node: AdfNode; attachmen
 
     case 'listItem':
       return (
-        <li className="ml-2">
-          {node.content?.map((child, idx) => (
-            <span key={idx} className="inline">
-              <AdfNodeComponent node={child} attachments={attachments} />
-            </span>
-          ))}
+        <li>
+          {node.content?.map((child, idx) => {
+            // paragraph 노드는 inline으로 렌더링 (줄바꿈 방지)
+            if (child.type === 'paragraph') {
+              return (
+                <span key={idx}>
+                  {child.content?.map((innerChild, innerIdx) => (
+                    <AdfNodeComponent key={innerIdx} node={innerChild} attachments={attachments} />
+                  ))}
+                </span>
+              );
+            }
+            return <AdfNodeComponent key={idx} node={child} attachments={attachments} />;
+          })}
         </li>
       );
 
