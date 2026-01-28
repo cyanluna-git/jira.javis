@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   const depth = parseInt(searchParams.get('depth') || '1', 10);
   const includeOrphans = searchParams.get('include_orphans') === 'true';
   const statsOnly = searchParams.get('stats') === 'true';
+  const searchQuery = searchParams.get('search');
 
   const client = await pool.connect();
 
@@ -26,6 +27,50 @@ export async function GET(request: NextRequest) {
         FROM confluence_v2_content
       `);
       return NextResponse.json(result.rows[0]);
+    }
+
+    // Handle search query - search database for matching pages
+    if (searchQuery && searchQuery.trim().length >= 2) {
+      const searchPattern = `%${searchQuery.replace(/[%_\\]/g, '\\$&')}%`;
+
+      // Search using FTS and trigram similarity
+      const searchResult = await client.query(`
+        SELECT
+          id, title, type, parent_id, depth, child_count, is_orphan, sort_order,
+          ts_rank(search_vector, plainto_tsquery('simple', $1)) as fts_rank,
+          similarity(title, $1) as sim
+        FROM confluence_v2_content
+        WHERE
+          type = 'page'
+          AND (
+            search_vector @@ plainto_tsquery('simple', $1)
+            OR similarity(title, $1) > 0.1
+            OR title ILIKE $2
+          )
+        ORDER BY
+          CASE WHEN title ILIKE $2 THEN 0 ELSE 1 END,
+          GREATEST(ts_rank(search_vector, plainto_tsquery('simple', $1)), similarity(title, $1)) DESC,
+          title
+        LIMIT 50
+      `, [searchQuery, searchPattern]);
+
+      const nodes: ConfluenceTreeNode[] = searchResult.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        type: row.type,
+        parent_id: row.parent_id,
+        depth: row.depth,
+        child_count: row.child_count,
+        is_orphan: row.is_orphan,
+        children: [],
+      }));
+
+      return NextResponse.json({
+        nodes,
+        total_count: searchResult.rowCount || 0,
+        orphan_count: 0,
+        is_search_result: true,
+      });
     }
 
     let nodes: ConfluenceTreeNode[] = [];

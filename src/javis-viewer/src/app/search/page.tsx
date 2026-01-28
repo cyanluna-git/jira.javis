@@ -66,6 +66,7 @@ async function searchJira(query: string, page: number): Promise<SearchResults> {
     const total = parseInt(countRes.rows[0].total);
 
     // Get paginated results with relevance ranking
+    // Note: PostgreSQL doesn't allow column aliases in ORDER BY, so we use the full expressions
     const res = await client.query(`
       SELECT
         key,
@@ -79,7 +80,7 @@ async function searchJira(query: string, page: number): Promise<SearchResults> {
           WHEN search_vector @@ plainto_tsquery('simple', $1) THEN 'content'
           ELSE 'similar'
         END as match_field,
-        ts_rank(search_vector, plainto_tsquery('simple', $1)) as rank,
+        ts_rank(search_vector, plainto_tsquery('simple', $1)) as fts_rank,
         similarity(summary, $1) as sim
       FROM jira_issues
       WHERE
@@ -88,7 +89,7 @@ async function searchJira(query: string, page: number): Promise<SearchResults> {
         OR similarity(summary, $1) > 0.1
       ORDER BY
         CASE WHEN key ILIKE $2 THEN 0 ELSE 1 END,
-        GREATEST(rank, sim) DESC,
+        GREATEST(ts_rank(search_vector, plainto_tsquery('simple', $1)), similarity(summary, $1)) DESC,
         (raw_data->'fields'->>'updated')::timestamp DESC
       LIMIT $3 OFFSET $4
     `, [query, searchPattern, PAGE_SIZE, offset]);
@@ -139,6 +140,7 @@ async function searchConfluence(query: string, page: number): Promise<SearchResu
     const total = parseInt(countRes.rows[0].total);
 
     // Get paginated results with relevance ranking
+    // Note: PostgreSQL doesn't allow column aliases in ORDER BY, so we use the full expressions
     const res = await client.query(`
       SELECT
         id,
@@ -150,7 +152,7 @@ async function searchConfluence(query: string, page: number): Promise<SearchResu
           SUBSTRING(body_storage FROM 1 FOR 200),
           ''
         ) as excerpt,
-        ts_rank(search_vector, plainto_tsquery('simple', $1)) as rank,
+        ts_rank(search_vector, plainto_tsquery('simple', $1)) as fts_rank,
         similarity(title, $1) as sim
       FROM confluence_v2_content
       WHERE
@@ -162,7 +164,7 @@ async function searchConfluence(query: string, page: number): Promise<SearchResu
         )
       ORDER BY
         CASE WHEN title ILIKE $2 THEN 0 ELSE 1 END,
-        GREATEST(rank, sim) DESC,
+        GREATEST(ts_rank(search_vector, plainto_tsquery('simple', $1)), similarity(title, $1)) DESC,
         title
       LIMIT $3 OFFSET $4
     `, [query, searchPattern, PAGE_SIZE, offset]);

@@ -57,32 +57,75 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     pageSize = 50,
   } = params;
 
-  const client = await pool.connect();
+  // Build base conditions for business unit
+  const buildConditions = (bu: BusinessUnit) => {
+    const conditions: string[] = [
+      "project = 'PSSM'",
+      HIDE_OLD_TICKETS_CONDITION,
+    ];
+    const values: (string | string[])[] = [];
+    let paramIndex = 1;
 
-  try {
-    // Build base conditions for business unit
-    const buildConditions = (bu: BusinessUnit) => {
-      const conditions: string[] = [
-        "project = 'PSSM'",
-        HIDE_OLD_TICKETS_CONDITION,  // Hide old completed/closed tickets
-      ];
-      const values: (string | string[])[] = [];
-      let paramIndex = 1;
+    const buComponents = getComponentsForBusinessUnit(bu);
+    if (buComponents) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM jsonb_array_elements(raw_data->'fields'->'components') AS comp
+        WHERE comp->>'name' = ANY($${paramIndex++})
+      )`);
+      values.push(buComponents);
+    }
 
-      const buComponents = getComponentsForBusinessUnit(bu);
-      if (buComponents) {
-        conditions.push(`EXISTS (
-          SELECT 1 FROM jsonb_array_elements(raw_data->'fields'->'components') AS comp
-          WHERE comp->>'name' = ANY($${paramIndex++})
-        )`);
-        values.push(buComponents);
-      }
+    return { conditions, values, paramIndex };
+  };
 
-      return { conditions, values, paramIndex };
-    };
+  // Build main query conditions
+  const { conditions, values, paramIndex: startParamIndex } = buildConditions(businessUnit);
+  let paramIndex = startParamIndex;
 
-    // Get tab counts in a single query
-    const tabCountsQuery = `
+  if (status) {
+    const statuses = status.split(',').map(s => s.trim().toUpperCase());
+    conditions.push(`UPPER(status) = ANY($${paramIndex++})`);
+    values.push(statuses);
+  }
+
+  if (assignee) {
+    const assignees = assignee.split(',').map(a => a.trim());
+    conditions.push(`raw_data->'fields'->'assignee'->>'accountId' = ANY($${paramIndex++})`);
+    values.push(assignees);
+  }
+
+  if (priority) {
+    const priorities = priority.split(',').map(p => p.trim());
+    conditions.push(`raw_data->'fields'->'priority'->>'name' = ANY($${paramIndex++})`);
+    values.push(priorities);
+  }
+
+  if (search) {
+    conditions.push(`(key ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
+    values.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const offset = (page - 1) * pageSize;
+
+  // Prepare tickets query params (extends base values with pagination)
+  const ticketsValues = [...values, pageSize.toString(), offset.toString()];
+  const limitParamIndex = paramIndex;
+  const offsetParamIndex = paramIndex + 1;
+
+  // Run all queries in parallel using Promise.all with pool.query for true parallelism
+  // Each query gets its own connection from the pool, enabling concurrent execution
+  const [
+    tabCountsResult,
+    statsResult,
+    statusBreakdownResult,
+    componentBreakdownResult,
+    ticketsResult,
+    filterOptionsResult,
+  ] = await Promise.all([
+    // Tab counts (independent)
+    pool.query(`
       WITH ticket_components AS (
         SELECT
           key,
@@ -106,47 +149,10 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
           WHERE c::text = ANY(ARRAY[${BUSINESS_UNIT_COMPONENTS['abatement'].map(c => `'"${c}"'`).join(',')}])
         )) as ab_count
       FROM ticket_components
-    `;
+    `),
 
-    const tabCountsResult = await client.query(tabCountsQuery);
-    const tabCounts: Record<BusinessUnit, number> = {
-      all: parseInt(tabCountsResult.rows[0].all_count) || 0,
-      'integrated-systems': parseInt(tabCountsResult.rows[0].is_count) || 0,
-      abatement: parseInt(tabCountsResult.rows[0].ab_count) || 0,
-    };
-
-    // Build main query conditions
-    const { conditions, values, paramIndex: startParamIndex } = buildConditions(businessUnit);
-    let paramIndex = startParamIndex;
-
-    if (status) {
-      const statuses = status.split(',').map(s => s.trim().toUpperCase());
-      conditions.push(`UPPER(status) = ANY($${paramIndex++})`);
-      values.push(statuses);
-    }
-
-    if (assignee) {
-      const assignees = assignee.split(',').map(a => a.trim());
-      conditions.push(`raw_data->'fields'->'assignee'->>'accountId' = ANY($${paramIndex++})`);
-      values.push(assignees);
-    }
-
-    if (priority) {
-      const priorities = priority.split(',').map(p => p.trim());
-      conditions.push(`raw_data->'fields'->'priority'->>'name' = ANY($${paramIndex++})`);
-      values.push(priorities);
-    }
-
-    if (search) {
-      conditions.push(`(key ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
-      values.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    // Get total count and stats in one query using DB aggregation
-    const statsQuery = `
+    // Stats query
+    pool.query(`
       SELECT
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE UPPER(status) NOT IN (${RESOLVED_STATUSES.map(s => `'${s}'`).join(',')})
@@ -155,47 +161,29 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
         COUNT(*) FILTER (WHERE UPPER(status) IN (${RESOLVED_STATUSES.map(s => `'${s}'`).join(',')})) as resolved
       FROM jira_issues
       ${whereClause}
-    `;
-    const statsResult = await client.query(statsQuery, values);
-    const statsRow = statsResult.rows[0];
-    const total = parseInt(statsRow.total) || 0;
-    const open = parseInt(statsRow.open) || 0;
-    const inProgress = parseInt(statsRow.in_progress) || 0;
-    const resolved = parseInt(statsRow.resolved) || 0;
-    const resolvedPercent = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    `, values),
 
-    // Get status breakdown
-    const statusBreakdownQuery = `
+    // Status breakdown
+    pool.query(`
       SELECT status, COUNT(*) as count
       FROM jira_issues
       ${whereClause}
       GROUP BY status
       ORDER BY count DESC
-    `;
-    const statusBreakdownResult = await client.query(statusBreakdownQuery, values);
-    const byStatus = statusBreakdownResult.rows.map(r => ({
-      status: r.status,
-      count: parseInt(r.count),
-    }));
+    `, values),
 
-    // Get component breakdown
-    const componentBreakdownQuery = `
+    // Component breakdown
+    pool.query(`
       SELECT comp->>'name' as component, COUNT(*) as count
       FROM jira_issues, jsonb_array_elements(raw_data->'fields'->'components') AS comp
       ${whereClause}
       GROUP BY comp->>'name'
       ORDER BY count DESC
       LIMIT 10
-    `;
-    const componentBreakdownResult = await client.query(componentBreakdownQuery, values);
-    const byComponent = componentBreakdownResult.rows.map(r => ({
-      component: r.component,
-      count: parseInt(r.count),
-    }));
+    `, values),
 
-    // Get paginated tickets
-    const offset = (page - 1) * pageSize;
-    const ticketsQuery = `
+    // Paginated tickets
+    pool.query(`
       SELECT
         key,
         summary,
@@ -217,47 +205,11 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
       FROM jira_issues
       ${whereClause}
       ORDER BY created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-    `;
-    values.push(pageSize.toString(), offset.toString());
-    const ticketsResult = await client.query(ticketsQuery, values);
+      LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
+    `, ticketsValues),
 
-    const tickets: ServiceDeskTicket[] = ticketsResult.rows.map(row => {
-      // Parse comments from JSONB and convert ADF body to text
-      const rawComments = row.comments || [];
-      const comments = Array.isArray(rawComments)
-        ? rawComments.map((c: { id?: string; author?: { accountId?: string; displayName?: string }; body?: unknown; created?: string }) => ({
-            id: c.id || '',
-            author: c.author?.accountId || '',
-            author_display_name: c.author?.displayName || 'Unknown',
-            body: adfToText(c.body),  // Convert ADF to text
-            created: c.created || '',
-          }))
-        : [];
-
-      // Parse description (may be ADF object or string)
-      const description = adfToText(row.description);
-
-      return {
-        key: row.key,
-        summary: row.summary,
-        status: row.status,
-        priority: row.priority,
-        reporter: row.reporter,
-        reporter_display_name: row.reporter_display_name,
-        assignee: row.assignee,
-        assignee_display_name: row.assignee_display_name,
-        components: row.components || [],
-        description,
-        comments,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        resolved_at: row.resolved_at,
-      };
-    });
-
-    // Get filter options (always from all PSSM tickets)
-    const filterOptionsQuery = `
+    // Filter options (independent)
+    pool.query(`
       SELECT DISTINCT
         status,
         raw_data->'fields'->'assignee'->>'accountId' as assignee_id,
@@ -265,71 +217,123 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
         raw_data->'fields'->'priority'->>'name' as priority
       FROM jira_issues
       WHERE project = 'PSSM'
-    `;
-    const filterOptionsResult = await client.query(filterOptionsQuery);
+    `),
+  ]);
 
-    const statuses = [...new Set(filterOptionsResult.rows.map(r => r.status))].filter(Boolean).sort();
-    const assigneesMap = new Map<string, string>();
-    filterOptionsResult.rows.forEach(r => {
-      if (r.assignee_id && r.assignee_name) {
-        assigneesMap.set(r.assignee_id, r.assignee_name);
-      }
-    });
-    const assignees = Array.from(assigneesMap.entries())
-      .map(([accountId, displayName]) => ({ accountId, displayName }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
-    const priorities = [...new Set(filterOptionsResult.rows.map(r => r.priority))].filter(Boolean);
+  // Process tab counts
+  const tabCounts: Record<BusinessUnit, number> = {
+    all: parseInt(tabCountsResult.rows[0].all_count) || 0,
+    'integrated-systems': parseInt(tabCountsResult.rows[0].is_count) || 0,
+    abatement: parseInt(tabCountsResult.rows[0].ab_count) || 0,
+  };
 
-    const stats: ServiceDeskStats = {
-      total,
-      open,
-      inProgress,
-      resolved,
-      resolvedPercent,
-      byStatus,
-      byComponent,
-    };
+  // Process stats
+  const statsRow = statsResult.rows[0];
+  const total = parseInt(statsRow.total) || 0;
+  const open = parseInt(statsRow.open) || 0;
+  const inProgress = parseInt(statsRow.in_progress) || 0;
+  const resolved = parseInt(statsRow.resolved) || 0;
+  const resolvedPercent = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
-    const filterOptions: ServiceDeskFilterOptions = {
-      statuses,
-      assignees,
-      priorities,
-    };
+  // Process breakdowns
+  const byStatus = statusBreakdownResult.rows.map(r => ({
+    status: r.status,
+    count: parseInt(r.count),
+  }));
+
+  const byComponent = componentBreakdownResult.rows.map(r => ({
+    component: r.component,
+    count: parseInt(r.count),
+  }));
+
+  // Process tickets
+  const tickets: ServiceDeskTicket[] = ticketsResult.rows.map(row => {
+    const rawComments = row.comments || [];
+    const comments = Array.isArray(rawComments)
+      ? rawComments.map((c: { id?: string; author?: { accountId?: string; displayName?: string }; body?: unknown; created?: string }) => ({
+          id: c.id || '',
+          author: c.author?.accountId || '',
+          author_display_name: c.author?.displayName || 'Unknown',
+          body: adfToText(c.body),
+          created: c.created || '',
+        }))
+      : [];
+
+    const description = adfToText(row.description);
 
     return {
-      tickets,
-      stats,
-      filterOptions,
-      pagination: {
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
-        totalCount: total,
-      },
-      tabCounts,
+      key: row.key,
+      summary: row.summary,
+      status: row.status,
+      priority: row.priority,
+      reporter: row.reporter,
+      reporter_display_name: row.reporter_display_name,
+      assignee: row.assignee,
+      assignee_display_name: row.assignee_display_name,
+      components: row.components || [],
+      description,
+      comments,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      resolved_at: row.resolved_at,
     };
-  } finally {
-    client.release();
-  }
+  });
+
+  // Process filter options
+  const statuses = [...new Set(filterOptionsResult.rows.map(r => r.status))].filter(Boolean).sort();
+  const assigneesMap = new Map<string, string>();
+  filterOptionsResult.rows.forEach(r => {
+    if (r.assignee_id && r.assignee_name) {
+      assigneesMap.set(r.assignee_id, r.assignee_name);
+    }
+  });
+  const assignees = Array.from(assigneesMap.entries())
+    .map(([accountId, displayName]) => ({ accountId, displayName }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const priorities = [...new Set(filterOptionsResult.rows.map(r => r.priority))].filter(Boolean);
+
+  const stats: ServiceDeskStats = {
+    total,
+    open,
+    inProgress,
+    resolved,
+    resolvedPercent,
+    byStatus,
+    byComponent,
+  };
+
+  const filterOptions: ServiceDeskFilterOptions = {
+    statuses,
+    assignees,
+    priorities,
+  };
+
+  return {
+    tickets,
+    stats,
+    filterOptions,
+    pagination: {
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+      totalCount: total,
+    },
+    tabCounts,
+  };
 }
 
 // Simple stats for home page
 export async function getServiceDeskStats(): Promise<{ total: number; open: number }> {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(*) FILTER (WHERE UPPER(status) NOT IN (${RESOLVED_STATUSES.map(s => `'${s}'`).join(',')})) as open
-      FROM jira_issues
-      WHERE project = 'PSSM'
-        AND ${HIDE_OLD_TICKETS_CONDITION}
-    `);
-    return {
-      total: parseInt(result.rows[0].total) || 0,
-      open: parseInt(result.rows[0].open) || 0,
-    };
-  } finally {
-    client.release();
-  }
+  const result = await pool.query(`
+    SELECT
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE UPPER(status) NOT IN (${RESOLVED_STATUSES.map(s => `'${s}'`).join(',')})) as open
+    FROM jira_issues
+    WHERE project = 'PSSM'
+      AND ${HIDE_OLD_TICKETS_CONDITION}
+  `);
+  return {
+    total: parseInt(result.rows[0].total) || 0,
+    open: parseInt(result.rows[0].open) || 0,
+  };
 }

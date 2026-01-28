@@ -29,11 +29,47 @@ export default function ConfluenceTree({
   onViewModeChange,
 }: Props) {
   const [nodes, setNodes] = useState<ConfluenceTreeNode[]>([]);
+  const [searchResults, setSearchResults] = useState<ConfluenceTreeNode[]>([]);
   const [stats, setStats] = useState<TreeStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch search results when debounced query changes
+  useEffect(() => {
+    if (debouncedSearch.trim().length >= 2) {
+      fetchSearchResults(debouncedSearch);
+    } else {
+      setSearchResults([]);
+    }
+  }, [debouncedSearch]);
+
+  // Fetch search results from API
+  const fetchSearchResults = async (query: string) => {
+    setSearchLoading(true);
+    try {
+      const res = await fetch(`/api/confluence/tree?search=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.nodes || []);
+      }
+    } catch (error) {
+      console.error('Error searching:', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   // Fetch tree statistics
   const fetchStats = async () => {
@@ -124,28 +160,14 @@ export default function ConfluenceTree({
     });
   };
 
-  // Filter nodes by search query
-  const filterNodes = (nodes: ConfluenceTreeNode[], query: string): ConfluenceTreeNode[] => {
-    if (!query.trim()) return nodes;
-
-    const lowerQuery = query.toLowerCase();
-    return nodes.filter(node => {
-      const matchesTitle = node.title.toLowerCase().includes(lowerQuery);
-      const hasMatchingChildren = node.children.length > 0 &&
-        filterNodes(node.children, query).length > 0;
-      return matchesTitle || hasMatchingChildren;
-    }).map(node => ({
-      ...node,
-      children: filterNodes(node.children, query),
-    }));
-  };
-
   useEffect(() => {
     fetchStats();
     fetchRootNodes();
   }, [viewMode]);
 
-  const filteredNodes = filterNodes(nodes, searchQuery);
+  // Determine which nodes to display
+  const isSearching = debouncedSearch.trim().length >= 2;
+  const displayNodes = isSearching ? searchResults : nodes;
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -205,19 +227,24 @@ export default function ConfluenceTree({
 
       {/* Tree Content */}
       <div className="flex-1 overflow-y-auto p-2">
-        {loading ? (
+        {loading || searchLoading ? (
           <div className="flex items-center justify-center py-8 text-gray-500">
             <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-            로딩 중...
+            {searchLoading ? '검색 중...' : '로딩 중...'}
           </div>
-        ) : filteredNodes.length === 0 ? (
+        ) : displayNodes.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>{searchQuery ? '검색 결과가 없습니다' : '페이지가 없습니다'}</p>
+            <p>{isSearching ? '검색 결과가 없습니다' : '페이지가 없습니다'}</p>
           </div>
         ) : (
           <div className="space-y-0.5">
-            {filteredNodes.map(node => (
+            {isSearching && (
+              <div className="text-xs text-gray-500 px-2 py-1 mb-2">
+                {displayNodes.length}개 검색 결과
+              </div>
+            )}
+            {displayNodes.map(node => (
               <TreeNode
                 key={node.id}
                 node={node}
