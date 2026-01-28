@@ -1,6 +1,6 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones } from "lucide-react";
+import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones, Users } from "lucide-react";
 import { getServiceDeskStats } from "@/lib/service-desk";
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +51,18 @@ async function getStats() {
       // Query failed
     }
 
+    // Get team members stats
+    let memberCount = 0;
+    let activeMemberCount = 0;
+    try {
+      const memberRes = await client.query('SELECT COUNT(*) FROM team_members');
+      const activeRes = await client.query("SELECT COUNT(*) FROM team_members WHERE is_active = true");
+      memberCount = parseInt(memberRes.rows[0].count);
+      activeMemberCount = parseInt(activeRes.rows[0].count);
+    } catch {
+      // Table doesn't exist yet
+    }
+
     return {
       jiraCount: jiraRes.rows[0].count,
       confluenceCount: confRes.rows[0].count,
@@ -63,10 +75,12 @@ async function getStats() {
       inProgressMilestones,
       serviceDeskTotal,
       serviceDeskOpen,
+      memberCount,
+      activeMemberCount,
     };
   } catch (e) {
     console.error(e);
-    return { jiraCount: 0, confluenceCount: 0, sprintCount: 0, boardCount: 0, opsCount: 0, pendingOpsCount: 0, visionCount: 0, milestoneCount: 0, inProgressMilestones: 0, serviceDeskTotal: 0, serviceDeskOpen: 0 };
+    return { jiraCount: 0, confluenceCount: 0, sprintCount: 0, boardCount: 0, opsCount: 0, pendingOpsCount: 0, visionCount: 0, milestoneCount: 0, inProgressMilestones: 0, serviceDeskTotal: 0, serviceDeskOpen: 0, memberCount: 0, activeMemberCount: 0 };
   } finally {
     client.release();
   }
@@ -228,6 +242,27 @@ export default async function Home() {
             </div>
             <div className="text-gray-400 text-sm font-medium">
               {stats.serviceDeskOpen > 0 ? `${stats.serviceDeskOpen} open` : 'Tickets'}
+            </div>
+          </div>
+        </Link>
+
+        {/* Members Card */}
+        <Link href="/members" className="group block">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-cyan-100 p-3 rounded-xl">
+                <Users className="w-8 h-8 text-cyan-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">Members</h2>
+                <p className="text-gray-500 text-sm">Team Directory</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900 mb-2">
+              {stats.memberCount}
+            </div>
+            <div className="text-gray-400 text-sm font-medium">
+              {stats.activeMemberCount > 0 ? `${stats.activeMemberCount} active` : 'Team Members'}
             </div>
           </div>
         </Link>
