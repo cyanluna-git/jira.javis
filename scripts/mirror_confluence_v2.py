@@ -28,7 +28,7 @@ TOKEN = config.get("JIRA_TOKEN")
 
 # DB Config
 DB_HOST = "localhost"
-DB_PORT = "5432"
+DB_PORT = config.get("DB_PORT", "5439")
 DB_NAME = "javis_brain"
 DB_USER = "javis"
 DB_PASS = config.get("JAVIS_DB_PASSWORD", "javis_password")
@@ -128,33 +128,124 @@ def save_content(conn, item, content_type):
 def sync_v2_resource(resource_type):
     print(f"🚀 Syncing {resource_type}...")
     conn = get_db_connection()
-    
+
     # Initial URL
     current_url = f"/api/v2/spaces/{SPACE_ID}/{resource_type}?limit=50"
     if resource_type == 'pages':
         current_url += "&body-format=storage"
-        
+
     total = 0
     while current_url:
         data = api_get(current_url)
         if not data or 'results' not in data:
             break
-            
+
         results = data['results']
         for item in results:
             save_content(conn, item, resource_type.rstrip('s'))
             total += 1
             if total % 10 == 0: print(f"  - {resource_type}: {total} synced...")
-        
+
         conn.commit()
         next_link = data.get('_links', {}).get('next')
         current_url = next_link # v2 next links are usually relative from /wiki
-        
+
     conn.close()
     print(f"✅ Total {resource_type}: {total}")
 
+def fetch_folder_details(folder_id):
+    """Fetch full folder details including parent info"""
+    endpoint = f"/api/v2/folders/{folder_id}"
+    return api_get(endpoint)
+
+def sync_folders_recursive():
+    """Sync folders by traversing the content tree using direct-children endpoint"""
+    print("🚀 Syncing folders recursively...")
+    conn = get_db_connection()
+
+    # Get all root pages first
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM confluence_v2_content WHERE parent_id IS NULL AND type = 'page'")
+    root_pages = [row[0] for row in cur.fetchall()]
+
+    # Also get pages that might have folder children
+    cur.execute("SELECT DISTINCT id FROM confluence_v2_content WHERE type = 'page'")
+    all_pages = [row[0] for row in cur.fetchall()]
+
+    # Queue for BFS: start with root pages
+    queue = list(root_pages)
+    visited_pages = set()
+    folder_count = 0
+
+    while queue:
+        page_id = queue.pop(0)
+        if page_id in visited_pages:
+            continue
+        visited_pages.add(page_id)
+
+        # Get direct children of this page
+        current_url = f"/api/v2/pages/{page_id}/direct-children?limit=100"
+        while current_url:
+            data = api_get(current_url)
+            if not data or 'results' not in data:
+                break
+
+            for child in data['results']:
+                child_type = child.get('type')
+                child_id = child.get('id')
+
+                if child_type == 'folder':
+                    # Fetch full folder details
+                    folder_data = fetch_folder_details(child_id)
+                    if folder_data:
+                        save_content(conn, folder_data, 'folder')
+                        folder_count += 1
+                        if folder_count % 10 == 0:
+                            print(f"  - folders: {folder_count} synced...")
+                    # Add folder to queue to check its children
+                    queue.append(child_id)
+                elif child_type == 'page' and child_id not in visited_pages:
+                    queue.append(child_id)
+
+            conn.commit()
+            next_link = data.get('_links', {}).get('next')
+            current_url = next_link
+
+    # Also traverse folders to find nested folders
+    cur.execute("SELECT id FROM confluence_v2_content WHERE type = 'folder'")
+    folder_ids = [row[0] for row in cur.fetchall()]
+
+    for folder_id in folder_ids:
+        if folder_id in visited_pages:
+            continue
+        visited_pages.add(folder_id)
+
+        current_url = f"/api/v2/folders/{folder_id}/direct-children?limit=100"
+        while current_url:
+            data = api_get(current_url)
+            if not data or 'results' not in data:
+                break
+
+            for child in data['results']:
+                child_type = child.get('type')
+                child_id = child.get('id')
+
+                if child_type == 'folder':
+                    folder_data = fetch_folder_details(child_id)
+                    if folder_data:
+                        save_content(conn, folder_data, 'folder')
+                        folder_count += 1
+                        folder_ids.append(child_id)  # Add to list for further traversal
+
+            conn.commit()
+            next_link = data.get('_links', {}).get('next')
+            current_url = next_link
+
+    conn.close()
+    print(f"✅ Total folders: {folder_count}")
+
 if __name__ == "__main__":
     init_db()
-    sync_v2_resource('folders')
-    sync_v2_resource('pages')
+    sync_v2_resource('pages')  # Sync pages first
+    sync_folders_recursive()    # Then sync folders by traversing the tree
     print("\n🎉 Done!")

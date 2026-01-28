@@ -34,13 +34,13 @@ JIRA_TOKEN = config.get("JIRA_TOKEN")
 
 # DB Config
 DB_HOST = "localhost"
-DB_PORT = "5432"
+DB_PORT = config.get("DB_PORT", "5432")
 DB_NAME = "javis_brain"
 DB_USER = "javis"
 DB_PASS = config.get("JAVIS_DB_PASSWORD", "javis_password")
 
 # Projects to fetch
-TARGET_PROJECTS = ["ASP", "PSSM"]
+TARGET_PROJECTS = ["EUV", "ASP", "PSSM"]
 
 if not JIRA_URL or not JIRA_TOKEN:
     print("❌ Error: JIRA_URL or JIRA_TOKEN missing in .env")
