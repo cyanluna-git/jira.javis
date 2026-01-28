@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(md5:*)",
+      "Bash(pg_restore:*)",
+      "Bash(PGPASSWORD=javis_password psql:*)",
+      "Bash(gunzip:*)",
+      "Bash(psql:*)",
+      "Bash(gemini --resume:*)",
+      "Bash(npm run build:*)",
+      "Bash(pnpm build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: add session summary workthrough\n\n- Summarize all 13 commits from today''s session\n- Document completed features and bug fixes\n- List all working pages with their functionality\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(echo:*)",
+      "Bash(gemini:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: implement Full-Text Search with PostgreSQL GIN indexes\n\n- Add tsvector columns with auto-update triggers\n- Add GIN indexes for FTS and trigram similarity\n- Use plainto_tsquery for safe special character handling\n- Add escapeIlike function to prevent wildcard injection\n- Support Korean text with pg_trgm similarity matching\n- Relevance ranking with ts_rank and similarity\n\nGemini review: Fixed tsquery syntax error risk, ILIKE injection\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(grep:*)",
+      "Bash(python3:*)",
+      "Bash(source /Users/cyanluna-pro16/dev/jira.javis/src/javis-viewer/.env)",
+      "Bash(PGPASSWORD=$POSTGRES_PASSWORD psql:*)",
+      "Bash(source .env)",
+      "Bash(brew services:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

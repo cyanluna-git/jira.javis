@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import VisionCard from '@/components/VisionCard';
 import MilestoneCard from '@/components/MilestoneCard';
+import RiskPanel from '@/components/RiskPanel';
 import type { Vision, RoadmapSummary, QuarterlyMilestones, MilestoneWithStreams } from '@/types/roadmap';
 
 interface VisionWithAggregates extends Vision {
@@ -183,6 +184,11 @@ export default function RoadmapPage() {
             </div>
           </div>
         )}
+
+        {/* AI Risk Panel */}
+        <div className="mb-8">
+          <RiskPanel onRiskClick={(risk) => console.log('Risk clicked:', risk)} />
+        </div>
 
         {/* Filters */}
         <div className="flex items-center gap-4 mb-6">

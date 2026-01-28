@@ -30,3 +30,8 @@ venv/
 .vscode/
 .idea/
 *.swp
+
+# Workthrough VitePress
+workthrough/node_modules/
+workthrough/.vitepress/cache/
+workthrough/.vitepress/dist/
