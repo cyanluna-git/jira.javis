@@ -111,6 +111,7 @@ def get_issues_by_status(status: str, project: str = None, limit: int = 50) -> L
 
 def get_blocked_issues(project: str = None, limit: int = 50) -> List[Dict]:
     """Get issues that appear to be blocked (have blocking links or blocked label)."""
+    # Note: Using @> instead of ? to avoid psycopg2 parameter confusion
     query = """
         SELECT key, project, summary, status,
                raw_data->'fields'->'assignee'->>'displayName' as assignee,
@@ -118,11 +119,14 @@ def get_blocked_issues(project: str = None, limit: int = 50) -> List[Dict]:
                updated_at
         FROM jira_issues
         WHERE (
-            raw_data->'fields'->'labels' ? 'blocked'
-            OR raw_data->'fields'->'labels' ? 'blocker'
+            raw_data->'fields'->'labels' @> '["blocked"]'::jsonb
+            OR raw_data->'fields'->'labels' @> '["blocker"]'::jsonb
+            OR status = 'Blocked'
             OR EXISTS (
-                SELECT 1 FROM jsonb_array_elements(raw_data->'fields'->'issuelinks') as link
-                WHERE link->>'type' LIKE '%block%'
+                SELECT 1 FROM jsonb_array_elements(
+                    COALESCE(raw_data->'fields'->'issuelinks', '[]'::jsonb)
+                ) as link
+                WHERE link->>'type' LIKE '%%block%%'
             )
         )
     """

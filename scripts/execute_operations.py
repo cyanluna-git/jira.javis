@@ -309,12 +309,12 @@ class ConfluenceMergeHandler(OperationHandler):
         op_data = self.operation['operation_data']
         preview_data = self.operation.get('preview_data', {})
 
-        destination_id = op_data.get('destination_id')
-        source_ids = op_data.get('source_ids', [])
+        destination_id = op_data.get('destination_id') or op_data.get('primary_page_id')
+        source_ids = op_data.get('source_ids') or op_data.get('secondary_page_ids', [])
         merged_content = preview_data.get('merged_content')
 
-        if not destination_id or not merged_content:
-            print("  Error: Need destination_id and merged_content in preview")
+        if not destination_id:
+            print("  Error: Need destination_id or primary_page_id")
             return False
 
         print(f"  Merging {len(source_ids)} pages into {destination_id}...")
@@ -331,15 +331,29 @@ class ConfluenceMergeHandler(OperationHandler):
         before_data = response.json()
         current_version = before_data.get('version', {}).get('number', 1)
 
+        # Build merged content if not provided
+        if not merged_content:
+            merged_content = before_data.get('body', {}).get('storage', {}).get('value', '')
+            for source_id in source_ids:
+                src_response = confluence_request('GET', f'/wiki/api/v2/pages/{source_id}', params={
+                    'body-format': 'storage'
+                })
+                if src_response and src_response.ok:
+                    src_data = src_response.json()
+                    src_body = src_data.get('body', {}).get('storage', {}).get('value', '')
+                    src_title = src_data.get('title', 'Unknown')
+                    merged_content += f'\n<hr/>\n<h2>Merged from: {src_title}</h2>\n{src_body}'
+
         if self.dry_run:
             print(f"    [DRY-RUN] Would merge {len(source_ids)} pages")
             return True
 
         # Update destination page with merged content
+        new_title = op_data.get('merged_title', before_data.get('title'))
         payload = {
             'id': destination_id,
             'status': 'current',
-            'title': before_data.get('title'),
+            'title': new_title,
             'body': {
                 'representation': 'storage',
                 'value': merged_content
@@ -356,10 +370,9 @@ class ConfluenceMergeHandler(OperationHandler):
             after_data = response.json()
             self.save_history('confluence', destination_id, before_data, after_data, ['body'])
 
-            # Archive source pages if requested
-            if op_data.get('archive_sources'):
-                for source_id in source_ids:
-                    self._archive_page(source_id)
+            # Archive source pages
+            for source_id in source_ids:
+                self._archive_page(source_id)
 
             print(f"    Merge completed successfully")
             return True
@@ -389,13 +402,283 @@ class ConfluenceMergeHandler(OperationHandler):
             confluence_request('PUT', f'/wiki/api/v2/pages/{page_id}', json=payload)
 
 
+class ConfluenceUpdateHandler(OperationHandler):
+    """Handle Confluence page update operations."""
+
+    def execute(self) -> bool:
+        op_data = self.operation['operation_data']
+        target_ids = self.operation['target_ids']
+
+        if not target_ids:
+            print("  Error: No target pages specified")
+            return False
+
+        success_count = 0
+
+        for page_id in target_ids:
+            print(f"  Updating page {page_id}...")
+
+            # Get current page
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}', params={
+                'body-format': 'storage'
+            })
+
+            if not response or not response.ok:
+                print(f"    Error fetching page")
+                continue
+
+            before_data = response.json()
+            current_version = before_data.get('version', {}).get('number', 1)
+
+            # Determine what to update
+            new_title = op_data.get('title', before_data.get('title'))
+            new_body = op_data.get('body')
+
+            if self.dry_run:
+                print(f"    [DRY-RUN] Would update page")
+                success_count += 1
+                continue
+
+            payload = {
+                'id': page_id,
+                'status': 'current',
+                'title': new_title,
+                'version': {
+                    'number': current_version + 1,
+                    'message': op_data.get('message', 'Updated via Javis')
+                }
+            }
+
+            if new_body:
+                payload['body'] = {
+                    'representation': 'storage',
+                    'value': new_body
+                }
+
+            response = confluence_request('PUT', f'/wiki/api/v2/pages/{page_id}', json=payload)
+
+            if response and response.ok:
+                after_data = response.json()
+                self.save_history('confluence', page_id, before_data, after_data, ['title', 'body'])
+                print(f"    Updated successfully")
+                success_count += 1
+            else:
+                print(f"    Error: {response.text if response else 'No response'}")
+
+            time.sleep(0.3)
+
+        return success_count == len(target_ids)
+
+
+class ConfluenceMoveHandler(OperationHandler):
+    """Handle Confluence page move operations."""
+
+    def execute(self) -> bool:
+        op_data = self.operation['operation_data']
+        target_ids = self.operation['target_ids']
+
+        new_parent_id = op_data.get('new_parent_id')
+
+        if not new_parent_id:
+            print("  Error: new_parent_id required")
+            return False
+
+        success_count = 0
+
+        for page_id in target_ids:
+            print(f"  Moving page {page_id} to parent {new_parent_id}...")
+
+            # Get current page
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}')
+
+            if not response or not response.ok:
+                print(f"    Error fetching page")
+                continue
+
+            before_data = response.json()
+            current_version = before_data.get('version', {}).get('number', 1)
+
+            if self.dry_run:
+                print(f"    [DRY-RUN] Would move page")
+                success_count += 1
+                continue
+
+            payload = {
+                'id': page_id,
+                'status': 'current',
+                'title': before_data.get('title'),
+                'parentId': new_parent_id,
+                'version': {
+                    'number': current_version + 1,
+                    'message': f'Moved to new parent via Javis'
+                }
+            }
+
+            response = confluence_request('PUT', f'/wiki/api/v2/pages/{page_id}', json=payload)
+
+            if response and response.ok:
+                after_data = response.json()
+                self.save_history('confluence', page_id, before_data, after_data, ['parentId'])
+                print(f"    Moved successfully")
+                success_count += 1
+            else:
+                print(f"    Error: {response.text if response else 'No response'}")
+
+            time.sleep(0.3)
+
+        return success_count == len(target_ids)
+
+
+class ConfluenceLabelHandler(OperationHandler):
+    """Handle Confluence label operations."""
+
+    def execute(self) -> bool:
+        op_data = self.operation['operation_data']
+        target_ids = self.operation['target_ids']
+
+        add_labels = op_data.get('add_labels', [])
+        remove_labels = op_data.get('remove_labels', [])
+
+        if not add_labels and not remove_labels:
+            print("  Error: No labels to add or remove")
+            return False
+
+        success_count = 0
+
+        for page_id in target_ids:
+            print(f"  Updating labels on page {page_id}...")
+
+            # Get current labels for history
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}/labels')
+            before_labels = []
+            if response and response.ok:
+                before_labels = [l['name'] for l in response.json().get('results', [])]
+
+            if self.dry_run:
+                print(f"    [DRY-RUN] Would add {add_labels}, remove {remove_labels}")
+                success_count += 1
+                continue
+
+            # Add labels
+            for label in add_labels:
+                response = confluence_request('POST', f'/wiki/api/v2/pages/{page_id}/labels', json={
+                    'name': label
+                })
+                if response and response.ok:
+                    print(f"    Added label: {label}")
+                elif response and response.status_code != 400:  # 400 = already exists
+                    print(f"    Error adding {label}: {response.text}")
+
+            # Remove labels
+            if remove_labels:
+                response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}/labels')
+                if response and response.ok:
+                    label_map = {l['name']: l['id'] for l in response.json().get('results', [])}
+                    for label in remove_labels:
+                        if label in label_map:
+                            del_response = confluence_request(
+                                'DELETE',
+                                f'/wiki/api/v2/pages/{page_id}/labels/{label_map[label]}'
+                            )
+                            if del_response and del_response.ok:
+                                print(f"    Removed label: {label}")
+
+            # Get after labels for history
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}/labels')
+            after_labels = []
+            if response and response.ok:
+                after_labels = [l['name'] for l in response.json().get('results', [])]
+
+            self.save_history(
+                'confluence', page_id,
+                {'labels': before_labels},
+                {'labels': after_labels},
+                ['labels']
+            )
+
+            success_count += 1
+            time.sleep(0.3)
+
+        return success_count == len(target_ids)
+
+
+class ConfluenceArchiveHandler(OperationHandler):
+    """Handle Confluence page archive operations."""
+
+    def execute(self) -> bool:
+        target_ids = self.operation['target_ids']
+
+        success_count = 0
+
+        for page_id in target_ids:
+            print(f"  Archiving page {page_id}...")
+
+            # Get current page
+            response = confluence_request('GET', f'/wiki/api/v2/pages/{page_id}')
+
+            if not response or not response.ok:
+                print(f"    Error fetching page")
+                continue
+
+            before_data = response.json()
+            current_title = before_data.get('title', '')
+            current_version = before_data.get('version', {}).get('number', 1)
+
+            if current_title.startswith('[ARCHIVED]'):
+                print(f"    Page already archived")
+                success_count += 1
+                continue
+
+            if self.dry_run:
+                print(f"    [DRY-RUN] Would archive page")
+                success_count += 1
+                continue
+
+            # Add archived label
+            confluence_request('POST', f'/wiki/api/v2/pages/{page_id}/labels', json={
+                'name': 'archived'
+            })
+
+            # Update title with [ARCHIVED] prefix
+            payload = {
+                'id': page_id,
+                'status': 'current',
+                'title': f'[ARCHIVED] {current_title}',
+                'version': {
+                    'number': current_version + 1,
+                    'message': 'Archived via Javis'
+                }
+            }
+
+            response = confluence_request('PUT', f'/wiki/api/v2/pages/{page_id}', json=payload)
+
+            if response and response.ok:
+                after_data = response.json()
+                self.save_history('confluence', page_id, before_data, after_data, ['title', 'labels'])
+                print(f"    Archived successfully")
+                success_count += 1
+            else:
+                print(f"    Error: {response.text if response else 'No response'}")
+
+            time.sleep(0.3)
+
+        return success_count == len(target_ids)
+
+
 # --- Handler Registry ---
 
 HANDLERS = {
+    # Jira handlers
     ('jira', 'update_field'): JiraUpdateFieldHandler,
     ('jira', 'bulk_transition'): JiraBulkTransitionHandler,
     ('jira', 'link_issues'): JiraLinkIssuesHandler,
+    # Confluence handlers
     ('confluence', 'merge'): ConfluenceMergeHandler,
+    ('confluence', 'update'): ConfluenceUpdateHandler,
+    ('confluence', 'restructure'): ConfluenceMoveHandler,
+    ('confluence', 'move'): ConfluenceMoveHandler,
+    ('confluence', 'label'): ConfluenceLabelHandler,
+    ('confluence', 'archive'): ConfluenceArchiveHandler,
 }
 
 
