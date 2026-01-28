@@ -5,9 +5,13 @@ import { ExternalLink, Image as ImageIcon, ChevronDown, ChevronRight, Info, Aler
 
 interface ConfluenceRendererProps {
   content: string;
+  pageId?: string;
 }
 
-export function ConfluenceRenderer({ content }: ConfluenceRendererProps) {
+// Context to pass pageId to child components
+const PageContext = React.createContext<string | undefined>(undefined);
+
+export function ConfluenceRenderer({ content, pageId }: ConfluenceRendererProps) {
   if (!content) {
     return <p className="text-gray-400 italic">No content available</p>;
   }
@@ -17,11 +21,13 @@ export function ConfluenceRenderer({ content }: ConfluenceRendererProps) {
   const doc = parser.parseFromString(content, 'text/html');
 
   return (
-    <div className="confluence-content max-w-4xl mx-auto text-gray-900 leading-relaxed">
-      {Array.from(doc.body.childNodes).map((node, idx) => (
-        <NodeRenderer key={idx} node={node} />
-      ))}
-    </div>
+    <PageContext.Provider value={pageId}>
+      <div className="confluence-content max-w-4xl mx-auto text-gray-900 leading-relaxed">
+        {Array.from(doc.body.childNodes).map((node, idx) => (
+          <NodeRenderer key={idx} node={node} />
+        ))}
+      </div>
+    </PageContext.Provider>
   );
 }
 
@@ -336,45 +342,109 @@ function TocMacro() {
 }
 
 function AcImageRenderer({ element }: { element: Element }) {
+  const pageId = React.useContext(PageContext);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
   const attachment = element.querySelector('ri\\:attachment');
   const url = element.querySelector('ri\\:url');
 
   const filename = attachment?.getAttribute('ri:filename') || 'image';
   const alt = element.getAttribute('ac:alt') || filename;
   const width = element.getAttribute('ac:width');
-  const height = element.getAttribute('ac:height');
+  const originalWidth = element.getAttribute('ac:original-width');
+  const originalHeight = element.getAttribute('ac:original-height');
+  const layout = element.getAttribute('ac:layout') || element.getAttribute('ac:align');
+
+  // Calculate display width
+  const displayWidth = width || originalWidth;
+
+  // Style for width constraint
+  const widthStyle: React.CSSProperties = displayWidth ? { maxWidth: `${displayWidth}px` } : {};
+
+  // Alignment style (using inline-block for proper centering without div)
+  const alignStyle: React.CSSProperties = layout === 'center'
+    ? { display: 'block', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' as const }
+    : layout === 'right'
+    ? { display: 'block', marginLeft: 'auto', textAlign: 'right' as const }
+    : { display: 'inline-block' };
+
+  // Combined style
+  const containerStyle: React.CSSProperties = { ...widthStyle, ...alignStyle, marginBottom: '0.75rem' };
 
   // If there's a direct URL
   if (url) {
     const urlValue = url.getAttribute('ri:value');
     if (urlValue) {
       return (
-        <div className="mb-3">
+        <span style={containerStyle}>
           <img
             src={urlValue}
             alt={alt}
             className="max-w-full h-auto rounded border border-gray-200"
-            style={width ? { maxWidth: `${width}px` } : {}}
           />
-        </div>
+        </span>
       );
     }
   }
 
-  // Show placeholder for attachments (would need authentication)
+  // For attachments, use the proxy API
+  if (attachment && pageId) {
+    const proxyUrl = `/api/confluence/attachment/${pageId}/${encodeURIComponent(filename)}`;
+
+    if (imageError) {
+      // Show placeholder on error - using span for inline compatibility
+      return (
+        <span
+          style={{ ...containerStyle, padding: '1.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+          className="inline-flex flex-col items-center gap-2 text-gray-500"
+        >
+          <ImageIcon className="w-10 h-10 opacity-50" />
+          <span className="text-center">
+            <span className="block font-medium text-gray-700">{filename}</span>
+            <span className="block text-sm text-gray-400">Failed to load image</span>
+          </span>
+        </span>
+      );
+    }
+
+    return (
+      <span style={containerStyle}>
+        {!imageLoaded && (
+          <span
+            style={{ display: 'block', padding: '1.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+            className="animate-pulse text-center"
+          >
+            <ImageIcon className="w-10 h-10 mx-auto opacity-30" />
+          </span>
+        )}
+        <img
+          src={proxyUrl}
+          alt={alt}
+          className="max-w-full h-auto rounded border border-gray-200"
+          style={!imageLoaded ? { display: 'none' } : {}}
+          onError={() => setImageError(true)}
+          onLoad={() => setImageLoaded(true)}
+        />
+      </span>
+    );
+  }
+
+  // Show placeholder if no pageId available - using span for inline compatibility
   return (
-    <div className="mb-3 p-6 bg-gray-100 rounded-lg border border-gray-200 text-center">
-      <div className="flex flex-col items-center gap-2 text-gray-500">
-        <ImageIcon className="w-10 h-10 opacity-50" />
-        <div>
-          <div className="font-medium text-gray-700">{filename}</div>
-          <div className="text-sm text-gray-400">Image attachment</div>
-          {width && height && (
-            <div className="text-xs text-gray-400 mt-1">{width} × {height}</div>
-          )}
-        </div>
-      </div>
-    </div>
+    <span
+      style={{ ...containerStyle, padding: '1.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+      className="inline-flex flex-col items-center gap-2 text-gray-500"
+    >
+      <ImageIcon className="w-10 h-10 opacity-50" />
+      <span className="text-center">
+        <span className="block font-medium text-gray-700">{filename}</span>
+        <span className="block text-sm text-gray-400">Image attachment</span>
+        {originalWidth && originalHeight && (
+          <span className="block text-xs text-gray-400 mt-1">{originalWidth} × {originalHeight}</span>
+        )}
+      </span>
+    </span>
   );
 }
 
