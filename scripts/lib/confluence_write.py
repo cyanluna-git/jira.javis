@@ -279,19 +279,21 @@ class ConfluenceWriter:
         """
         results = []
 
-        for label in labels:
-            data = {'name': label}
+        # Use REST API v1 for labels (v2 doesn't support label POST)
+        # Format: POST /wiki/rest/api/content/{id}/label
+        # Body: [{"name": "label1"}, {"name": "label2"}]
+        label_data = [{'name': label, 'prefix': 'global'} for label in labels]
 
-            self._log(f"Adding label '{label}' to page {page_id}")
+        self._log(f"Adding labels {labels} to page {page_id}")
 
-            try:
-                result = api_request('POST', f'/api/v2/pages/{page_id}/labels', data)
-                if result:
-                    results.append(result)
-            except ConfluenceAPIError as e:
-                # Label might already exist
-                if e.status_code != 400:
-                    raise
+        try:
+            result = api_request('POST', f'/rest/api/content/{page_id}/label', label_data)
+            if result:
+                results = result.get('results', [result])
+        except ConfluenceAPIError as e:
+            # Label might already exist (400) or other recoverable error
+            if e.status_code not in (400, 409):
+                raise
 
         # Update local DB
         db.execute("""
