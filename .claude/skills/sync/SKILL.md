@@ -1,6 +1,6 @@
 ---
 name: sync
-description: Jira/Confluence/Boards/Members 전체 동기화. 사용법: /sync all, /sync issues, /sync boards, /sync members, /sync confluence, /sync status
+description: Jira/Confluence/Bitbucket/Boards/Members 전체 동기화. 사용법: /sync all, /sync issues, /sync boards, /sync members, /sync confluence, /sync bitbucket, /sync status
 ---
 
 # /sync - 전체 데이터 동기화
@@ -122,12 +122,35 @@ python3 scripts/sync_roadmap_epics.py
 
 ---
 
-### `/sync bitbucket`
-Bitbucket Commits 동기화
+### `/sync bitbucket [--repos-only|--commits-only|--prs-only] [--days N]`
+Bitbucket Commits, PRs, Repositories 동기화
 
 ```bash
+# 전체 동기화 (Repos + Commits + PRs)
 python3 scripts/sync_bitbucket.py
+
+# 레포지토리만
+python3 scripts/sync_bitbucket.py --repos-only
+
+# 커밋만 (기본 30일)
+python3 scripts/sync_bitbucket.py --commits-only
+
+# 최근 7일 커밋만
+python3 scripts/sync_bitbucket.py --commits-only --days 7
+
+# PR만 (OPEN + MERGED)
+python3 scripts/sync_bitbucket.py --prs-only
+
+# Dry run
+python3 scripts/sync_bitbucket.py --dry-run
 ```
+
+**동기화 대상:**
+- `bitbucket_repositories`: 워크스페이스 내 모든 레포지토리
+- `bitbucket_commits`: 커밋 이력 + Jira 이슈 키 추출
+- `bitbucket_pullrequests`: OPEN/MERGED PR + Jira 이슈 키 추출
+
+**참고:** 레포지토리가 env에 지정되지 않으면 워크스페이스 전체를 자동 탐색합니다.
 
 ---
 
@@ -157,6 +180,30 @@ SELECT 'Members' as type, '-',
        COUNT(*),
        MAX(updated_at)::date
 FROM team_members WHERE is_active = true
+
+UNION ALL
+
+-- Bitbucket Repos 동기화 상태
+SELECT 'BB Repos' as type, workspace,
+       COUNT(*),
+       MAX(last_synced_at)::date
+FROM bitbucket_repositories GROUP BY workspace
+
+UNION ALL
+
+-- Bitbucket Commits 동기화 상태 (최근 30일)
+SELECT 'BB Commits' as type, '-',
+       COUNT(*),
+       MAX(synced_at)::date
+FROM bitbucket_commits WHERE committed_at > NOW() - INTERVAL '30 days'
+
+UNION ALL
+
+-- Bitbucket PRs 동기화 상태
+SELECT 'BB PRs' as type, state,
+       COUNT(*),
+       MAX(synced_at)::date
+FROM bitbucket_pullrequests GROUP BY state
 
 ORDER BY type, project;
 "
@@ -190,7 +237,9 @@ python3 scripts/sync_bidirectional.py --force-remote
 | `team_members` | 팀원 정보 | sync_member_stats.py |
 | `member_stats` | 멤버 통계 | sync_member_stats.py |
 | `confluence_v2_content` | Confluence 페이지 | sync_confluence_bidirectional.py |
-| `bitbucket_commits` | Bitbucket 커밋 | sync_bitbucket.py |
+| `bitbucket_repositories` | Bitbucket 레포지토리 | sync_bitbucket.py |
+| `bitbucket_commits` | Bitbucket 커밋 (jira_keys 추출) | sync_bitbucket.py |
+| `bitbucket_pullrequests` | Bitbucket PR (jira_keys 추출) | sync_bitbucket.py |
 | `roadmap_epic_links` | Epic-Milestone 연결 | sync_roadmap_epics.py |
 | `sync_conflicts` | 충돌 기록 | sync_bidirectional.py |
 

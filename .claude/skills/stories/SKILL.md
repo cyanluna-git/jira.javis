@@ -9,7 +9,7 @@ description: 로컬 DB 기반 Story 관리. Vision/Epic 맥락 조회, Story 목
 
 ## 데이터 소스
 
-모든 정보는 로컬 DB에서 조회합니다 (Jira와 bidirectional sync 상태):
+모든 정보는 로컬 DB에서 조회합니다 (Jira/Bitbucket과 bidirectional sync 상태):
 
 | 정보 | 테이블 |
 |------|--------|
@@ -18,6 +18,9 @@ description: 로컬 DB 기반 Story 관리. Vision/Epic 맥락 조회, Story 목
 | Epic/Story | `jira_issues` (raw_data 필드) |
 | 팀 구성 | `roadmap_vision_members` + `team_members` |
 | Epic 연결 | `roadmap_epic_links` |
+| 커밋 이력 | `bitbucket_commits` (jira_keys 필드로 Epic/Story 연결) |
+| PR 현황 | `bitbucket_pullrequests` (jira_keys 필드로 Epic/Story 연결) |
+| 레포지토리 | `bitbucket_repositories` |
 
 **DB 연결**: localhost:5439, javis_brain, user: javis
 
@@ -26,15 +29,18 @@ description: 로컬 DB 기반 Story 관리. Vision/Epic 맥락 조회, Story 목
 ## 명령어
 
 ### `/stories context [vision_title]`
-Vision의 프로젝트 맥락 조회
+Vision의 프로젝트 맥락 조회 (Bitbucket 개발 현황 포함)
 
 **출력 정보:**
 - Vision 목표 및 North Star Metric
 - Milestone 진행률 (planned/in_progress/completed)
 - Epic 현황 (전체/진행중/완료)
 - 팀 구성 및 역할
+- **Bitbucket 개발 현황** (최근 커밋, 오픈 PR, 개발자 활동)
 
 **실행:**
+
+1. **Vision/Milestone 정보:**
 ```bash
 PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
 SELECT v.title, v.description, v.status, v.north_star_metric, v.north_star_target,
@@ -48,17 +54,115 @@ ORDER BY v.created_at DESC;
 "
 ```
 
+2. **Bitbucket 개발 현황 (Vision 관련 Epic/Story 기준):**
+```bash
+PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
+-- Vision 관련 Epic keys 조회
+WITH vision_epics AS (
+    SELECT el.epic_key
+    FROM roadmap_epic_links el
+    JOIN roadmap_milestones m ON m.id = el.milestone_id
+    JOIN roadmap_visions v ON v.id = m.vision_id
+    WHERE v.title ILIKE '%{vision_title}%'
+),
+-- Epic 하위 Story keys 포함
+related_keys AS (
+    SELECT epic_key as issue_key FROM vision_epics
+    UNION
+    SELECT ji.key FROM jira_issues ji
+    JOIN vision_epics ve ON ji.raw_data->'fields'->'parent'->>'key' = ve.epic_key
+)
+-- 최근 7일 커밋 (관련 이슈)
+SELECT
+    bc.committed_at::date as date,
+    bc.author_name,
+    LEFT(bc.message, 60) as message,
+    bc.jira_keys,
+    br.slug as repo
+FROM bitbucket_commits bc
+JOIN bitbucket_repositories br ON br.uuid = bc.repo_uuid
+WHERE bc.committed_at > NOW() - INTERVAL '7 days'
+  AND bc.jira_keys && (SELECT ARRAY_AGG(issue_key) FROM related_keys)
+ORDER BY bc.committed_at DESC
+LIMIT 10;
+"
+```
+
+3. **오픈 PR 현황:**
+```bash
+PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
+WITH vision_epics AS (
+    SELECT el.epic_key
+    FROM roadmap_epic_links el
+    JOIN roadmap_milestones m ON m.id = el.milestone_id
+    JOIN roadmap_visions v ON v.id = m.vision_id
+    WHERE v.title ILIKE '%{vision_title}%'
+),
+related_keys AS (
+    SELECT epic_key as issue_key FROM vision_epics
+    UNION
+    SELECT ji.key FROM jira_issues ji
+    JOIN vision_epics ve ON ji.raw_data->'fields'->'parent'->>'key' = ve.epic_key
+)
+SELECT
+    bp.pr_number,
+    bp.title,
+    bp.state,
+    bp.author_name,
+    bp.source_branch,
+    bp.jira_keys,
+    br.slug as repo
+FROM bitbucket_pullrequests bp
+JOIN bitbucket_repositories br ON br.uuid = bp.repo_uuid
+WHERE bp.state = 'OPEN'
+  AND bp.jira_keys && (SELECT ARRAY_AGG(issue_key) FROM related_keys)
+ORDER BY bp.created_at DESC;
+"
+```
+
+4. **개발자 활동 요약 (최근 7일):**
+```bash
+PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
+WITH vision_epics AS (
+    SELECT el.epic_key
+    FROM roadmap_epic_links el
+    JOIN roadmap_milestones m ON m.id = el.milestone_id
+    JOIN roadmap_visions v ON v.id = m.vision_id
+    WHERE v.title ILIKE '%{vision_title}%'
+),
+related_keys AS (
+    SELECT epic_key as issue_key FROM vision_epics
+    UNION
+    SELECT ji.key FROM jira_issues ji
+    JOIN vision_epics ve ON ji.raw_data->'fields'->'parent'->>'key' = ve.epic_key
+)
+SELECT
+    bc.author_name,
+    COUNT(*) as commits,
+    COUNT(DISTINCT bc.repo_uuid) as repos,
+    ARRAY_AGG(DISTINCT UNNEST(bc.jira_keys)) FILTER (WHERE bc.jira_keys IS NOT NULL) as worked_on_issues
+FROM bitbucket_commits bc
+WHERE bc.committed_at > NOW() - INTERVAL '7 days'
+  AND bc.jira_keys && (SELECT ARRAY_AGG(issue_key) FROM related_keys)
+GROUP BY bc.author_name
+ORDER BY commits DESC;
+"
+```
+
 ---
 
 ### `/stories list <epic_key>`
-Epic 하위 Story 목록 조회
+Epic 하위 Story 목록 및 개발 현황 조회
 
 **출력 정보:**
 - Story key, summary, status
 - 담당자, Story Points
 - 생성/수정일
+- **Bitbucket 개발 현황** (Epic 관련 커밋/PR)
 
 **실행:**
+
+1. **Epic 및 Story 목록:**
 ```bash
 PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
 -- Epic 정보
@@ -86,6 +190,53 @@ ORDER BY
         ELSE 4
     END,
     key;
+"
+```
+
+2. **Epic 관련 최근 커밋 (7일):**
+```bash
+PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
+WITH epic_stories AS (
+    SELECT key FROM jira_issues
+    WHERE key = '{epic_key}'
+       OR raw_data->'fields'->'parent'->>'key' = '{epic_key}'
+)
+SELECT
+    bc.committed_at::date as date,
+    bc.author_name,
+    LEFT(bc.message, 50) as message,
+    bc.jira_keys,
+    br.slug as repo
+FROM bitbucket_commits bc
+JOIN bitbucket_repositories br ON br.uuid = bc.repo_uuid
+WHERE bc.committed_at > NOW() - INTERVAL '7 days'
+  AND bc.jira_keys && (SELECT ARRAY_AGG(key) FROM epic_stories)
+ORDER BY bc.committed_at DESC
+LIMIT 10;
+"
+```
+
+3. **Epic 관련 오픈 PR:**
+```bash
+PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -c "
+WITH epic_stories AS (
+    SELECT key FROM jira_issues
+    WHERE key = '{epic_key}'
+       OR raw_data->'fields'->'parent'->>'key' = '{epic_key}'
+)
+SELECT
+    bp.pr_number,
+    LEFT(bp.title, 50) as title,
+    bp.state,
+    bp.author_name,
+    bp.source_branch,
+    bp.jira_keys,
+    br.slug as repo
+FROM bitbucket_pullrequests bp
+JOIN bitbucket_repositories br ON br.uuid = bp.repo_uuid
+WHERE bp.jira_keys && (SELECT ARRAY_AGG(key) FROM epic_stories)
+ORDER BY bp.created_at DESC
+LIMIT 10;
 "
 ```
 
