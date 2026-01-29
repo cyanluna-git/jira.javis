@@ -1,6 +1,6 @@
 ---
-name: risk
-description: 프로젝트 리스크 감지 및 관리. 자동 감지, 리스크 목록, 분석, 해결. 사용법: /risk, /risk detect, /risk list, /risk analyze, /risk resolve
+name: javis-risk
+description: 프로젝트 리스크 감지 및 관리. 자동 감지, 리스크 목록, 분석, 해결. 사용법: /javis-risk, /javis-risk detect, /javis-risk list, /javis-risk analyze, /javis-risk resolve
 ---
 
 # /risk - 프로젝트 리스크 관리

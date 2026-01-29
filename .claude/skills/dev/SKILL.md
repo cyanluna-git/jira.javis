@@ -1,6 +1,6 @@
 ---
-name: dev
-description: 개발자 대시보드. 내 작업 현황, 커밋/PR 활동, 스프린트 기여도, 팀 비교. 사용법: /dev, /dev <name>, /dev commits, /dev prs, /dev team
+name: javis-dev
+description: 개발자 대시보드. 내 작업 현황, 커밋/PR 활동, 스프린트 기여도, 팀 비교. 사용법: /javis-dev, /javis-dev <name>, /javis-dev commits, /javis-dev prs, /javis-dev team
 ---
 
 # /dev - 개발자 대시보드

@@ -1,6 +1,6 @@
 ---
-name: report
-description: 프로젝트 리포트 생성. 스프린트 리포트, 팀 성과, 프로젝트 현황, Epic 진행률. 사용법: /report sprint, /report team, /report project, /report epic, /report weekly
+name: javis-report
+description: 프로젝트 리포트 생성. 스프린트 리포트, 팀 성과, 프로젝트 현황, Epic 진행률. 사용법: /javis-report sprint, /javis-report team, /javis-report project, /javis-report epic, /javis-report weekly
 ---
 
 # /report - 프로젝트 리포트 생성

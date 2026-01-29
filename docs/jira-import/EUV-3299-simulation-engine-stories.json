@@ -1,0 +1,75 @@
+{
+  "epic": {
+    "key": "EUV-3299",
+    "summary": "Simulation Engine",
+    "assignee": "Dave Kim"
+  },
+  "stories": [
+    {
+      "summary": "Define Common Simulator Interface",
+      "description": "## User Story\n\n**As a** Gateway developer\n**I want** a common interface that all Simulators must follow\n**So that** new equipment types can be implemented in a consistent manner\n\n## Acceptance Criteria\n\n- [ ] `ISimulator` abstract class is defined\n- [ ] `read(point: str) -> Any` method is defined\n- [ ] `write(point: str, value: Any) -> bool` method is defined\n- [ ] `load_config(config_path: str)` method is defined\n- [ ] `get_mode() -> str` method returns current mode (physical/simulation)\n- [ ] Interface documentation (docstrings) is complete\n\n## Technical Notes\n\n```python\nfrom abc import ABC, abstractmethod\nfrom typing import Any\n\nclass ISimulator(ABC):\n    @abstractmethod\n    def read(self, point: str) -> Any:\n        \"\"\"Read value from a named point\"\"\"\n        pass\n\n    @abstractmethod\n    def write(self, point: str, value: Any) -> bool:\n        \"\"\"Write value to a named point, returns success\"\"\"\n        pass\n\n    @abstractmethod\n    def load_config(self, config_path: str) -> None:\n        \"\"\"Load simulation configuration from file\"\"\"\n        pass\n```",
+      "issue_type": "Story",
+      "priority": "High",
+      "story_points": 3,
+      "assignee": "Dave Kim",
+      "labels": ["simulation", "interface", "sprint-1"]
+    },
+    {
+      "summary": "Define Simulation Config Schema",
+      "description": "## User Story\n\n**As a** Scenario engineer\n**I want** to configure mock responses using YAML files\n**So that** I can create various test cases without modifying code\n\n## Acceptance Criteria\n\n- [ ] YAML schema is defined and documented\n- [ ] Default value can be set per point\n- [ ] Value range can be set per point\n- [ ] Response behavior types supported: `echo`, `random`, `sequence`, `fixed`\n- [ ] Schema validation logic exists\n- [ ] Clear error messages on invalid config file\n\n## Config Schema Example\n\n```yaml\nproduct: EUV\nprotocol: modbus\nversion: \"1.0\"\n\npoints:\n  pump_pressure:\n    address: 100\n    type: holding_register\n    default: 0\n    range: [0, 500]\n    behavior: echo\n\n  chamber_temp:\n    address: 200\n    type: input_register\n    default: 25.5\n    behavior: random\n    range: [20.0, 30.0]\n```\n\n## Behavior Types\n\n| Behavior | Description | Required Fields |\n|----------|-------------|----------------|\n| `echo` | Returns written value on read | `default` |\n| `random` | Returns random value within range | `range` |\n| `sequence` | Cycles through defined sequence | `sequence` |\n| `fixed` | Always returns same value | `value` |",
+      "issue_type": "Story",
+      "priority": "High",
+      "story_points": 2,
+      "assignee": "Dave Kim",
+      "labels": ["simulation", "config", "sprint-1"]
+    },
+    {
+      "summary": "Implement EUV Simulator",
+      "description": "## User Story\n\n**As an** EUV Scenario engineer (Andrew)\n**I want** to simulate EUV equipment Modbus communication\n**So that** I can develop and verify test scenarios without physical EUV equipment\n\n## Acceptance Criteria\n\n- [ ] `ModbusSimulator` class implements `ISimulator`\n- [ ] EUV config file (`euv_config.yaml`) loads successfully\n- [ ] `pump_pressure` point read/write works correctly\n- [ ] `chamber_temp` point returns random values within range\n- [ ] Accessing non-existent point returns appropriate error\n- [ ] Unit tests are written with >80% coverage\n\n## Test Cases\n\n```python\ndef test_euv_echo_behavior():\n    \"\"\"Written value should be returned on read\"\"\"\n    sim = ModbusSimulator()\n    sim.load_config(\"simulation/euv_config.yaml\")\n    sim.write(\"pump_pressure\", 100)\n    assert sim.read(\"pump_pressure\") == 100\n\ndef test_euv_random_behavior():\n    \"\"\"Random behavior should return value within range\"\"\"\n    sim = ModbusSimulator()\n    sim.load_config(\"simulation/euv_config.yaml\")\n    value = sim.read(\"chamber_temp\")\n    assert 20.0 <= value <= 30.0\n```",
+      "issue_type": "Story",
+      "priority": "High",
+      "story_points": 5,
+      "assignee": "Dave Kim",
+      "labels": ["simulation", "euv", "modbus", "sprint-2"]
+    },
+    {
+      "summary": "Implement Abatement Simulator",
+      "description": "## User Story\n\n**As an** Abatement Scenario engineer (Daniel, Seokwon)\n**I want** to simulate Abatement equipment communication\n**So that** I can develop test scenarios without physical Abatement equipment\n\n## Acceptance Criteria\n\n- [ ] Abatement Simulator class implements `ISimulator`\n- [ ] Abatement config file (`abatement_config.yaml`) is defined\n- [ ] Abatement-specific points are defined (gas_flow, burn_temp, etc.)\n- [ ] PLF protocol characteristics are reflected (if applicable)\n- [ ] Unit tests are written with >80% coverage\n\n## Config Example\n\n```yaml\nproduct: Abatement\nprotocol: plf\n\npoints:\n  gas_flow:\n    address: 100\n    default: 0\n    range: [0, 100]\n    behavior: echo\n    unit: \"L/min\"\n\n  burn_temp:\n    address: 200\n    default: 800\n    range: [700, 900]\n    behavior: random\n    unit: \"°C\"\n```",
+      "issue_type": "Story",
+      "priority": "Medium",
+      "story_points": 5,
+      "assignee": "Dave Kim",
+      "labels": ["simulation", "abatement", "plf", "sprint-2"]
+    },
+    {
+      "summary": "Implement Vacuum Pump Simulator",
+      "description": "## User Story\n\n**As a** Vacuum Pump Scenario engineer (Jess)\n**I want** to simulate Vacuum Pump equipment communication\n**So that** I can develop test scenarios without physical Vacuum Pump equipment\n\n## Acceptance Criteria\n\n- [ ] Vacuum Pump Simulator implements `ISimulator`\n- [ ] Vacuum Pump config file (`vacuum_pump_config.yaml`) is defined\n- [ ] Vacuum Pump-specific points are defined (rotation_speed, vacuum_level, etc.)\n- [ ] Works with Modbus protocol\n- [ ] Unit tests are written with >80% coverage\n\n## Config Example\n\n```yaml\nproduct: VacuumPump\nprotocol: modbus\n\npoints:\n  rotation_speed:\n    address: 100\n    type: holding_register\n    default: 0\n    range: [0, 3000]\n    behavior: echo\n    unit: \"RPM\"\n\n  vacuum_level:\n    address: 200\n    type: input_register\n    default: 760\n    range: [0, 760]\n    behavior: echo\n    unit: \"Torr\"\n```",
+      "issue_type": "Story",
+      "priority": "Medium",
+      "story_points": 5,
+      "assignee": "Dave Kim",
+      "labels": ["simulation", "vacuum-pump", "modbus", "sprint-2"]
+    },
+    {
+      "summary": "Implement Mode Switcher API",
+      "description": "## User Story\n\n**As a** Test engineer\n**I want** to switch between Physical and Simulation modes via API\n**So that** I can run the same scenario on both real equipment and simulation environment\n\n## Acceptance Criteria\n\n- [ ] `POST /gateway/mode` API is implemented\n- [ ] `GET /gateway/mode` API returns current mode\n- [ ] Existing connections are safely closed on mode switch\n- [ ] Simulation mode does not attempt physical equipment connection\n- [ ] Mode switch events are logged\n- [ ] Invalid mode value returns 400 error\n\n## API Design\n\n### Change Mode\n```http\nPOST /gateway/mode\nContent-Type: application/json\n\n{\n  \"mode\": \"simulation\",\n  \"product\": \"EUV\"\n}\n\nResponse 200:\n{\n  \"success\": true,\n  \"previous_mode\": \"physical\",\n  \"current_mode\": \"simulation\",\n  \"affected_products\": [\"EUV\"]\n}\n```\n\n### Get Current Mode\n```http\nGET /gateway/mode\n\nResponse 200:\n{\n  \"global_mode\": \"simulation\",\n  \"products\": {\n    \"EUV\": \"simulation\",\n    \"Abatement\": \"simulation\",\n    \"VacuumPump\": \"physical\"\n  }\n}\n```\n\n## Gherkin Step Integration\n```gherkin\nGiven the system is in \"simulation\" mode\nGiven product \"EUV\" is in \"simulation\" mode\n```",
+      "issue_type": "Story",
+      "priority": "High",
+      "story_points": 3,
+      "assignee": "Dave Kim",
+      "labels": ["simulation", "api", "sprint-1"]
+    }
+  ],
+  "summary": {
+    "total_stories": 6,
+    "total_points": 23,
+    "sprint_1": {
+      "stories": ["Define Common Simulator Interface", "Define Simulation Config Schema", "Implement Mode Switcher API"],
+      "points": 8
+    },
+    "sprint_2": {
+      "stories": ["Implement EUV Simulator", "Implement Abatement Simulator", "Implement Vacuum Pump Simulator"],
+      "points": 15
+    }
+  }
+}
