@@ -20,7 +20,25 @@ npm run lint     # ESLint checks
 python3 scripts/javis_cli.py suggest           # AI work recommendations
 python3 scripts/javis_cli.py context           # View work context
 python3 scripts/javis_cli.py tag list          # Manage tags
-python3 scripts/javis_cli.py sync all          # Sync all data sources
+```
+
+### Data Sync (Bidirectional - run from project root)
+```bash
+# Jira <-> DB 양방향 증분 동기화
+python3 scripts/sync_bidirectional.py              # 전체 양방향 싱크
+python3 scripts/sync_bidirectional.py --pull-only  # Jira → DB만
+python3 scripts/sync_bidirectional.py --push-only  # DB → Jira만
+python3 scripts/sync_bidirectional.py --dry-run    # 시뮬레이션
+
+# Confluence <-> DB 양방향 증분 동기화
+python3 scripts/sync_confluence_bidirectional.py              # 전체 양방향 싱크
+python3 scripts/sync_confluence_bidirectional.py --pull-only  # Confluence → DB만
+python3 scripts/sync_confluence_bidirectional.py --push-only  # DB → Confluence만
+
+# 충돌 해결
+python3 scripts/sync_bidirectional.py --show-conflicts   # 충돌 목록
+python3 scripts/sync_bidirectional.py --force-local      # 로컬 우선
+python3 scripts/sync_bidirectional.py --force-remote     # 원격 우선
 ```
 
 ### Database
@@ -49,11 +67,13 @@ PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -f s
 ```
 
 ### Python Scripts (`scripts/`)
-- `mirror_jira.py` - Jira → PostgreSQL sync
-- `sync_bidirectional.py` - Two-way Jira sync
+- `sync_bidirectional.py` - Jira <-> DB 양방향 증분 동기화
+- `sync_confluence_bidirectional.py` - Confluence <-> DB 양방향 증분 동기화
 - `javis_cli.py` - CLI entry point
 - `lib/` - Shared utilities (db.py, config.py, context_aggregator.py, ai_client.py)
 - `cli/` - CLI commands (suggest.py, context.py, tag.py, sync.py)
+
+**Note**: Full scan one-way sync scripts (mirror_*.py) have been removed to prevent accidental data overwrites. Always use bidirectional sync.
 
 ### Database Schema
 Key tables: `roadmap_visions`, `roadmap_milestones`, `roadmap_streams`, `roadmap_risks`, `team_members`, `jira_issues`, `bitbucket_commits`, `work_tags`
@@ -77,5 +97,9 @@ Environment variables in `.env`:
 
 - **Roadmap Hierarchy**: Vision → Milestone → Stream → Epic
 - **Risk Detection**: Auto-detects delay, blocker, velocity_drop, dependency_block, resource_conflict
-- **Bidirectional Sync**: Local modifications tracked via `local_modified_at` field, synced back to Jira
+- **Bidirectional Sync**:
+  - 증분 동기화: `last_synced_at` 타임스탬프 이후 변경분만 동기화
+  - 로컬 수정 추적: PostgreSQL 트리거가 `local_modified_at`, `local_modified_fields` 자동 기록
+  - 충돌 감지: 같은 필드가 로컬/원격 모두 변경된 경우 `sync_conflicts` 테이블에 저장
+  - API/직접 DB 수정 모두 자동 추적됨
 - **Content Operations**: Approval workflow for bulk Jira/Confluence changes

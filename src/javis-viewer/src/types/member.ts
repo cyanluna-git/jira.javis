@@ -126,6 +126,7 @@ export interface MemberRanking {
   maturity_level: number;
   rank_contribution: number;
   rank_points: number;
+  last_activity_at: string | null;
 }
 
 export interface MemberDetail {
