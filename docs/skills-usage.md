@@ -7,6 +7,7 @@
 | Skill | 설명 |
 |-------|------|
 | `/stories` | Story 관리 (생성, 정제, Jira push) + Bitbucket 개발 현황 |
+| `/sprint` | 스프린트 관리 (현황, velocity, 계획, 멤버별 작업) |
 | `/sync` | Jira/Confluence/Bitbucket 전체 데이터 동기화 |
 
 ---
@@ -38,6 +39,43 @@
 - ADF 형식으로 Description 변환
 - 생성 후 자동 DB 동기화
 - **Bitbucket 연동**: Epic/Story 관련 커밋, PR, 개발자 활동 표시
+
+---
+
+## `/sprint` - 스프린트 관리
+
+### 명령어
+
+```bash
+/sprint                       # 현재 활성 스프린트 현황
+/sprint list                  # 최근 스프린트 목록
+/sprint <sprint_name>         # 특정 스프린트 상세
+/sprint velocity              # Velocity 추이 (최근 6개)
+/sprint plan [epic_key]       # 다음 스프린트 계획 (백로그)
+/sprint burndown              # 번다운 차트 데이터
+/sprint member <name>         # 멤버별 작업 현황
+```
+
+### 워크플로우
+
+```bash
+# 데일리 스크럼
+/sprint                       # 현재 스프린트 진행 상황
+/sprint member Gerald         # 내 작업 확인
+
+# 스프린트 계획
+/sprint velocity              # 예상 capacity 확인
+/sprint plan EUV-3299         # Epic별 백로그 확인
+
+# 스프린트 회고
+/sprint Scaled Sprint13       # 완료된 스프린트 상세
+/sprint velocity              # velocity 변화 분석
+```
+
+### 특징
+- 담당자별 작업량 분석
+- Velocity 추이 및 예측
+- Bitbucket 커밋과 연동
 
 ---
 
@@ -88,6 +126,7 @@
 ```
 .claude/skills/
 ├── stories/SKILL.md    # Story 관리
+├── sprint/SKILL.md     # 스프린트 관리
 └── sync/SKILL.md       # 동기화
 ```
 
