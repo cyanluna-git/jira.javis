@@ -18,12 +18,16 @@ import {
   Trash2,
 } from 'lucide-react';
 import MilestoneCard from '@/components/MilestoneCard';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import EpicIssueTree from '@/components/EpicIssueTree';
 import type {
   VisionWithMilestones,
   VisionStatus,
   CreateMilestoneInput,
   MilestoneStatus,
   RiskLevel,
+  VisionIssuesResponse,
+  EpicWithIssues,
 } from '@/types/roadmap';
 
 interface PageProps {
@@ -45,6 +49,8 @@ export default function VisionDetailPage({ params }: PageProps) {
   const [editing, setEditing] = useState(false);
   const [showNewMilestoneModal, setShowNewMilestoneModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [issuesData, setIssuesData] = useState<VisionIssuesResponse | null>(null);
+  const [loadingIssues, setLoadingIssues] = useState(false);
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -95,8 +101,24 @@ export default function VisionDetailPage({ params }: PageProps) {
     }
   };
 
+  const fetchIssues = async () => {
+    setLoadingIssues(true);
+    try {
+      const res = await fetch(`/api/roadmap/visions/${visionId}/issues`);
+      if (res.ok) {
+        const data = await res.json();
+        setIssuesData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching issues:', error);
+    } finally {
+      setLoadingIssues(false);
+    }
+  };
+
   useEffect(() => {
     fetchVision();
+    fetchIssues();
   }, [visionId]);
 
   const handleSave = async () => {
@@ -302,11 +324,14 @@ export default function VisionDetailPage({ params }: PageProps) {
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={10}
+                placeholder="마크다운 형식을 지원합니다. (# 헤딩, **볼드**, *이탤릭*, - 리스트 등)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
               />
             ) : (
-              <p className="text-gray-700">{vision.description || 'No description'}</p>
+              <div className="text-gray-700 prose prose-sm max-w-none">
+                <MarkdownRenderer content={vision.description} />
+              </div>
             )}
           </div>
 
@@ -465,6 +490,115 @@ export default function VisionDetailPage({ params }: PageProps) {
             ))}
           </div>
         )}
+
+        {/* Project Issues Section */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Project Issues</h2>
+            <button
+              onClick={fetchIssues}
+              disabled={loadingIssues}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingIssues ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+
+          {/* JQL Filter Display */}
+          {issuesData?.jql_filter && (
+            <div className="mb-4 p-3 bg-gray-100 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                <span className="font-medium">JQL Filter:</span>
+              </div>
+              <code className="text-sm text-gray-700 font-mono">{issuesData.jql_filter}</code>
+            </div>
+          )}
+
+          {loadingIssues ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
+            </div>
+          ) : issuesData ? (
+            <div className="space-y-6">
+              {/* Linked Epics - Grouped by Milestone */}
+              {issuesData.linked_epics.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    Linked Epics ({issuesData.linked_epics.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {/* Group by Milestone */}
+                    {(() => {
+                      const groupedByMilestone = issuesData.linked_epics.reduce((acc, epic) => {
+                        const milestoneTitle = epic.milestone_title || 'Unknown Milestone';
+                        if (!acc[milestoneTitle]) {
+                          acc[milestoneTitle] = [];
+                        }
+                        acc[milestoneTitle].push(epic);
+                        return acc;
+                      }, {} as Record<string, EpicWithIssues[]>);
+
+                      return Object.entries(groupedByMilestone).map(([milestoneTitle, epics]) => (
+                        <div key={milestoneTitle} className="mb-4">
+                          <div className="text-sm font-medium text-purple-700 mb-2 pl-2 border-l-2 border-purple-300">
+                            {milestoneTitle}
+                          </div>
+                          <div className="space-y-2">
+                            {epics.map((epic) => (
+                              <EpicIssueTree
+                                key={epic.key}
+                                epic={epic}
+                                jiraUrl={process.env.NEXT_PUBLIC_JIRA_URL}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Unlinked Epics */}
+              {issuesData.unlinked_epics.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    Unlinked Epics ({issuesData.unlinked_epics.length})
+                    <span className="text-xs text-gray-400 font-normal">- Link to a Milestone for better tracking</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {issuesData.unlinked_epics.map((epic) => (
+                      <EpicIssueTree
+                        key={epic.key}
+                        epic={epic}
+                        jiraUrl={process.env.NEXT_PUBLIC_JIRA_URL}
+                        onLinkToMilestone={(epicKey) => {
+                          alert(`TODO: Open modal to link ${epicKey} to a milestone`);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {issuesData.linked_epics.length === 0 && issuesData.unlinked_epics.length === 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                  <Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No epics found for this project.</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+              <Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">Unable to load issues. Try refreshing.</p>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* New Milestone Modal */}

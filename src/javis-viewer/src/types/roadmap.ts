@@ -8,6 +8,10 @@ export type RiskType = 'delay' | 'blocker' | 'resource_conflict' | 'dependency_b
 export type RiskStatus = 'open' | 'acknowledged' | 'mitigated' | 'resolved' | 'false_positive';
 
 // Vision - Top level strategic goal (Why)
+// Vision acts as a "Project" in Javis roadmap system
+// project_key = Jira project space (EUV, ASP, PSSM)
+// title = Actual project name (OQC Digitalization, Unify, etc.)
+// jql_filter = JQL to filter related issues from Jira
 export interface Vision {
   id: string;
   project_key: string;
@@ -19,6 +23,7 @@ export interface Vision {
   target_date: string | null;
   status: VisionStatus;
   owner_account_id: string | null;
+  jql_filter: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -88,6 +93,7 @@ export interface CreateVisionInput {
   north_star_current?: number;
   target_date?: string;
   owner_account_id?: string;
+  jql_filter?: string;
 }
 
 export interface UpdateVisionInput {
@@ -99,6 +105,7 @@ export interface UpdateVisionInput {
   target_date?: string;
   status?: VisionStatus;
   owner_account_id?: string;
+  jql_filter?: string;
 }
 
 export interface CreateMilestoneInput {
@@ -237,3 +244,78 @@ export const RISK_STATUS_LABELS: Record<RiskStatus, string> = {
   resolved: '해결됨',
   false_positive: '오탐',
 };
+
+// Issue hierarchy types for Vision -> Milestone -> Epic -> Issue view
+export interface IssueBasic {
+  key: string;
+  summary: string;
+  status: string;
+  type: string;
+  assignee?: string;
+}
+
+export interface EpicStats {
+  total: number;
+  done: number;
+  in_progress: number;
+  todo: number;
+  progress_percent: number;
+}
+
+export interface EpicWithIssues {
+  key: string;
+  summary: string;
+  status: string;
+  milestone_id?: string;
+  milestone_title?: string;
+  issues: IssueBasic[];
+  stats: EpicStats;
+}
+
+export interface VisionIssuesResponse {
+  linked_epics: EpicWithIssues[];
+  unlinked_epics: EpicWithIssues[];
+  jql_filter: string | null;
+}
+
+// Local Epic types (Draft epics before Jira sync)
+export type LocalEpicStatus = 'draft' | 'ready' | 'synced';
+
+export interface LocalEpic {
+  id: string;
+  milestone_id: string;
+  title: string;
+  description: string | null;
+  assignee: string | null;
+  priority: string;
+  status: LocalEpicStatus;
+  jira_key: string | null;
+  story_points: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  milestone_title?: string;
+  vision_title?: string;
+  project_key?: string;
+}
+
+export interface CreateLocalEpicInput {
+  milestone_id: string;
+  title: string;
+  description?: string;
+  assignee?: string;
+  priority?: string;
+  story_points?: number;
+  sort_order?: number;
+}
+
+export interface UpdateLocalEpicInput {
+  title?: string;
+  description?: string;
+  assignee?: string;
+  priority?: string;
+  status?: LocalEpicStatus;
+  story_points?: number;
+  sort_order?: number;
+  jira_key?: string;
+}

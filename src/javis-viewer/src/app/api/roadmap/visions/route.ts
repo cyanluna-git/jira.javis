@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
       INSERT INTO roadmap_visions (
         project_key, title, description,
         north_star_metric, north_star_target, north_star_current,
-        target_date, owner_account_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        target_date, owner_account_id, jql_filter
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [
       body.project_key,
@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
       body.north_star_current || null,
       body.target_date || null,
       body.owner_account_id || null,
+      body.jql_filter || null,
     ]);
 
     return NextResponse.json(result.rows[0], { status: 201 });

@@ -11,10 +11,10 @@ import {
   Clock,
   RefreshCw,
   Filter,
+  FolderKanban,
 } from 'lucide-react';
 import VisionCard from '@/components/VisionCard';
 import MilestoneCard from '@/components/MilestoneCard';
-import RiskPanel from '@/components/RiskPanel';
 import type { Vision, RoadmapSummary, QuarterlyMilestones, MilestoneWithStreams } from '@/types/roadmap';
 
 interface VisionWithAggregates extends Vision {
@@ -56,15 +56,15 @@ export default function RoadmapPage() {
     fetchData();
   }, []);
 
-  // Filter visions
+  // Filter visions - now filter by vision title (project name) instead of Jira project_key
   const filteredVisions = visions.filter(v => {
-    if (filterProject && v.project_key !== filterProject) return false;
+    if (filterProject && v.title !== filterProject) return false;
     if (filterStatus && v.status !== filterStatus) return false;
     return true;
   });
 
-  // Get unique project keys
-  const projectKeys = [...new Set(visions.map(v => v.project_key))];
+  // Get unique project names (vision titles)
+  const projectNames = visions.map(v => v.title);
 
   // New vision form
   const [newVision, setNewVision] = useState({
@@ -74,6 +74,7 @@ export default function RoadmapPage() {
     north_star_metric: '',
     north_star_target: '',
     target_date: '',
+    jql_filter: '',
   });
 
   const handleCreateVision = async (e: React.FormEvent) => {
@@ -85,12 +86,13 @@ export default function RoadmapPage() {
         body: JSON.stringify({
           ...newVision,
           north_star_target: newVision.north_star_target ? Number(newVision.north_star_target) : null,
+          jql_filter: newVision.jql_filter || null,
         }),
       });
 
       if (res.ok) {
         setShowNewVisionModal(false);
-        setNewVision({ project_key: '', title: '', description: '', north_star_metric: '', north_star_target: '', target_date: '' });
+        setNewVision({ project_key: '', title: '', description: '', north_star_metric: '', north_star_target: '', target_date: '', jql_filter: '' });
         fetchData();
       }
     } catch (error) {
@@ -185,16 +187,11 @@ export default function RoadmapPage() {
           </div>
         )}
 
-        {/* AI Risk Panel */}
-        <div className="mb-8">
-          <RiskPanel onRiskClick={(risk) => console.log('Risk clicked:', risk)} />
-        </div>
-
         {/* Filters */}
         <div className="flex items-center gap-4 mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Filter className="w-4 h-4" />
-            <span>Filter:</span>
+            <FolderKanban className="w-4 h-4" />
+            <span>Project:</span>
           </div>
           <select
             value={filterProject}
@@ -202,8 +199,8 @@ export default function RoadmapPage() {
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">All Projects</option>
-            {projectKeys.map(key => (
-              <option key={key} value={key}>{key}</option>
+            {projectNames.map(name => (
+              <option key={name} value={name}>{name}</option>
             ))}
           </select>
           <select
@@ -350,6 +347,18 @@ export default function RoadmapPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">JQL Filter</label>
+                <input
+                  type="text"
+                  value={newVision.jql_filter}
+                  onChange={(e) => setNewVision({ ...newVision, jql_filter: e.target.value })}
+                  placeholder='예: project = EUV AND component = "OQC Digitalization"'
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500 font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">이 프로젝트에 해당하는 이슈를 필터링하는 JQL</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
