@@ -51,8 +51,12 @@ config = load_env()
 # Bitbucket config
 BITBUCKET_WORKSPACE = config.get("BITBUCKET_WORKSPACE")
 BITBUCKET_REPOS = [r.strip() for r in config.get("BITBUCKET_REPOS", "").split(",") if r.strip()]
-BITBUCKET_USERNAME = config.get("BITBUCKET_USERNAME")
-BITBUCKET_APP_PASSWORD = config.get("BITBUCKET_APP_PASSWORD")
+# New API Token auth (email + API token) - App Password deprecated
+BITBUCKET_EMAIL = config.get("JIRA_EMAIL")  # Same Atlassian account
+BITBUCKET_API_TOKEN = config.get("BITBUCKET_API_TOKEN")
+# Legacy support
+BITBUCKET_USERNAME = config.get("BITBUCKET_USERNAME") or BITBUCKET_EMAIL
+BITBUCKET_APP_PASSWORD = config.get("BITBUCKET_APP_PASSWORD") or BITBUCKET_API_TOKEN
 
 # DB config
 DB_HOST = config.get("DB_HOST", "localhost")
@@ -94,6 +98,31 @@ def extract_jira_keys(text: str) -> List[str]:
         return []
     matches = JIRA_KEY_PATTERN.findall(text)
     return list(set(matches))
+
+
+def discover_repositories(workspace: str) -> List[str]:
+    """Auto-discover all repositories in the workspace."""
+    print(f"\n[DISCOVER] Fetching all repositories from workspace: {workspace}")
+    repos = []
+    page_url = f'/repositories/{workspace}?pagelen=100'
+
+    while page_url:
+        response = bitbucket_request('GET', page_url)
+        if not response or not response.ok:
+            print(f"  Error: {response.text if response else 'No response'}")
+            break
+
+        data = response.json()
+        for repo in data.get('values', []):
+            repos.append(repo.get('slug'))
+
+        page_url = data.get('next')
+        if page_url:
+            page_url = page_url.replace('https://api.bitbucket.org/2.0', '')
+        time.sleep(0.2)
+
+    print(f"  Found {len(repos)} repositories")
+    return repos
 
 
 # --- Sync Functions ---
@@ -370,14 +399,23 @@ def main():
         print("Error: BITBUCKET_WORKSPACE not set in .env")
         print("\nRequired environment variables:")
         print("  BITBUCKET_WORKSPACE=<your-workspace>")
-        print("  BITBUCKET_REPOS=repo1,repo2,repo3")
-        print("  BITBUCKET_USERNAME=<your-username>")
-        print("  BITBUCKET_APP_PASSWORD=<app-password>")
+        print("  BITBUCKET_API_TOKEN=<api-token>")
+        print("  JIRA_EMAIL=<your-email>")
+        print("\nOptional:")
+        print("  BITBUCKET_REPOS=repo1,repo2  (if empty, auto-discovers all repos)")
         sys.exit(1)
 
-    if not BITBUCKET_REPOS:
-        print("Error: BITBUCKET_REPOS not set in .env")
+    if not BITBUCKET_API_TOKEN:
+        print("Error: BITBUCKET_API_TOKEN not set in .env")
         sys.exit(1)
+
+    # Auto-discover repositories if not specified
+    repos_to_sync = BITBUCKET_REPOS
+    if not repos_to_sync:
+        repos_to_sync = discover_repositories(BITBUCKET_WORKSPACE)
+        if not repos_to_sync:
+            print("Error: No repositories found in workspace")
+            sys.exit(1)
 
     conn = get_db_connection()
 
@@ -386,19 +424,19 @@ def main():
         print("BITBUCKET SYNC")
         print("=" * 60)
         print(f"Workspace: {BITBUCKET_WORKSPACE}")
-        print(f"Repositories: {', '.join(BITBUCKET_REPOS)}")
+        print(f"Repositories: {len(repos_to_sync)} repos" + (f" ({', '.join(repos_to_sync[:5])}...)" if len(repos_to_sync) > 5 else f" ({', '.join(repos_to_sync)})"))
         print(f"Mode: {'DRY-RUN' if args.dry_run else 'LIVE'}")
 
         sync_all = not (args.repos_only or args.commits_only or args.prs_only)
 
         if sync_all or args.repos_only:
-            sync_repositories(conn, BITBUCKET_WORKSPACE, BITBUCKET_REPOS, args.dry_run)
+            sync_repositories(conn, BITBUCKET_WORKSPACE, repos_to_sync, args.dry_run)
 
         if sync_all or args.commits_only:
-            sync_commits(conn, BITBUCKET_WORKSPACE, BITBUCKET_REPOS, args.days, args.dry_run)
+            sync_commits(conn, BITBUCKET_WORKSPACE, repos_to_sync, args.days, args.dry_run)
 
         if sync_all or args.prs_only:
-            sync_pullrequests(conn, BITBUCKET_WORKSPACE, BITBUCKET_REPOS, args.dry_run)
+            sync_pullrequests(conn, BITBUCKET_WORKSPACE, repos_to_sync, args.dry_run)
 
         print("\n" + "=" * 60)
         print("SYNC COMPLETE")
