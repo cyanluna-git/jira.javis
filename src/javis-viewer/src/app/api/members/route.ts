@@ -15,8 +15,25 @@ export async function GET(request: NextRequest) {
   try {
     // Use ranking view for leaderboard
     if (ranking === 'true') {
-      const result = await client.query<MemberRanking>(`
-        SELECT * FROM member_ranking
+      // Only show members with:
+      // 1. contribution_score > 0
+      // 2. Activity within the last 1 year
+      const result = await client.query(`
+        WITH member_activity AS (
+          SELECT
+            mr.*,
+            (
+              SELECT MAX(ji.updated_at)
+              FROM jira_issues ji
+              WHERE ji.raw_data->'fields'->'assignee'->>'accountId' = mr.account_id
+            ) as last_activity_at
+          FROM member_ranking mr
+        )
+        SELECT *
+        FROM member_activity
+        WHERE contribution_score > 0
+          AND last_activity_at IS NOT NULL
+          AND last_activity_at > NOW() - INTERVAL '1 year'
         ORDER BY rank_contribution ASC
         LIMIT 50
       `);

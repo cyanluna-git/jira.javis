@@ -55,7 +55,7 @@ DB_NAME = config.get("DB_NAME", "javis_brain")
 DB_USER = config.get("DB_USER", "javis")
 DB_PASS = config.get("JAVIS_DB_PASSWORD", "javis_password")
 
-TARGET_PROJECTS = ["ASP", "PSSM"]
+TARGET_PROJECTS = ["EUV", "ASP", "PSSM"]
 
 # Fields that can be pushed to Jira
 PUSHABLE_FIELDS = ["summary", "description", "priority", "labels", "components"]

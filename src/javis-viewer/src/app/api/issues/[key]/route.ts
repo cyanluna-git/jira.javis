@@ -21,8 +21,7 @@ export async function GET(
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT key, project, summary, status, created_at, updated_at, raw_data,
-              local_modified_at, local_modified_fields, last_synced_at
+      `SELECT key, project, summary, status, created_at, updated_at, raw_data, last_synced_at
        FROM jira_issues
        WHERE key = $1`,
       [key]
@@ -81,7 +80,7 @@ export async function PATCH(
   try {
     // First, get current issue to merge raw_data
     const current = await client.query(
-      `SELECT raw_data, local_modified_fields FROM jira_issues WHERE key = $1`,
+      `SELECT raw_data FROM jira_issues WHERE key = $1`,
       [key]
     );
 
@@ -93,7 +92,6 @@ export async function PATCH(
     }
 
     const currentRawData = current.rows[0].raw_data || { fields: {} };
-    const currentModifiedFields = current.rows[0].local_modified_fields || [];
 
     // Build update query dynamically
     const setClauses: string[] = [];
@@ -147,13 +145,10 @@ export async function PATCH(
     setClauses.push(`raw_data = $${paramIndex++}`);
     values.push(JSON.stringify(currentRawData));
 
-    // Merge modified fields (avoid duplicates)
-    const newModifiedFields = Array.from(new Set([...currentModifiedFields, ...updates]));
-
-    // Update local_modified tracking
-    setClauses.push(`local_modified_at = NOW()`);
-    setClauses.push(`local_modified_fields = $${paramIndex++}`);
-    values.push(newModifiedFields);
+    // NOTE: Do NOT update last_synced_at here!
+    // The PostgreSQL trigger (trg_track_jira_changes) automatically sets
+    // local_modified_at and local_modified_fields when last_synced_at is unchanged.
+    // This marks the change as a "local modification" for bidirectional sync.
 
     // Add key as last parameter
     values.push(key);

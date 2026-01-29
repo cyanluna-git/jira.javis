@@ -68,4 +68,4 @@ ANTHROPIC_API_KEY = get("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = get("OPENAI_API_KEY")
 
 # Target projects
-TARGET_PROJECTS = [p.strip() for p in get("TARGET_PROJECTS", "ASP,PSSM").split(",") if p.strip()]
+TARGET_PROJECTS = [p.strip() for p in get("TARGET_PROJECTS", "EUV,ASP,PSSM").split(",") if p.strip()]
