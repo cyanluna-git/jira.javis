@@ -134,6 +134,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updates.push(`owner_account_id = $${paramIndex++}`);
       values.push(body.owner_account_id);
     }
+    if (body.jql_filter !== undefined) {
+      updates.push(`jql_filter = $${paramIndex++}`);
+      values.push(body.jql_filter);
+    }
 
     if (updates.length === 0) {
       return NextResponse.json(

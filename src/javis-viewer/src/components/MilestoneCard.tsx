@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle,
   Clock,
@@ -14,15 +14,19 @@ import {
   LinkIcon,
   Plus,
   X,
+  FileEdit,
+  ExternalLink,
 } from 'lucide-react';
 import type {
   MilestoneWithStreams,
   MilestoneStatus,
   RiskLevel,
+  LocalEpic,
   MILESTONE_STATUS_COLORS,
   RISK_LEVEL_COLORS,
 } from '@/types/roadmap';
 import StreamProgressBar from './StreamProgressBar';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface Props {
   milestone: MilestoneWithStreams;
@@ -60,9 +64,34 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
   const [linking, setLinking] = useState(false);
   const [epicSuggestions, setEpicSuggestions] = useState<EpicSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [localEpics, setLocalEpics] = useState<LocalEpic[]>([]);
+  const [loadingLocalEpics, setLoadingLocalEpics] = useState(false);
+  const [expandedLocalEpic, setExpandedLocalEpic] = useState<string | null>(null);
 
   const statusInfo = statusConfig[milestone.status];
   const riskInfo = riskConfig[milestone.risk_level];
+
+  // Fetch local/draft epics for this milestone
+  useEffect(() => {
+    const fetchLocalEpics = async () => {
+      setLoadingLocalEpics(true);
+      try {
+        const res = await fetch(`/api/roadmap/local-epics?milestone_id=${milestone.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLocalEpics(data);
+        }
+      } catch (error) {
+        console.error('Error fetching local epics:', error);
+      } finally {
+        setLoadingLocalEpics(false);
+      }
+    };
+
+    if (expanded) {
+      fetchLocalEpics();
+    }
+  }, [milestone.id, expanded]);
 
   // Fetch epic suggestions when search term changes
   const searchEpics = async (searchTerm: string) => {
@@ -196,9 +225,11 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
             {/* Title */}
             <h4 className="font-semibold text-gray-900">{milestone.title}</h4>
 
-            {/* Description */}
-            {milestone.description && (
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{milestone.description}</p>
+            {/* Description Preview (collapsed) */}
+            {milestone.description && !expanded && (
+              <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                {milestone.description.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '')}
+              </p>
             )}
 
             {/* Meta Info */}
@@ -219,6 +250,12 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
                 <span className="flex items-center gap-1">
                   <LinkIcon className="w-4 h-4" />
                   {milestone.epic_links.length} epics
+                </span>
+              )}
+              {localEpics.length > 0 && (
+                <span className="flex items-center gap-1 text-amber-600">
+                  <FileEdit className="w-4 h-4" />
+                  {localEpics.length} drafts
                 </span>
               )}
             </div>
@@ -261,9 +298,19 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
         </div>
       </div>
 
-      {/* Expanded Content: Streams & Epic Links */}
+      {/* Expanded Content: Description, Streams & Epic Links */}
       {expanded && (
         <div className="border-t border-gray-100 p-4 bg-gray-50">
+          {/* Full Description with Markdown */}
+          {milestone.description && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <div className="text-xs font-medium text-gray-500 uppercase mb-2">Description</div>
+              <div className="text-sm text-gray-700">
+                <MarkdownRenderer content={milestone.description} />
+              </div>
+            </div>
+          )}
+
           {/* Streams */}
           {milestone.streams && milestone.streams.length > 0 && (
             <div className="mb-4">
@@ -390,6 +437,94 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
               <div className="text-sm text-gray-400">No epics linked</div>
             )}
           </div>
+
+          {/* Draft Epics (Local) */}
+          {(localEpics.length > 0 || loadingLocalEpics) && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-medium text-gray-500 uppercase flex items-center gap-2">
+                  <FileEdit className="w-3 h-3" />
+                  Draft Epics
+                  <span className="text-xs font-normal text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                    Jira 동기화 전
+                  </span>
+                </div>
+              </div>
+
+              {loadingLocalEpics ? (
+                <div className="text-sm text-gray-400">Loading...</div>
+              ) : (
+                <div className="space-y-2">
+                  {localEpics.map((epic) => (
+                    <div
+                      key={epic.id}
+                      className="bg-amber-50 border border-amber-200 rounded-lg overflow-hidden"
+                    >
+                      {/* Epic Header */}
+                      <div
+                        className="p-3 cursor-pointer hover:bg-amber-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedLocalEpic(expandedLocalEpic === epic.id ? null : epic.id);
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                epic.status === 'ready' ? 'bg-green-100 text-green-700' :
+                                epic.status === 'synced' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {epic.status}
+                              </span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                epic.priority === 'High' ? 'bg-red-100 text-red-700' :
+                                epic.priority === 'Medium' ? 'bg-amber-100 text-amber-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {epic.priority}
+                              </span>
+                              {epic.jira_key && (
+                                <span className="text-xs font-mono text-blue-600">
+                                  {epic.jira_key}
+                                </span>
+                              )}
+                            </div>
+                            <h5 className="font-medium text-gray-900 mt-1">{epic.title}</h5>
+                            {epic.assignee && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                담당: {epic.assignee}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {expandedLocalEpic === epic.id ? (
+                              <ChevronUp className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Epic Detail (Expanded) */}
+                      {expandedLocalEpic === epic.id && epic.description && (
+                        <div
+                          className="px-3 pb-3 border-t border-amber-200 bg-white"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="pt-3 text-sm text-gray-700 prose prose-sm max-w-none">
+                            <MarkdownRenderer content={epic.description} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* No Streams Message */}
           {(!milestone.streams || milestone.streams.length === 0) && (
