@@ -93,6 +93,40 @@ Environment variables in `.env`:
 - `BITBUCKET_*` - Bitbucket integration
 - `AI_PROVIDER`, `ANTHROPIC_API_KEY` - AI features
 
+## Javis Skills (Claude Code)
+
+프로젝트 전용 slash commands. 자세한 사용법: `docs/skills-usage.md`
+
+| Skill | 용도 | 예시 |
+|-------|------|------|
+| `/javis-stories` | Story 관리 (생성, 정제, Jira push) | `/javis-stories context OQC` |
+| `/javis-sprint` | 스프린트 관리 (현황, velocity) | `/javis-sprint velocity` |
+| `/javis-dev` | 개발자 대시보드 (작업, 커밋/PR) | `/javis-dev team` |
+| `/javis-report` | 프로젝트 리포트 생성 | `/javis-report weekly` |
+| `/javis-risk` | 리스크 감지/관리 | `/javis-risk detect` |
+| `/javis-sync` | 데이터 동기화 | `/javis-sync all` |
+
+### 주요 워크플로우
+
+```bash
+# 아침 동기화
+/javis-sync all
+
+# Story 작업
+/javis-stories context OQC      # 맥락 파악
+/javis-stories list EUV-3299    # Epic의 Story 확인
+/javis-stories create EUV-3299  # AI Story 생성
+/javis-stories push EUV-3299    # Jira에 생성
+
+# 스프린트 관리
+/javis-sprint                   # 현재 스프린트 현황
+/javis-sprint velocity          # Velocity 추이
+
+# 리스크 체크
+/javis-risk detect              # 자동 리스크 감지
+/javis-risk analyze EUV-3299    # Epic 리스크 분석
+```
+
 ## Key Concepts
 
 - **Roadmap Hierarchy**: Vision → Milestone → Stream → Epic
