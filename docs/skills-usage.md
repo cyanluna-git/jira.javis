@@ -10,6 +10,7 @@
 | `/sprint` | 스프린트 관리 (현황, velocity, 계획, 멤버별 작업) |
 | `/dev` | 개발자 대시보드 (내 작업, 커밋/PR, 팀 비교) |
 | `/report` | 프로젝트 리포트 (스프린트, 팀, Epic, 주간, velocity) |
+| `/risk` | 리스크 감지 및 관리 (자동 감지, 분석, 해결) |
 | `/sync` | Jira/Confluence/Bitbucket 전체 데이터 동기화 |
 
 ---
@@ -153,6 +154,51 @@
 
 ---
 
+## `/risk` - 리스크 관리
+
+### 명령어
+
+```bash
+/risk                         # 현재 오픈 리스크 요약
+/risk detect                  # 자동 리스크 감지 실행
+/risk list [--type TYPE]      # 리스크 목록
+/risk analyze <epic|sprint>   # 특정 대상 리스크 분석
+/risk create                  # 수동 리스크 등록
+/risk resolve <id>            # 리스크 해결 처리
+/risk report                  # 리스크 현황 리포트
+```
+
+### 리스크 유형
+
+| Type | 감지 기준 |
+|------|----------|
+| `delay` | 스프린트 종료 임박 + 낮은 완료율 |
+| `blocker` | Blocker priority 이슈 |
+| `velocity_drop` | 이전 평균 대비 20%+ 하락 |
+| `resource_conflict` | 한 명에게 과다 할당 (8+) |
+| `stale_issue` | In Progress 14일+ 방치 |
+
+### 워크플로우
+
+```bash
+# 데일리 리스크 체크
+/risk detect                  # 자동 감지
+/risk                         # 요약 확인
+
+# Epic 리스크 분석
+/risk analyze EUV-3299
+
+# 주간 리포트
+/risk report
+```
+
+### 특징
+- 자동 리스크 감지 (7가지 유형)
+- Severity 자동 판정 (critical/high/medium/low)
+- AI 기반 대응 제안
+
+---
+
 ## `/sync` - 데이터 동기화
 
 ### 명령어
@@ -203,6 +249,7 @@
 ├── sprint/SKILL.md     # 스프린트 관리
 ├── dev/SKILL.md        # 개발자 대시보드
 ├── report/SKILL.md     # 프로젝트 리포트
+├── risk/SKILL.md       # 리스크 관리
 └── sync/SKILL.md       # 동기화
 ```
 
