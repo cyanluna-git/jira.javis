@@ -22,7 +22,8 @@
       "Bash(PGPASSWORD=$POSTGRES_PASSWORD psql:*)",
       "Bash(source .env)",
       "Bash(brew services:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(curl:*)"
     ]
   }
 }
