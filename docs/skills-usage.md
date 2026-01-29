@@ -9,6 +9,7 @@
 | `/stories` | Story 관리 (생성, 정제, Jira push) + Bitbucket 개발 현황 |
 | `/sprint` | 스프린트 관리 (현황, velocity, 계획, 멤버별 작업) |
 | `/dev` | 개발자 대시보드 (내 작업, 커밋/PR, 팀 비교) |
+| `/report` | 프로젝트 리포트 (스프린트, 팀, Epic, 주간, velocity) |
 | `/sync` | Jira/Confluence/Bitbucket 전체 데이터 동기화 |
 
 ---
@@ -116,6 +117,42 @@
 
 ---
 
+## `/report` - 프로젝트 리포트
+
+### 명령어
+
+```bash
+/report sprint [name]         # 스프린트 리포트 (기본: 현재)
+/report team                  # 팀 성과 리포트
+/report project [key]         # 프로젝트 현황 리포트
+/report epic <epic_key>       # Epic 상세 리포트
+/report weekly                # 주간 리포트
+/report velocity              # Velocity 추이 리포트
+/report vision [title]        # Vision 진행 현황 리포트
+```
+
+### 워크플로우
+
+```bash
+# 데일리 스탠드업
+/report sprint                # 현재 스프린트 현황
+
+# 스프린트 회고
+/report sprint "Sprint13"     # 완료 스프린트 분석
+/report velocity              # velocity 추이
+
+# 주간 보고
+/report weekly                # 주간 활동 요약
+/report team                  # 팀 성과
+```
+
+### 특징
+- 마크다운 형식 리포트 생성
+- Jira + Bitbucket 통합 데이터
+- 자동 계산 (완료율, velocity, 기여도)
+
+---
+
 ## `/sync` - 데이터 동기화
 
 ### 명령어
@@ -165,6 +202,7 @@
 ├── stories/SKILL.md    # Story 관리
 ├── sprint/SKILL.md     # 스프린트 관리
 ├── dev/SKILL.md        # 개발자 대시보드
+├── report/SKILL.md     # 프로젝트 리포트
 └── sync/SKILL.md       # 동기화
 ```
 
