@@ -1,6 +1,6 @@
 ---
-name: stories
-description: 로컬 DB 기반 Story 관리. Vision/Epic 맥락 조회, Story 목록, AI 생성/정제, Jira 동기화. 사용법: /stories context, /stories list <epic>, /stories create <epic>, /stories refine <epic>, /stories push <epic>
+name: javis-stories
+description: 로컬 DB 기반 Story 관리. Vision/Epic 맥락 조회, Story 목록, AI 생성/정제, Jira 동기화. 사용법: /javis-stories context, /javis-stories list <epic>, /javis-stories create <epic>, /javis-stories refine <epic>, /javis-stories push <epic>
 ---
 
 # /stories - 로컬 DB 기반 Story 관리

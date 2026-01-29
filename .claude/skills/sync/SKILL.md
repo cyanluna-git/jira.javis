@@ -1,6 +1,6 @@
 ---
-name: sync
-description: Jira/Confluence/Bitbucket/Boards/Members 전체 동기화. 사용법: /sync all, /sync issues, /sync boards, /sync members, /sync confluence, /sync bitbucket, /sync status
+name: javis-sync
+description: Jira/Confluence/Bitbucket/Boards/Members 전체 동기화. 사용법: /javis-sync all, /javis-sync issues, /javis-sync boards, /javis-sync members, /javis-sync confluence, /javis-sync bitbucket, /javis-sync status
 ---
 
 # /sync - 전체 데이터 동기화

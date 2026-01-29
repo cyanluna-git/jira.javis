@@ -1,6 +1,6 @@
 ---
-name: sprint
-description: 스프린트 관리. 현재/과거 스프린트 조회, velocity 추적, 스프린트 계획, 멤버별 작업량. 사용법: /sprint, /sprint list, /sprint velocity, /sprint plan
+name: javis-sprint
+description: 스프린트 관리. 현재/과거 스프린트 조회, velocity 추적, 스프린트 계획, 멤버별 작업량. 사용법: /javis-sprint, /javis-sprint list, /javis-sprint velocity, /javis-sprint plan
 ---
 
 # /sprint - 스프린트 관리
