@@ -8,6 +8,7 @@
 |-------|------|
 | `/stories` | Story 관리 (생성, 정제, Jira push) + Bitbucket 개발 현황 |
 | `/sprint` | 스프린트 관리 (현황, velocity, 계획, 멤버별 작업) |
+| `/dev` | 개발자 대시보드 (내 작업, 커밋/PR, 팀 비교) |
 | `/sync` | Jira/Confluence/Bitbucket 전체 데이터 동기화 |
 
 ---
@@ -79,6 +80,42 @@
 
 ---
 
+## `/dev` - 개발자 대시보드
+
+### 명령어
+
+```bash
+/dev                          # 내 대시보드 (현재 할당, 커밋, PR)
+/dev <name>                   # 특정 개발자 대시보드
+/dev commits [--days N]       # 커밋 활동 분석
+/dev prs [--state OPEN]       # PR 활동 분석
+/dev team                     # 팀 전체 현황 비교
+/dev stats <name>             # 개발자 통계 (히스토리)
+/dev workload                 # 팀 작업 부하 분석
+```
+
+### 워크플로우
+
+```bash
+# 아침 내 작업 확인
+/dev                          # 내 할당 이슈, 커밋, PR
+
+# 팀원 상황 파악
+/dev Tushar                   # 특정 팀원 현황
+/dev team                     # 팀 전체 비교
+
+# 주간 활동 리뷰
+/dev commits --days 7         # 7일간 커밋 활동
+/dev stats Gerald             # 내 통계 추이
+```
+
+### 특징
+- Jira 할당 이슈 + Bitbucket 커밋/PR 통합
+- 팀원별 작업 부하 분석
+- 스프린트 기여도 비교
+
+---
+
 ## `/sync` - 데이터 동기화
 
 ### 명령어
@@ -127,6 +164,7 @@
 .claude/skills/
 ├── stories/SKILL.md    # Story 관리
 ├── sprint/SKILL.md     # 스프린트 관리
+├── dev/SKILL.md        # 개발자 대시보드
 └── sync/SKILL.md       # 동기화
 ```
 
