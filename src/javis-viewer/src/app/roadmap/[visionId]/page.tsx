@@ -20,6 +20,7 @@ import {
 import MilestoneCard from '@/components/MilestoneCard';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import EpicIssueTree from '@/components/EpicIssueTree';
+import VisionMemberSection from '@/components/VisionMemberSection';
 import type {
   VisionWithMilestones,
   VisionStatus,
@@ -457,6 +458,11 @@ export default function VisionDetailPage({ params }: PageProps) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Team Members Section */}
+        <div className="mb-6">
+          <VisionMemberSection visionId={visionId} />
         </div>
 
         {/* Milestones Section */}

@@ -319,3 +319,68 @@ export interface UpdateLocalEpicInput {
   sort_order?: number;
   jira_key?: string;
 }
+
+// Vision Member Types (Project-level role assignments)
+export type RoleCategory = 'pm' | 'backend' | 'frontend' | 'plc' | 'qa' | 'scenario' | 'devops' | 'fullstack';
+
+export interface VisionMember {
+  id: string;
+  vision_id: string;
+  member_account_id: string;
+  role_title: string;
+  role_category: RoleCategory | null;
+  role_description: string | null;
+  mm_allocation: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields from team_members
+  display_name?: string;
+  avatar_url?: string;
+  email?: string;
+  company_role?: string;
+  team?: string;
+  skills?: string[];
+}
+
+export interface CreateVisionMemberInput {
+  member_account_id: string;
+  role_title: string;
+  role_category?: RoleCategory;
+  role_description?: string;
+  mm_allocation?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface UpdateVisionMemberInput {
+  role_title?: string;
+  role_category?: RoleCategory | null;
+  role_description?: string | null;
+  mm_allocation?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
+export const ROLE_CATEGORY_LABELS: Record<RoleCategory, string> = {
+  pm: '프로젝트 관리',
+  backend: '백엔드',
+  frontend: '프론트엔드',
+  plc: 'PLC/제어',
+  qa: 'QA/테스트',
+  scenario: '시나리오',
+  devops: 'DevOps',
+  fullstack: '풀스택',
+};
+
+export const ROLE_CATEGORY_COLORS: Record<RoleCategory, string> = {
+  pm: '#8B5CF6',       // purple
+  backend: '#3B82F6',  // blue
+  frontend: '#10B981', // green
+  plc: '#F59E0B',      // amber
+  qa: '#EC4899',       // pink
+  scenario: '#6366F1', // indigo
+  devops: '#6B7280',   // gray
+  fullstack: '#14B8A6',// teal
+};
