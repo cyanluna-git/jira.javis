@@ -2,7 +2,22 @@
 
 ## 워크플로우 예시
 
-### 1. 새 Epic Story 생성 (전체 플로우)
+### 1. 자연어로 빠르게 Story 추가 (add)
+
+```bash
+/javis-stories add OQC에 유저스토리를 추가하고 싶어.
+지금 Simulation Engine 기본 구조까지 있는데.
+에러 핸들링 기능을 확인하고 추가해야해.
+그러면 시뮬레이터 실패 시 자동 재시도가 가능해져.
+```
+
+**AI가 자동으로:**
+1. OQC → Vision 매칭
+2. "Simulation Engine" → EUV-3299 Epic 탐색
+3. "에러 핸들링", "재시도" → `backend`, `plc` 라벨 부여
+4. 구조화된 유저스토리 생성
+
+### 2. Epic 기반 다수 Story 생성 (create)
 
 ```bash
 # 1. 프로젝트 맥락 파악
@@ -11,7 +26,7 @@
 # 2. 현재 Story 확인
 /javis-stories list EUV-3299
 
-# 3. AI가 Story 초안 생성
+# 3. AI가 Story 초안 생성 (Epic 분석 후 빠진 영역 다수 생성)
 /javis-stories create EUV-3299
 
 # 4. AC/Points 정제
@@ -94,6 +109,48 @@ Progress: 1/5 (20%) | Points: 14 total, 1 done
 === 오픈 PR ===
 #42 | feat/simulator-interface | Gerald | OPEN
 ```
+
+### `/javis-stories add` 예시
+
+**입력:**
+```
+/javis-stories add OQC에 유저스토리를 추가하고 싶어.
+지금 Gateway REST API까지 있는데.
+PLC 연결 상태를 실시간으로 모니터링하는 UI가 필요해.
+그러면 운영자가 장비 상태를 한눈에 파악할 수 있어.
+```
+
+**출력:**
+```markdown
+## Story: Add Real-time PLC Connection Status Dashboard
+
+**Epic**: EUV-3301 (Gateway Integration)
+**Labels**: `frontend`, `plc`
+**Project**: OQC
+
+### Description
+As an operator, I want to see real-time PLC connection status on a dashboard
+so that I can monitor equipment health at a glance.
+
+### Acceptance Criteria
+- [ ] 연결된 PLC 목록 표시 (IP, 포트, 프로토콜)
+- [ ] 연결 상태 표시 (Connected/Disconnected/Error)
+- [ ] 상태 변경 시 실시간 업데이트 (WebSocket 또는 polling)
+- [ ] 연결 실패 시 알림 표시
+- [ ] 최근 5분간 통신 성공률 표시
+
+### Technical Notes
+- 기존 Gateway /api/status 엔드포인트 활용
+- React Query로 polling (5초 간격)
+- Recharts로 통신 성공률 그래프
+
+### Story Points: 3
+
+---
+저장 위치: docs/stories/EUV-3301-stories.md
+```
+
+---
 
 ### `/javis-stories create EUV-3299`
 
