@@ -69,3 +69,8 @@ OPENAI_API_KEY = get("OPENAI_API_KEY")
 
 # Target projects
 TARGET_PROJECTS = [p.strip() for p in get("TARGET_PROJECTS", "EUV,ASP,PSSM").split(",") if p.strip()]
+
+# Slack config
+SLACK_BOT_TOKEN = get("SLACK_BOT_TOKEN")
+SLACK_SIGNING_SECRET = get("SLACK_SIGNING_SECRET")
+SLACK_DEFAULT_CHANNEL = get("SLACK_DEFAULT_CHANNEL", "#jarvis-alerts")

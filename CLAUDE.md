@@ -64,19 +64,21 @@ PGPASSWORD=javis_password psql -h localhost -p 5439 -U javis -d javis_brain -f s
 /api/roadmap/risks        # Risk detection
 /api/members              # Team stats
 /api/search               # Full-text search
+/api/slack/commands       # Slack slash commands (/jarvis)
+/api/slack/interactivity  # Slack button/interaction handlers
 ```
 
 ### Python Scripts (`scripts/`)
 - `sync_bidirectional.py` - Jira <-> DB 양방향 증분 동기화
 - `sync_confluence_bidirectional.py` - Confluence <-> DB 양방향 증분 동기화
 - `javis_cli.py` - CLI entry point
-- `lib/` - Shared utilities (db.py, config.py, context_aggregator.py, ai_client.py)
-- `cli/` - CLI commands (suggest.py, context.py, tag.py, sync.py)
+- `lib/` - Shared utilities (db.py, config.py, context_aggregator.py, ai_client.py, slack_client.py, slack_notifications.py)
+- `cli/` - CLI commands (suggest.py, context.py, tag.py, sync.py, slack.py)
 
 **Note**: Full scan one-way sync scripts (mirror_*.py) have been removed to prevent accidental data overwrites. Always use bidirectional sync.
 
 ### Database Schema
-Key tables: `roadmap_visions`, `roadmap_milestones`, `roadmap_streams`, `roadmap_risks`, `team_members`, `jira_issues`, `bitbucket_commits`, `work_tags`
+Key tables: `roadmap_visions`, `roadmap_milestones`, `roadmap_streams`, `roadmap_risks`, `team_members`, `jira_issues`, `bitbucket_commits`, `work_tags`, `slack_notifications`, `slack_channel_config`
 
 ## Tech Stack
 
@@ -92,6 +94,7 @@ Environment variables in `.env`:
 - `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` - Jira API
 - `BITBUCKET_*` - Bitbucket integration
 - `AI_PROVIDER`, `ANTHROPIC_API_KEY` - AI features
+- `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_DEFAULT_CHANNEL` - Slack integration
 
 ## Javis Skills (Claude Code)
 
@@ -125,6 +128,11 @@ Environment variables in `.env`:
 # 리스크 체크
 /javis-risk detect              # 자동 리스크 감지
 /javis-risk analyze EUV-3299    # Epic 리스크 분석
+
+# Slack 연동 테스트
+python3 scripts/javis_cli.py slack test     # 테스트 메시지 전송
+python3 scripts/javis_cli.py slack risk     # 리스크 알림 전송
+python3 scripts/javis_cli.py slack status   # 연동 상태 확인
 ```
 
 ## Key Concepts
@@ -137,3 +145,7 @@ Environment variables in `.env`:
   - 충돌 감지: 같은 필드가 로컬/원격 모두 변경된 경우 `sync_conflicts` 테이블에 저장
   - API/직접 DB 수정 모두 자동 추적됨
 - **Content Operations**: Approval workflow for bulk Jira/Confluence changes
+- **Slack Integration**:
+  - Outbound: Python CLI로 리스크/스프린트 알림 발송 (`javis slack risk`)
+  - Inbound: `/jarvis` 슬래시 명령어 (status, search, risk)
+  - API: `/api/slack/commands`, `/api/slack/interactivity`
