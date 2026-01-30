@@ -44,6 +44,25 @@ async function getBoards(): Promise<Board[]> {
   }
 }
 
+async function getFirstActiveSprint(): Promise<{ boardId: number; sprintId: number } | null> {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(`
+      SELECT s.board_id, s.id as sprint_id
+      FROM jira_sprints s
+      WHERE s.state = 'active'
+      ORDER BY s.start_date DESC
+      LIMIT 1
+    `);
+    if (res.rows.length > 0) {
+      return { boardId: res.rows[0].board_id, sprintId: res.rows[0].sprint_id };
+    }
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
 async function getSprints(boardId: number): Promise<Sprint[]> {
   const client = await pool.connect();
   try {
@@ -93,15 +112,38 @@ interface PageProps {
 
 export default async function SprintsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const boardId = params.board ? parseInt(params.board) : null;
-  const sprintId = params.sprint ? parseInt(params.sprint) : null;
   const stateFilter = params.state || 'all';
   const initialAssignees = params.assignees ? params.assignees.split(',').filter(Boolean) : [];
   const initialComponents = params.components ? params.components.split(',').filter(Boolean) : [];
 
-  // Fetch data based on URL params
+  // Get boards first
   const boards = await getBoards();
+
+  // Determine board and sprint IDs (use active sprint as default if none specified)
+  let boardId = params.board ? parseInt(params.board) : null;
+  let sprintId = params.sprint ? parseInt(params.sprint) : null;
+
+  // If no board specified, find first active sprint
+  if (!boardId) {
+    const activeSprint = await getFirstActiveSprint();
+    if (activeSprint) {
+      boardId = activeSprint.boardId;
+      sprintId = activeSprint.sprintId;
+    }
+  }
+
+  // Fetch sprints for the board
   const sprints = boardId ? await getSprints(boardId) : [];
+
+  // If board selected but no sprint, auto-select active sprint
+  if (boardId && !sprintId) {
+    const activeSprint = sprints.find(s => s.state === 'active');
+    if (activeSprint) {
+      sprintId = activeSprint.id;
+    }
+  }
+
+  // Fetch issues for the selected sprint
   const issues = sprintId ? await getSprintIssues(sprintId) : [];
 
   // Get selected sprint details
