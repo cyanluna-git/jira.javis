@@ -24,7 +24,10 @@
       "Bash(brew services:*)",
       "Bash(ls:*)",
       "Bash(curl:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: integrate Bitbucket data into /stories skill\n\n- Add Bitbucket commits/PRs/developer activity to /stories context\n- Add Epic-related commits and PRs to /stories list\n- Update /sync skill with detailed Bitbucket options\n- Update sync_bitbucket.py with API token auth and auto-discovery\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: integrate Bitbucket data into /stories skill\n\n- Add Bitbucket commits/PRs/developer activity to /stories context\n- Add Epic-related commits and PRs to /stories list\n- Update /sync skill with detailed Bitbucket options\n- Update sync_bitbucket.py with API token auth and auto-discovery\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "mcp__acp__Edit",
+      "mcp__acp__Bash",
+      "mcp__acp__Write"
     ]
   }
 }
