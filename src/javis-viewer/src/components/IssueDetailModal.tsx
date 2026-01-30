@@ -85,7 +85,7 @@ export default function IssueDetailModal({ issue, onClose }: Props) {
               <section>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Description</h3>
                 <div className="text-sm text-gray-700 bg-white p-4 rounded-lg border border-gray-200">
-                  <AdfRenderer doc={description} attachments={attachments} />
+                  <AdfRenderer doc={description} attachments={attachments} issueKey={issue.key} />
                 </div>
               </section>
 
@@ -111,7 +111,7 @@ export default function IssueDetailModal({ issue, onClose }: Props) {
                           </span>
                         </div>
                         <div className="text-sm text-gray-700">
-                          <AdfRenderer doc={comment.body} />
+                          <AdfRenderer doc={comment.body} attachments={attachments} issueKey={issue.key} />
                         </div>
                       </div>
                     ))}

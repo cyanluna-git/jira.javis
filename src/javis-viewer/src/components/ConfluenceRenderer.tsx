@@ -340,10 +340,20 @@ function TocMacro() {
   );
 }
 
+// Video file extensions for playback support
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.avi', '.mkv', '.m4v'];
+
+function isVideoFile(filename: string): boolean {
+  const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'));
+  return VIDEO_EXTENSIONS.includes(ext);
+}
+
 function AcImageRenderer({ element }: { element: Element }) {
   const pageId = React.useContext(PageContext);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
 
   const attachment = element.querySelector('ri\\:attachment');
   const url = element.querySelector('ri\\:url');
@@ -390,7 +400,50 @@ function AcImageRenderer({ element }: { element: Element }) {
   // For attachments, use the proxy API
   if (attachment && pageId) {
     const proxyUrl = `/api/confluence/attachment/${pageId}/${encodeURIComponent(filename)}`;
+    const isVideo = isVideoFile(filename);
 
+    // Video file handling
+    if (isVideo) {
+      if (videoError) {
+        return (
+          <span
+            style={{ ...containerStyle, padding: '1.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+            className="inline-flex flex-col items-center gap-2 text-gray-500"
+          >
+            <ImageIcon className="w-10 h-10 opacity-50" />
+            <span className="text-center">
+              <span className="block font-medium text-gray-700">{filename}</span>
+              <span className="block text-sm text-gray-400">Failed to load video</span>
+            </span>
+          </span>
+        );
+      }
+
+      return (
+        <span style={containerStyle}>
+          {!videoLoaded && (
+            <span
+              style={{ display: 'block', padding: '1.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+              className="animate-pulse text-center"
+            >
+              <ImageIcon className="w-10 h-10 mx-auto opacity-30" />
+            </span>
+          )}
+          <video
+            src={proxyUrl}
+            controls
+            className="max-w-full h-auto rounded border border-gray-200"
+            style={!videoLoaded ? { display: 'none' } : {}}
+            onError={() => setVideoError(true)}
+            onLoadedData={() => setVideoLoaded(true)}
+          >
+            Your browser does not support video playback.
+          </video>
+        </span>
+      );
+    }
+
+    // Image file handling
     if (imageError) {
       // Show placeholder on error - using span for inline compatibility
       return (
