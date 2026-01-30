@@ -35,3 +35,6 @@ venv/
 workthrough/node_modules/
 workthrough/.vitepress/cache/
 workthrough/.vitepress/dist/
+
+# Story Drafts (local only)
+docs/stories/
