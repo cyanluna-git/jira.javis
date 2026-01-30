@@ -332,12 +332,11 @@ function StatusMacro({ element }: { element: Element }) {
 }
 
 function TocMacro() {
+  // Use span instead of div to allow inline usage within <p> tags
   return (
-    <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div className="text-sm text-gray-500 italic">
-        [Table of Contents - rendered in Confluence]
-      </div>
-    </div>
+    <span className="inline-block my-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded text-sm text-gray-500 italic">
+      [Table of Contents]
+    </span>
   );
 }
 
