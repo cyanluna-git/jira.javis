@@ -110,7 +110,7 @@ Progress: 1/5 (20%) | Points: 14 total, 1 done
 #42 | feat/simulator-interface | Gerald | OPEN
 ```
 
-### `/javis-stories add` 예시
+### `/javis-stories add` 예시 (맥락 기반)
 
 **입력:**
 ```
@@ -120,35 +120,98 @@ PLC 연결 상태를 실시간으로 모니터링하는 UI가 필요해.
 그러면 운영자가 장비 상태를 한눈에 파악할 수 있어.
 ```
 
-**출력:**
+**AI 실행 흐름:**
+
+```bash
+# Step 1: 프로젝트 맥락 조회
+$ python3 .claude/skills/stories/scripts/stories.py context OQC
+
+=== Vision: OQC Digitalization ===
+North Star: Zero Manual QC, 100% Data Trust
+Status: active
+
+=== Milestones ===
+2026-02: The Walking Skeleton (in_progress) - 진행률: 25%
+
+=== 팀 구성 ===
+Gerald Park - Tech Lead (1.0 MM)
+Owen Rim - Edge/Frontend Engineer (0.5 MM)
+```
+
+```bash
+# Step 2: 관련 Epic 탐색 (키워드: Gateway)
+$ python3 .claude/skills/stories/scripts/stories.py list EUV-3300
+
+=== Epic: EUV-3300 ===
+Summary: Gateway REST API Integration
+Status: In Progress
+
+=== Stories (3) ===
+EUV-3310 | Implement /api/devices endpoint | Done | Gerald | 3
+EUV-3311 | Add /api/status endpoint       | Done | Gerald | 2
+EUV-3312 | WebSocket event streaming      | To Do | -     | 5
+```
+
+```bash
+# Step 3: 최근 개발 현황
+$ python3 .claude/skills/stories/scripts/stories.py dev EUV-3300
+
+=== 최근 커밋 (7일) ===
+2026-01-28 | Gerald | feat: add /api/status endpoint | edge-gateway
+2026-01-27 | Gerald | feat: implement device listing | edge-gateway
+2026-01-26 | Owen   | fix: CORS configuration       | edge-gateway
+
+=== 오픈 PR ===
+#45 | feat/websocket-events | Owen | OPEN
+```
+
+**생성된 Story (맥락 반영):**
+
 ```markdown
 ## Story: Add Real-time PLC Connection Status Dashboard
 
-**Epic**: EUV-3301 (Gateway Integration)
+**Epic**: EUV-3300 (Gateway REST API Integration)
 **Labels**: `frontend`, `plc`
 **Project**: OQC
+**의존성**: EUV-3312 (WebSocket event streaming) 완료 후 실시간 업데이트 가능
 
 ### Description
 As an operator, I want to see real-time PLC connection status on a dashboard
 so that I can monitor equipment health at a glance.
 
+### Context (현재 상황)
+- 현재 EUV-3300에서 Gateway REST API 구현 중
+- `/api/status` 엔드포인트 완료 (EUV-3311)
+- WebSocket 스트리밍 PR 진행 중 (#45 by Owen)
+- 관련 파일: `edge-gateway/src/api/status.py`
+
 ### Acceptance Criteria
-- [ ] 연결된 PLC 목록 표시 (IP, 포트, 프로토콜)
-- [ ] 연결 상태 표시 (Connected/Disconnected/Error)
-- [ ] 상태 변경 시 실시간 업데이트 (WebSocket 또는 polling)
-- [ ] 연결 실패 시 알림 표시
-- [ ] 최근 5분간 통신 성공률 표시
+- [ ] `/api/devices` 응답 기반 PLC 목록 표시 (IP, 포트, 프로토콜)
+- [ ] `/api/status` 응답 기반 연결 상태 표시 (Connected/Disconnected/Error)
+- [ ] EUV-3312 완료 시 WebSocket으로 실시간 업데이트 (fallback: 5초 polling)
+- [ ] 연결 실패 시 Toast 알림 (기존 `NotificationProvider` 활용)
+- [ ] 최근 5분간 통신 성공률 그래프 (Recharts - 기존 Dashboard 패턴)
 
 ### Technical Notes
-- 기존 Gateway /api/status 엔드포인트 활용
-- React Query로 polling (5초 간격)
-- Recharts로 통신 성공률 그래프
+- 기존 `/api/status` 엔드포인트 활용 (`edge-gateway/src/api/status.py`)
+- React Query `useQuery` 패턴 따르기 (`src/hooks/useDevices.ts` 참조)
+- Recharts 그래프 컴포넌트는 `src/components/charts/` 패턴 따르기
+- Owen의 WebSocket PR (#45) 머지 후 실시간 업데이트 적용
 
 ### Story Points: 3
 
 ---
-저장 위치: docs/stories/EUV-3301-stories.md
+저장 위치: docs/stories/EUV-3300-stories.md
 ```
+
+**차이점 비교:**
+
+| 항목 | 맥락 없이 | 맥락 기반 |
+|------|----------|----------|
+| Epic | 추측 | 정확한 EUV-3300 |
+| AC | 일반적 | `/api/status` 등 실제 엔드포인트 참조 |
+| 의존성 | 없음 | EUV-3312 명시 |
+| Technical Notes | 일반 패턴 | 실제 파일 경로, PR 번호 참조 |
 
 ---
 
