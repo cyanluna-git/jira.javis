@@ -165,7 +165,7 @@ def resolve_conflict(conn, issue_key: str, resolution: str):
 def fetch_remote_issue(issue_key: str) -> Optional[Dict]:
     """Fetch single issue from Jira."""
     response = api_request('GET', f'/rest/api/3/issue/{issue_key}', params={
-        'fields': 'summary,status,description,priority,assignee,creator,reporter,issuetype,components,versions,fixVersions,labels,updated'
+        'fields': 'summary,status,description,priority,assignee,creator,reporter,issuetype,components,versions,fixVersions,labels,updated,attachment,comment'
     })
 
     if response and response.ok:
@@ -194,7 +194,7 @@ def fetch_updated_issues(project: str, since: Optional[datetime]) -> List[Dict]:
                 "key", "summary", "status", "created", "updated",
                 "description", "project", "priority", "assignee",
                 "creator", "reporter", "issuetype", "components",
-                "versions", "fixVersions", "labels"
+                "versions", "fixVersions", "labels", "attachment", "comment"
             ]
         }
 

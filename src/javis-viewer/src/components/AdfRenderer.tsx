@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useContext, useRef } from 'react';
 import { ExternalLink, Image as ImageIcon } from 'lucide-react';
 
 interface AdfNode {
@@ -20,9 +20,33 @@ interface Attachment {
 interface AdfRendererProps {
   doc: any;
   attachments?: Attachment[];
+  issueKey?: string; // Jira issue key for proxy URL
 }
 
-export function AdfRenderer({ doc, attachments = [] }: AdfRendererProps) {
+// Context for tracking media index and issue key for proxy URL
+interface MediaContextValue {
+  getNextIndex: () => number;
+  usedAttachmentIds: Set<string>;
+  issueKey?: string;
+}
+
+const MediaContext = createContext<MediaContextValue | null>(null);
+
+export function AdfRenderer({ doc, attachments = [], issueKey }: AdfRendererProps) {
+  // Use ref to track media index across renders
+  const mediaIndexRef = useRef(0);
+  const usedAttachmentIds = useRef(new Set<string>());
+
+  // Reset on each render
+  mediaIndexRef.current = 0;
+  usedAttachmentIds.current = new Set<string>();
+
+  const contextValue: MediaContextValue = {
+    getNextIndex: () => mediaIndexRef.current++,
+    usedAttachmentIds: usedAttachmentIds.current,
+    issueKey,
+  };
+
   if (!doc) {
     return <p className="text-gray-400 italic">No description available</p>;
   }
@@ -36,11 +60,13 @@ export function AdfRenderer({ doc, attachments = [] }: AdfRendererProps) {
   }
 
   return (
-    <div className="adf-content">
-      {doc.content.map((node: AdfNode, idx: number) => (
-        <AdfNodeComponent key={idx} node={node} attachments={attachments} />
-      ))}
-    </div>
+    <MediaContext.Provider value={contextValue}>
+      <div className="adf-content">
+        {doc.content.map((node: AdfNode, idx: number) => (
+          <AdfNodeComponent key={idx} node={node} attachments={attachments} />
+        ))}
+      </div>
+    </MediaContext.Provider>
   );
 }
 
@@ -235,26 +261,110 @@ function AdfNodeComponent({ node, attachments = [] }: { node: AdfNode; attachmen
 }
 
 function MediaNode({ node, attachments }: { node: AdfNode; attachments: Attachment[] }) {
+  const mediaContext = useContext(MediaContext);
   const mediaId = node.attrs?.id;
-  const alt = node.attrs?.alt || 'Image';
+  const collection = node.attrs?.collection || '';
   const width = node.attrs?.width;
   const height = node.attrs?.height;
 
-  // Try to find matching attachment by filename (alt usually contains filename)
-  const attachment = attachments.find(att => att.filename === alt || att.id === mediaId);
+  // Jira uses various attributes for filename
+  const fileName = node.attrs?.__fileName || node.attrs?.alt || node.attrs?.filename || '';
+  let displayName = fileName || 'Image';
+
+  // Try multiple matching strategies
+  let attachment = attachments.find(att => {
+    // Skip already used attachments
+    if (mediaContext?.usedAttachmentIds.has(att.id)) return false;
+
+    // 1. Match by __fileName attribute (Jira's internal filename reference)
+    if (fileName && att.filename === fileName) return true;
+
+    // 2. Match by filename (case-insensitive)
+    if (fileName && att.filename?.toLowerCase() === fileName.toLowerCase()) return true;
+
+    // 3. Match by attachment ID in collection (e.g., "jira-attachment-10001")
+    if (collection && att.id) {
+      const collectionLower = collection.toLowerCase();
+      if (collectionLower.includes(att.id) || collectionLower.includes(`attachment-${att.id}`)) {
+        return true;
+      }
+    }
+
+    // 4. Match if filename contains the other (partial match)
+    if (fileName && fileName !== 'Image' && att.filename) {
+      if (fileName.includes(att.filename) || att.filename.includes(fileName)) return true;
+    }
+
+    return false;
+  });
+
+  // 5. Fallback: Try fuzzy match by extension and partial name
+  if (!attachment && fileName && fileName !== 'Image') {
+    const fileNameLower = fileName.toLowerCase();
+    attachment = attachments.find(att => {
+      if (mediaContext?.usedAttachmentIds.has(att.id)) return false;
+      const attFilenameLower = att.filename?.toLowerCase() || '';
+      const fileExt = fileNameLower.split('.').pop();
+      const attExt = attFilenameLower.split('.').pop();
+      if (fileExt !== attExt) return false;
+
+      const fileBase = fileNameLower.split('.').slice(0, -1).join('.');
+      const attBase = attFilenameLower.split('.').slice(0, -1).join('.');
+      return attBase.includes(fileBase) || fileBase.includes(attBase);
+    });
+  }
+
+  // 6. Positional fallback: Use next unused attachment if no match found
+  if (!attachment && mediaContext) {
+    const mediaIndex = mediaContext.getNextIndex();
+    // Find unused attachments (images only)
+    const unusedImageAttachments = attachments.filter(att =>
+      !mediaContext.usedAttachmentIds.has(att.id) &&
+      att.mimeType?.startsWith('image/')
+    );
+
+    if (unusedImageAttachments.length > 0) {
+      // Use the first unused image attachment
+      attachment = unusedImageAttachments[0];
+      console.log('[MediaNode] Positional match:', {
+        mediaIndex,
+        assignedAttachment: attachment.filename
+      });
+    } else {
+      // Debug: No attachments available
+      console.log('[MediaNode] No attachments available:', {
+        mediaId,
+        fileName,
+        totalAttachments: attachments.length,
+        allAttachments: attachments.map(a => ({ id: a.id, filename: a.filename, mimeType: a.mimeType }))
+      });
+    }
+  }
+
+  // Mark attachment as used
+  if (attachment && mediaContext) {
+    mediaContext.usedAttachmentIds.add(attachment.id);
+    // Update display name if we matched by position
+    if (!fileName && attachment.filename) {
+      displayName = attachment.filename;
+    }
+  }
 
   if (attachment) {
-    const imageUrl = attachment.content;
+    // Use proxy URL if issueKey is available, otherwise fall back to direct URL
+    const imageUrl = mediaContext?.issueKey
+      ? `/api/jira/attachment/${mediaContext.issueKey}/${encodeURIComponent(attachment.filename)}`
+      : attachment.content;
     const isImage = attachment.mimeType?.startsWith('image/');
 
     if (isImage) {
       return (
-        <div className="mb-3 rounded border border-gray-200 overflow-hidden bg-gray-50">
+        <div className="mb-3 rounded border border-gray-200 overflow-hidden bg-gray-50" style={{ maxWidth: '100%' }}>
           <img
             src={imageUrl}
-            alt={alt}
-            className="max-w-full h-auto"
-            style={width && height ? { maxWidth: width, maxHeight: height } : {}}
+            alt={displayName}
+            className="h-auto block"
+            style={{ maxWidth: '100%', width: width ? `min(${width}px, 100%)` : 'auto' }}
             onError={(e) => {
               // If image fails to load, show placeholder
               e.currentTarget.style.display = 'none';
@@ -267,7 +377,7 @@ function MediaNode({ node, attachments }: { node: AdfNode; attachments: Attachme
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <div>
-                        <div class="font-medium">${alt}</div>
+                        <div class="font-medium">${displayName}</div>
                         <div class="text-sm text-gray-400">Image requires authentication</div>
                       </div>
                     </div>
@@ -308,7 +418,7 @@ function MediaNode({ node, attachments }: { node: AdfNode; attachments: Attachme
       <div className="flex flex-col items-center gap-2">
         <ImageIcon className="w-12 h-12" />
         <div>
-          <div className="font-medium">{alt}</div>
+          <div className="font-medium">{displayName}</div>
           <div className="text-sm text-gray-400">Media not available</div>
         </div>
       </div>
