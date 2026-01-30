@@ -225,3 +225,99 @@ def markdown_to_adf(md_text):
 
 ### Story Points: [1/2/3/5/8]
 ```
+
+---
+
+## 라벨 시스템
+
+### 라벨 분류 기준
+
+| 라벨 | 키워드 힌트 | 설명 |
+|------|-------------|------|
+| `frontend` | UI, 화면, React, 컴포넌트, 버튼, 폼, 모달, 페이지, 대시보드 | 프론트엔드/UI 작업 |
+| `backend` | API, 서버, DB, 엔드포인트, 인증, 데이터, 처리, 로직 | 백엔드/서버 작업 |
+| `plc` | PLC, Modbus, 프로토콜, 장비, Gateway, Simulator, 통신, Hostlink | 장비 통신/제어 |
+| `infra` | CI/CD, 배포, Docker, 설정, 환경변수, 파이프라인 | 인프라/DevOps |
+| `test` | 테스트, QA, 검증, 자동화, unit, integration, e2e | 테스트/QA |
+| `docs` | 문서, README, 가이드, 매뉴얼 | 문서화 |
+
+### 라벨 자동 부여 로직
+
+```python
+LABEL_KEYWORDS = {
+    'frontend': ['ui', '화면', 'react', '컴포넌트', '버튼', '폼', '모달', '페이지', '대시보드', 'css', 'style'],
+    'backend': ['api', '서버', 'db', '엔드포인트', '인증', '데이터', '처리', '로직', 'rest', 'graphql'],
+    'plc': ['plc', 'modbus', '프로토콜', '장비', 'gateway', 'simulator', '통신', 'hostlink', '시뮬레이터'],
+    'infra': ['ci/cd', '배포', 'docker', '설정', '환경변수', 'pipeline', 'kubernetes'],
+    'test': ['테스트', 'qa', '검증', '자동화', 'unit', 'integration', 'e2e'],
+    'docs': ['문서', 'readme', '가이드', '매뉴얼', 'documentation']
+}
+
+def detect_labels(text: str) -> list[str]:
+    """텍스트에서 라벨 자동 감지"""
+    text_lower = text.lower()
+    labels = []
+    for label, keywords in LABEL_KEYWORDS.items():
+        if any(kw in text_lower for kw in keywords):
+            labels.append(label)
+    return labels or ['backend']  # 기본값
+```
+
+---
+
+## Epic 자동 탐색
+
+### 키워드 기반 Epic 찾기
+
+```sql
+-- 프로젝트 내 키워드로 관련 Epic 탐색
+SELECT
+    key,
+    summary,
+    status,
+    raw_data->'fields'->>'description' as description
+FROM jira_issues
+WHERE raw_data->'fields'->'issuetype'->>'name' = 'Epic'
+  AND project = '{project_key}'
+  AND (
+    summary ILIKE '%{keyword}%'
+    OR raw_data->'fields'->>'description' ILIKE '%{keyword}%'
+  )
+ORDER BY
+    CASE WHEN summary ILIKE '%{keyword}%' THEN 0 ELSE 1 END,
+    updated_at DESC
+LIMIT 5;
+```
+
+### Vision → Project 매핑
+
+```sql
+-- Vision 이름으로 프로젝트 키 찾기
+SELECT
+    v.title as vision,
+    v.project_key,
+    COUNT(el.epic_key) as epic_count
+FROM roadmap_visions v
+LEFT JOIN roadmap_milestones m ON m.vision_id = v.id
+LEFT JOIN roadmap_epic_links el ON el.milestone_id = m.id
+WHERE v.title ILIKE '%{vision_name}%'
+GROUP BY v.id
+ORDER BY v.created_at DESC;
+```
+
+### 활성 Epic 목록 (Story 배치용)
+
+```sql
+-- 프로젝트의 활성 Epic 목록 (Story 추가 대상)
+SELECT
+    key,
+    summary,
+    status,
+    (SELECT COUNT(*) FROM jira_issues s
+     WHERE s.raw_data->'fields'->'parent'->>'key' = e.key) as story_count
+FROM jira_issues e
+WHERE e.raw_data->'fields'->'issuetype'->>'name' = 'Epic'
+  AND e.project = '{project_key}'
+  AND e.status NOT IN ('Done', 'Closed')
+ORDER BY e.updated_at DESC;
+```
