@@ -6,6 +6,7 @@ Usage:
   python scripts/sync_bidirectional.py                    # Full bidirectional sync
   python scripts/sync_bidirectional.py --pull-only        # Jira -> DB only
   python scripts/sync_bidirectional.py --push-only        # DB -> Jira only
+  python scripts/sync_bidirectional.py --force            # Force full re-sync (ignore timestamps)
   python scripts/sync_bidirectional.py --force-local      # Resolve conflicts with local data
   python scripts/sync_bidirectional.py --force-remote     # Resolve conflicts with remote data
   python scripts/sync_bidirectional.py --project ASP      # Sync specific project
@@ -318,17 +319,22 @@ def build_update_payload(issue: Dict) -> Dict:
 
 
 # --- Pull Phase ---
-def pull_changes(conn, project: str, stats: SyncStats, force_remote: bool = False, dry_run: bool = False):
+def pull_changes(conn, project: str, stats: SyncStats, force_remote: bool = False, dry_run: bool = False, force_full: bool = False):
     """Pull changes from Jira to local DB."""
     print(f"\n[PULL] Fetching updates from Jira for {project}...")
 
-    # Get last sync time for this project
     cur = conn.cursor()
-    cur.execute("""
-        SELECT MAX(last_synced_at) FROM jira_issues WHERE project = %s
-    """, [project])
-    result = cur.fetchone()
-    last_sync = result[0] if result else None
+
+    # Get last sync time for this project (skip if force_full)
+    last_sync = None
+    if not force_full:
+        cur.execute("""
+            SELECT MAX(last_synced_at) FROM jira_issues WHERE project = %s
+        """, [project])
+        result = cur.fetchone()
+        last_sync = result[0] if result else None
+    else:
+        print("  (Force mode: fetching ALL issues)")
 
     # Fetch updated issues from Jira
     remote_issues = fetch_updated_issues(project, last_sync)
@@ -588,6 +594,7 @@ def main():
     parser = argparse.ArgumentParser(description='Bidirectional Jira <-> DB Sync')
     parser.add_argument('--pull-only', action='store_true', help='Only pull from Jira')
     parser.add_argument('--push-only', action='store_true', help='Only push to Jira')
+    parser.add_argument('--force', action='store_true', help='Force full re-sync (ignore timestamps, fetch all issues)')
     parser.add_argument('--force-local', action='store_true', help='Force local changes on conflicts')
     parser.add_argument('--force-remote', action='store_true', help='Force remote changes on conflicts')
     parser.add_argument('--project', type=str, help='Sync specific project only')
@@ -618,6 +625,8 @@ def main():
         print("=" * 60)
         print(f"Projects: {', '.join(projects)}")
         print(f"Mode: {'DRY-RUN' if args.dry_run else 'LIVE'}")
+        if args.force:
+            print("Force: FULL RE-SYNC (ignoring timestamps)")
         if args.force_local:
             print("Conflict resolution: FORCE LOCAL")
         elif args.force_remote:
@@ -626,7 +635,7 @@ def main():
         for project in projects:
             # Pull phase
             if not args.push_only:
-                pull_changes(conn, project, stats, args.force_remote, args.dry_run)
+                pull_changes(conn, project, stats, args.force_remote, args.dry_run, args.force)
 
             # Push phase
             if not args.pull_only:
