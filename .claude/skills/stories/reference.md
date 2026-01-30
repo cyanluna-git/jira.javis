@@ -321,3 +321,94 @@ WHERE e.raw_data->'fields'->'issuetype'->>'name' = 'Epic'
   AND e.status NOT IN ('Done', 'Closed')
 ORDER BY e.updated_at DESC;
 ```
+
+---
+
+## `/javis-stories add` 맥락 수집 쿼리
+
+### 최근 커밋에서 파일 패턴 추출
+
+```sql
+-- Epic 관련 최근 커밋의 변경 파일 패턴
+WITH epic_keys AS (
+    SELECT key FROM jira_issues
+    WHERE key = '{epic_key}'
+       OR raw_data->'fields'->'parent'->>'key' = '{epic_key}'
+)
+SELECT
+    bc.message,
+    bc.author_name,
+    bc.committed_at::date,
+    br.slug as repo
+FROM bitbucket_commits bc
+JOIN bitbucket_repositories br ON br.uuid = bc.repo_uuid
+WHERE bc.jira_keys && (SELECT ARRAY_AGG(key) FROM epic_keys)
+  AND bc.committed_at > NOW() - INTERVAL '14 days'
+ORDER BY bc.committed_at DESC
+LIMIT 10;
+```
+
+### Epic 설명에서 기술 키워드 추출
+
+```sql
+-- Epic description에서 기술 스택 파악
+SELECT
+    key,
+    summary,
+    raw_data->'fields'->>'description' as description
+FROM jira_issues
+WHERE key = '{epic_key}';
+```
+
+### 기존 Story에서 패턴 파악
+
+```sql
+-- Epic 하위 Story들의 AC/Description 패턴 분석
+SELECT
+    key,
+    summary,
+    raw_data->'fields'->>'description' as description,
+    raw_data->'fields'->'labels' as labels,
+    raw_data->'fields'->>'customfield_10016' as story_points
+FROM jira_issues
+WHERE raw_data->'fields'->'parent'->>'key' = '{epic_key}'
+ORDER BY created_at DESC
+LIMIT 5;
+```
+
+### 오픈 PR에서 진행 중인 작업 파악
+
+```sql
+-- Epic 관련 오픈 PR
+WITH epic_keys AS (
+    SELECT key FROM jira_issues
+    WHERE key = '{epic_key}'
+       OR raw_data->'fields'->'parent'->>'key' = '{epic_key}'
+)
+SELECT
+    bp.pr_number,
+    bp.title,
+    bp.author_name,
+    bp.source_branch,
+    bp.state,
+    br.slug as repo
+FROM bitbucket_pullrequests bp
+JOIN bitbucket_repositories br ON br.uuid = bp.repo_uuid
+WHERE bp.jira_keys && (SELECT ARRAY_AGG(key) FROM epic_keys)
+  AND bp.state = 'OPEN'
+ORDER BY bp.created_at DESC;
+```
+
+---
+
+## Story 생성 시 참조할 정보 체크리스트
+
+| 정보 | 용도 | 쿼리/스크립트 |
+|------|------|---------------|
+| Vision 목표 | 전체 방향성 이해 | `context {project}` |
+| Milestone 상태 | 우선순위 판단 | `context {project}` |
+| Epic 설명 | 도메인 용어 파악 | `list {epic}` |
+| 기존 Story | 중복 방지, 패턴 참조 | `list {epic}` |
+| 최근 커밋 | 진행 중 작업, 파일 구조 | `dev {epic}` |
+| 오픈 PR | 의존성 파악 | `dev {epic}` |
+| 팀 구성 | 담당자 제안 | `context {project}` |
