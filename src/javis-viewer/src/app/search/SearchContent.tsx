@@ -3,7 +3,11 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, CheckSquare, FileText, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, CheckSquare, FileText, Filter, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import IssueDetailModal from '@/components/IssueDetailModal';
+import ConfluencePageModal from '@/components/ConfluencePageModal';
+import type { SprintIssue } from '@/types/sprint';
+import type { ConfluencePage, ConfluenceBreadcrumb } from '@/types/confluence';
 
 interface JiraResult {
   type: 'jira';
@@ -66,19 +70,29 @@ function formatDate(dateStr: string): string {
   }
 }
 
-function JiraResultCard({ result }: { result: JiraResult }) {
+function JiraResultCard({
+  result,
+  onClick,
+  isLoading,
+}: {
+  result: JiraResult;
+  onClick: () => void;
+  isLoading: boolean;
+}) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+    <div
+      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <CheckSquare className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <Link
-              href={`/jira?search=${result.key}`}
-              className="text-blue-600 hover:underline font-medium text-sm"
-            >
-              {result.key}
-            </Link>
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 text-blue-600 flex-shrink-0 animate-spin" />
+            ) : (
+              <CheckSquare className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            )}
+            <span className="text-blue-600 font-medium text-sm">{result.key}</span>
             <span
               className="inline-flex px-2 py-0.5 rounded text-xs font-medium"
               style={{
@@ -102,19 +116,29 @@ function JiraResultCard({ result }: { result: JiraResult }) {
   );
 }
 
-function ConfluenceResultCard({ result }: { result: ConfluenceResult }) {
+function ConfluenceResultCard({
+  result,
+  onClick,
+  isLoading,
+}: {
+  result: ConfluenceResult;
+  onClick: () => void;
+  isLoading: boolean;
+}) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+    <div
+      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-orange-300 transition-all cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <FileText className="w-4 h-4 text-orange-600 flex-shrink-0" />
-            <Link
-              href={`/confluence?pageId=${result.id}`}
-              className="text-orange-600 hover:underline font-medium text-sm"
-            >
-              {result.title}
-            </Link>
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 text-orange-600 flex-shrink-0 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4 text-orange-600 flex-shrink-0" />
+            )}
+            <span className="text-orange-600 font-medium text-sm">{result.title}</span>
           </div>
           {result.excerpt && (
             <p className="text-gray-600 text-sm line-clamp-2 mt-1">{result.excerpt}...</p>
@@ -236,6 +260,44 @@ export default function SearchContent({
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState(initialFilter);
 
+  // Modal states
+  const [selectedIssue, setSelectedIssue] = useState<SprintIssue | null>(null);
+  const [selectedPage, setSelectedPage] = useState<ConfluencePage | null>(null);
+  const [pageBreadcrumbs, setPageBreadcrumbs] = useState<ConfluenceBreadcrumb[]>([]);
+  const [loadingIssueKey, setLoadingIssueKey] = useState<string | null>(null);
+  const [loadingPageId, setLoadingPageId] = useState<string | null>(null);
+
+  // Fetch issue details and open modal
+  const handleIssueClick = useCallback(async (issueKey: string) => {
+    setLoadingIssueKey(issueKey);
+    try {
+      const res = await fetch(`/api/issues/${issueKey}`);
+      if (!res.ok) throw new Error('Failed to fetch issue');
+      const issue: SprintIssue = await res.json();
+      setSelectedIssue(issue);
+    } catch (error) {
+      console.error('Error fetching issue:', error);
+    } finally {
+      setLoadingIssueKey(null);
+    }
+  }, []);
+
+  // Fetch page details and open modal
+  const handlePageClick = useCallback(async (pageId: string) => {
+    setLoadingPageId(pageId);
+    try {
+      const res = await fetch(`/api/confluence/page/${pageId}`);
+      if (!res.ok) throw new Error('Failed to fetch page');
+      const data: { page: ConfluencePage; breadcrumbs: ConfluenceBreadcrumb[] } = await res.json();
+      setSelectedPage(data.page);
+      setPageBreadcrumbs(data.breadcrumbs || []);
+    } catch (error) {
+      console.error('Error fetching confluence page:', error);
+    } finally {
+      setLoadingPageId(null);
+    }
+  }, []);
+
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (query.length >= 2) {
@@ -336,9 +398,19 @@ export default function SearchContent({
             <div className="space-y-3">
               {combinedResults.map((result) =>
                 result.type === 'jira' ? (
-                  <JiraResultCard key={result.key} result={result} />
+                  <JiraResultCard
+                    key={result.key}
+                    result={result}
+                    onClick={() => handleIssueClick(result.key)}
+                    isLoading={loadingIssueKey === result.key}
+                  />
                 ) : (
-                  <ConfluenceResultCard key={result.id} result={result} />
+                  <ConfluenceResultCard
+                    key={result.id}
+                    result={result}
+                    onClick={() => handlePageClick(result.id)}
+                    isLoading={loadingPageId === result.id}
+                  />
                 )
               )}
             </div>
@@ -347,7 +419,12 @@ export default function SearchContent({
           {initialFilter === 'jira' && (
             <div className="space-y-3">
               {jiraResults.map((result) => (
-                <JiraResultCard key={(result as JiraResult).key} result={result as JiraResult} />
+                <JiraResultCard
+                  key={(result as JiraResult).key}
+                  result={result as JiraResult}
+                  onClick={() => handleIssueClick((result as JiraResult).key)}
+                  isLoading={loadingIssueKey === (result as JiraResult).key}
+                />
               ))}
             </div>
           )}
@@ -355,7 +432,12 @@ export default function SearchContent({
           {initialFilter === 'confluence' && (
             <div className="space-y-3">
               {confluenceResults.map((result) => (
-                <ConfluenceResultCard key={(result as ConfluenceResult).id} result={result as ConfluenceResult} />
+                <ConfluenceResultCard
+                  key={(result as ConfluenceResult).id}
+                  result={result as ConfluenceResult}
+                  onClick={() => handlePageClick((result as ConfluenceResult).id)}
+                  isLoading={loadingPageId === (result as ConfluenceResult).id}
+                />
               ))}
             </div>
           )}
@@ -367,6 +449,26 @@ export default function SearchContent({
             filter={initialFilter}
           />
         </div>
+      )}
+
+      {/* Issue Detail Modal */}
+      {selectedIssue && (
+        <IssueDetailModal
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+        />
+      )}
+
+      {/* Confluence Page Modal */}
+      {selectedPage && (
+        <ConfluencePageModal
+          page={selectedPage}
+          breadcrumbs={pageBreadcrumbs}
+          onClose={() => {
+            setSelectedPage(null);
+            setPageBreadcrumbs([]);
+          }}
+        />
       )}
     </div>
   );
