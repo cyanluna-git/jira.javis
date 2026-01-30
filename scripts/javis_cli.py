@@ -37,6 +37,7 @@ COMMANDS = {
     'context': 'cli.context',
     'tag': 'cli.tag',
     'sync': 'cli.sync',
+    'slack': 'cli.slack',
     'restructure': 'sprint_restructure.cli',
 }
 
@@ -48,6 +49,7 @@ Commands:
   context     View current work context
   tag         Manage lightweight issue tags
   sync        Sync data from external sources
+  slack       Slack integration (test, alerts, notifications)
   restructure Reorganize Confluence pages by document type
 
 Examples:
@@ -56,6 +58,8 @@ Examples:
   javis context --attention         Show items needing attention
   javis tag ASP-123 urgent          Tag an issue
   javis sync all                    Sync all data sources
+  javis slack test                  Send test message to Slack
+  javis slack risk                  Send risk alerts to Slack
   javis restructure analyze -p "Sprint-Tumalo"    Analyze pages
   javis restructure propose -p "Sprint-Tumalo"    Generate proposal
   javis restructure plan -p "Sprint-Tumalo"       Create operations
