@@ -1,6 +1,6 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 import CompareContent from "./CompareContent";
 
 export const dynamic = 'force-dynamic';
@@ -238,9 +238,14 @@ export default async function ComparePage({ searchParams }: Props) {
       <div className="min-h-screen bg-gray-50 p-8 font-sans">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex items-center gap-4">
-            <Link href="/sprints" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/sprints" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </Link>
+              <Link href="/" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <Home className="w-5 h-5 text-gray-600" />
+              </Link>
+            </div>
             <h1 className="text-3xl font-bold text-gray-900">Sprint Compare</h1>
           </div>
 
@@ -262,9 +267,14 @@ export default async function ComparePage({ searchParams }: Props) {
       <div className="min-h-screen bg-gray-50 p-8 font-sans">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex items-center gap-4">
-            <Link href="/sprints" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/sprints" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </Link>
+              <Link href="/" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <Home className="w-5 h-5 text-gray-600" />
+              </Link>
+            </div>
             <h1 className="text-3xl font-bold text-gray-900">Sprint Compare</h1>
           </div>
           <div className="bg-white rounded-xl border border-red-200 p-8 text-center">

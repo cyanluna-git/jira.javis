@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  Home,
   Target,
   Calendar,
   Edit,
@@ -237,12 +238,20 @@ export default function VisionDetailPage({ params }: PageProps) {
         <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link
-                href="/roadmap"
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/roadmap"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </Link>
+                <Link
+                  href="/"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Home className="w-5 h-5 text-gray-600" />
+                </Link>
+              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">

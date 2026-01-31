@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  Home,
   User,
   Trophy,
   Target,
@@ -18,6 +19,7 @@ import {
   RefreshCw,
   ExternalLink
 } from 'lucide-react';
+import Link from 'next/link';
 import EvaluationModal from '@/components/EvaluationModal';
 import type { MemberDetail, MemberStats, MemberStatHistory, ManagerEvaluation } from '@/types/member';
 
@@ -156,12 +158,20 @@ export default function MemberDetailClient({ memberId }: Props) {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 gap-4">
-            <button
-              onClick={() => router.push('/members')}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/members')}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <Link
+                href="/"
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <Home className="w-5 h-5 text-gray-600" />
+              </Link>
+            </div>
             <h1 className="text-xl font-bold text-gray-900">Member Detail</h1>
           </div>
         </div>
