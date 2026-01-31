@@ -50,6 +50,27 @@ python3 .claude/skills/stories/scripts/stories.py dev EUV-3299
 | 커밋 이력 | `bitbucket_commits` |
 | PR 현황 | `bitbucket_pullrequests` |
 
+## Vision 기본값 자동 적용
+
+Jira에 Story/Epic 생성 시 **Vision의 `default_component`와 `default_labels`가 자동 적용**됩니다.
+
+| 프로젝트 | Component | Labels |
+|----------|-----------|--------|
+| EUV | OQCDigitalization | oqc-digitalization |
+| ASP | Unify Plasma | unify-plasma-single |
+
+Vision별 기본값 확인:
+```bash
+python3 .claude/skills/stories/scripts/stories.py push {epic_key} --dry-run
+```
+
+Vision 기본값 수정:
+```sql
+UPDATE roadmap_visions
+SET default_component = '컴포넌트명', default_labels = ARRAY['label1', 'label2']
+WHERE project_key = 'EUV';
+```
+
 ---
 
 ## `/javis-stories add` 상세
