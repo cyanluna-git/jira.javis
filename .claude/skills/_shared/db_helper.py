@@ -85,6 +85,27 @@ def get_jira_config() -> Dict[str, str]:
         'token': env.get('JIRA_TOKEN', ''),
     }
 
+def get_vision_defaults(project_key: str) -> Optional[Dict[str, Any]]:
+    """
+    프로젝트의 Vision 기본값 (component, labels)을 반환합니다.
+
+    Args:
+        project_key: Jira 프로젝트 키 (예: EUV, ASP)
+
+    Returns:
+        {'default_component': str, 'default_labels': list} 또는 None
+    """
+    return query_one(
+        """
+        SELECT default_component, default_labels
+        FROM roadmap_visions
+        WHERE project_key = %s AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        [project_key]
+    )
+
 def get_connection():
     """PostgreSQL 연결을 반환합니다."""
     try:

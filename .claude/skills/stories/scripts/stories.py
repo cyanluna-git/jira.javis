@@ -12,10 +12,11 @@ Usage:
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 # 공통 헬퍼 로드
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "_shared"))
-from db_helper import query, query_one, get_jira_config, print_table, format_date
+from db_helper import query, query_one, get_jira_config, get_vision_defaults, print_table, format_date
 
 
 def context(vision_title: str = ""):
@@ -224,25 +225,157 @@ def dev_status(epic_key: str):
         print_table(prs, ["pr_number", "title", "state", "author_name", "repo"])
 
 
+def get_epic_project(epic_key: str) -> Optional[str]:
+    """Epic의 프로젝트 키를 조회"""
+    result = query_one(
+        "SELECT project FROM jira_issues WHERE key = %s",
+        [epic_key]
+    )
+    return result["project"] if result else None
+
+
+def create_jira_story(
+    project_key: str,
+    epic_key: str,
+    summary: str,
+    description: str,
+    labels: list = None,
+    story_points: int = None,
+    dry_run: bool = False
+) -> Optional[dict]:
+    """
+    Jira에 Story를 생성합니다.
+
+    Vision의 default_component와 default_labels가 자동으로 적용됩니다.
+    """
+    import base64
+    import urllib.request
+    import urllib.error
+
+    jira_config = get_jira_config()
+    if not jira_config["url"]:
+        print("Error: JIRA_URL not configured")
+        return None
+
+    # Vision 기본값 조회
+    vision_defaults = get_vision_defaults(project_key)
+    component = None
+    default_labels = []
+
+    if vision_defaults:
+        component = vision_defaults.get("default_component")
+        default_labels = vision_defaults.get("default_labels") or []
+        print(f"Vision defaults: component={component}, labels={default_labels}")
+
+    # 라벨 병합 (Vision 기본값 + 파라미터)
+    all_labels = list(set(default_labels + (labels or [])))
+
+    # Jira API payload
+    fields = {
+        "project": {"key": project_key},
+        "summary": summary,
+        "issuetype": {"name": "Story"},
+        "parent": {"key": epic_key},
+        "labels": all_labels,
+    }
+
+    # Component 설정 (있으면)
+    if component:
+        fields["components"] = [{"name": component}]
+
+    # Story Points (customfield_10016)
+    if story_points:
+        fields["customfield_10016"] = story_points
+
+    # Description (ADF 형식)
+    if description:
+        fields["description"] = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": description}]
+                }
+            ]
+        }
+
+    payload = {"fields": fields}
+
+    if dry_run:
+        print("\n[Dry-run] Would create Story:")
+        print(f"  Project: {project_key}")
+        print(f"  Epic: {epic_key}")
+        print(f"  Summary: {summary}")
+        print(f"  Component: {component}")
+        print(f"  Labels: {all_labels}")
+        print(f"  Story Points: {story_points}")
+        return {"dry_run": True, "payload": payload}
+
+    # Jira API 호출
+    url = f"{jira_config['url']}/rest/api/3/issue"
+    auth = base64.b64encode(
+        f"{jira_config['email']}:{jira_config['token']}".encode()
+    ).decode()
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode())
+            print(f"✓ Created: {result['key']} - {summary}")
+            return result
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        print(f"✗ Failed to create story: {e.code}")
+        print(f"  Error: {error_body}")
+        return None
+
+
 def push_stories(epic_key: str, dry_run: bool = False):
     """Story를 Jira에 생성"""
 
     print(f"\n=== Story Push: {epic_key} ===")
 
+    # Epic 프로젝트 확인
+    project_key = get_epic_project(epic_key)
+    if not project_key:
+        print(f"Error: Epic not found: {epic_key}")
+        return
+
+    # Vision 기본값 표시
+    vision_defaults = get_vision_defaults(project_key)
+    if vision_defaults:
+        print(f"Project: {project_key}")
+        print(f"  Component: {vision_defaults.get('default_component')}")
+        print(f"  Labels: {vision_defaults.get('default_labels')}")
+    else:
+        print(f"Warning: No Vision defaults for project {project_key}")
+
     if dry_run:
-        print("(Dry-run mode - 실제 생성하지 않음)")
+        print("\n(Dry-run mode - 실제 생성하지 않음)")
         print("\n생성할 Story가 준비되면 이 스크립트를 사용하세요.")
         print("먼저 '/javis-stories create' 로 Story 초안을 생성하세요.")
         return
 
-    # 실제 생성 로직은 AI가 Story 초안을 만든 후 수동으로 호출
+    # Jira 설정 확인
     jira_config = get_jira_config()
     if not jira_config["url"]:
         print("Error: JIRA_URL not configured in .env")
         return
 
-    print("Story 생성 준비 완료.")
+    print("\nStory 생성 준비 완료.")
     print("AI가 생성한 Story 초안을 확인하고 push를 진행하세요.")
+    print("\nUsage: create_jira_story(project, epic, summary, description, labels, points)")
 
 
 def main():

@@ -5,8 +5,13 @@
 ### 주요 테이블
 
 ```sql
--- Vision 목표
-roadmap_visions (id, title, description, status, north_star_metric, north_star_target, project_key)
+-- Vision 목표 (컴포넌트/라벨 기본값 포함)
+roadmap_visions (
+  id, title, description, status,
+  north_star_metric, north_star_target, project_key,
+  default_component,  -- Jira 컴포넌트 기본값
+  default_labels      -- TEXT[] 라벨 기본값
+)
 
 -- Milestone
 roadmap_milestones (id, vision_id, title, quarter, progress_percent, status)
@@ -137,15 +142,45 @@ ORDER BY completion_pct DESC NULLS LAST;
 
 ## Jira API
 
-### Story 생성
+### Vision 기본값 조회
+
+```python
+from db_helper import get_vision_defaults
+
+# 프로젝트의 Vision 기본값 조회
+defaults = get_vision_defaults('EUV')
+# 반환: {'default_component': 'OQCDigitalization', 'default_labels': ['oqc-digitalization']}
+```
+
+### Story 생성 (Vision 기본값 자동 적용)
+
+```python
+from stories import create_jira_story
+
+# Vision의 component/labels가 자동으로 적용됨
+result = create_jira_story(
+    project_key='EUV',
+    epic_key='EUV-3304',
+    summary='Implement Test Set Selection UI',
+    description='As a tester, I want to select a Test Set...',
+    labels=['frontend'],       # Vision 기본 라벨에 추가됨
+    story_points=3,
+    dry_run=False
+)
+# 생성 결과: {'key': 'EUV-3313', ...}
+# 적용된 component: OQCDigitalization
+# 적용된 labels: ['oqc-digitalization', 'frontend']
+```
+
+### Story 생성 (기존 방식)
 
 ```python
 import requests
 
 def create_story(epic_key, summary, description, story_points, jira_config):
-    """Jira에 Story 직접 생성"""
+    """Jira에 Story 직접 생성 (Vision 기본값 미적용)"""
     project_key = epic_key.split('-')[0]
-    
+
     payload = {
         "fields": {
             "project": {"key": project_key},
@@ -160,14 +195,14 @@ def create_story(epic_key, summary, description, story_points, jira_config):
             "customfield_10016": story_points  # Story Points
         }
     }
-    
+
     response = requests.post(
         f"{jira_config['url']}/rest/api/3/issue",
         auth=(jira_config['email'], jira_config['token']),
         headers={"Content-Type": "application/json"},
         json=payload
     )
-    
+
     if response.ok:
         return response.json()['key']
     else:
