@@ -1,7 +1,6 @@
-import Link from "next/link";
 import pool from "@/lib/db";
-import { ArrowLeft } from "lucide-react";
 import OperationsContent from "./OperationsContent";
+import { NavigationButtons } from "@/components/NavigationButtons";
 
 export const dynamic = 'force-dynamic';
 
@@ -89,9 +88,7 @@ export default async function OperationsPage() {
     <div className="min-h-screen bg-gray-50 p-8 font-sans">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center gap-4">
-          <Link href="/" className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Link>
+          <NavigationButtons />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Content Operations</h1>
             <p className="text-gray-500 mt-1">Manage AI-driven content operations queue</p>

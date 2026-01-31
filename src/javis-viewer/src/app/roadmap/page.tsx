@@ -10,9 +10,9 @@ import {
   AlertTriangle,
   Clock,
   RefreshCw,
-  Filter,
   FolderKanban,
 } from 'lucide-react';
+import { NavigationButtons } from '@/components/NavigationButtons';
 import VisionCard from '@/components/VisionCard';
 import MilestoneCard from '@/components/MilestoneCard';
 import type { Vision, RoadmapSummary, QuarterlyMilestones, MilestoneWithStreams } from '@/types/roadmap';
@@ -115,6 +115,7 @@ export default function RoadmapPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <NavigationButtons />
               <Map className="w-8 h-8 text-indigo-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Roadmap</h1>

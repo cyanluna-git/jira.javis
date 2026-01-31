@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft,
   FileText,
   ChevronRight,
   ExternalLink,
@@ -12,6 +11,7 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
+import { NavigationButtons } from '@/components/NavigationButtons';
 import clsx from 'clsx';
 import { ConfluenceRenderer } from '@/components/ConfluenceRenderer';
 import ConfluenceTree from '@/components/ConfluenceTree';
@@ -73,9 +73,7 @@ function ConfluencePageContent() {
       {/* Sidebar with Tree */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-gray-50">
         <div className="p-4 border-b border-gray-200 flex items-center gap-3 bg-white">
-          <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-500" />
-          </Link>
+          <NavigationButtons />
           <h1 className="font-bold text-gray-800">Confluence</h1>
         </div>
 

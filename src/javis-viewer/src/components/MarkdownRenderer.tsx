@@ -54,6 +54,26 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
     }
   };
 
+  // Parse table row into cells
+  const parseTableRow = (line: string): string[] => {
+    // Remove leading/trailing pipes and split by |
+    const trimmed = line.trim().replace(/^\||\|$/g, '');
+    return trimmed.split('|').map(cell => cell.trim());
+  };
+
+  // Check if line is a table separator (|---|---|)
+  const isTableSeparator = (line: string): boolean => {
+    const trimmed = line.trim();
+    return /^\|?[\s\-:|]+\|[\s\-:|]+\|?$/.test(trimmed);
+  };
+
+  // Check if line looks like a table row
+  const isTableRow = (line: string): boolean => {
+    const trimmed = line.trim();
+    // Must have at least one | that's not at the very start or end only
+    return trimmed.includes('|') && trimmed.split('|').length >= 2;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
@@ -143,6 +163,73 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         <pre key={`code-${i}`} className="mb-3 bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
           <code>{codeLines.join('\n')}</code>
         </pre>
+      );
+      continue;
+    }
+
+    // Table detection
+    if (isTableRow(trimmedLine)) {
+      flushList();
+      flushBlockquote();
+
+      const tableRows: string[][] = [];
+      let hasHeader = false;
+      let headerRow: string[] = [];
+
+      // First row (potential header)
+      headerRow = parseTableRow(trimmedLine);
+      i++;
+
+      // Check if next line is separator
+      if (i < lines.length && isTableSeparator(lines[i])) {
+        hasHeader = true;
+        i++; // Skip separator line
+      } else {
+        // No separator, treat first row as data
+        tableRows.push(headerRow);
+        headerRow = [];
+      }
+
+      // Collect remaining table rows
+      while (i < lines.length && isTableRow(lines[i].trim()) && !isTableSeparator(lines[i])) {
+        tableRows.push(parseTableRow(lines[i]));
+        i++;
+      }
+      i--; // Back up one since the for loop will increment
+
+      elements.push(
+        <div key={`table-${elements.length}`} className="mb-4 overflow-x-auto">
+          <table className="min-w-full border-collapse border border-gray-300">
+            {hasHeader && headerRow.length > 0 && (
+              <thead className="bg-gray-100">
+                <tr>
+                  {headerRow.map((cell, cellIdx) => (
+                    <th
+                      key={cellIdx}
+                      className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                    >
+                      {renderInline(cell)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {tableRows.map((row, rowIdx) => (
+                <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  {row.map((cell, cellIdx) => (
+                    <td
+                      key={cellIdx}
+                      className="border border-gray-300 px-4 py-2 text-sm text-gray-700"
+                    >
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       );
       continue;
     }

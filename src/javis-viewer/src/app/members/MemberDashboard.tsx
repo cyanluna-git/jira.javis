@@ -8,12 +8,12 @@ import {
   Search,
   Filter,
   RefreshCw,
-  UserPlus,
   TrendingUp,
   Target,
   Star,
   ChevronDown
 } from 'lucide-react';
+import { NavigationButtons } from '@/components/NavigationButtons';
 import MemberStatCard from '@/components/MemberStatCard';
 import type { MemberRanking, MemberRole } from '@/types/member';
 
@@ -91,6 +91,7 @@ export default function MemberDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <NavigationButtons />
               <Users className="w-6 h-6 text-blue-600" />
               <h1 className="text-xl font-bold text-gray-900">Team Members</h1>
             </div>

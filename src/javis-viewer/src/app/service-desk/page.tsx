@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { ArrowLeft, Headphones } from "lucide-react";
+import { Headphones } from "lucide-react";
 import ServiceDeskContent from "./ServiceDeskContent";
 import { getServiceDeskData } from "@/lib/service-desk";
+import { NavigationButtons } from "@/components/NavigationButtons";
 
 export const dynamic = 'force-dynamic';
 
@@ -49,12 +49,7 @@ export default async function ServiceDeskPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex items-center gap-4">
-          <Link
-            href="/"
-            className="p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Link>
+          <NavigationButtons />
           <div className="flex items-center gap-3">
             <div className="bg-rose-100 p-2 rounded-lg">
               <Headphones className="w-6 h-6 text-rose-600" />
