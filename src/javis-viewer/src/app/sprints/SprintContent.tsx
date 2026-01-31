@@ -2,14 +2,18 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Calendar, Target, ChevronRight, ChevronDown, Users, Box, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Calendar, Target, ChevronRight, ChevronDown, Users, Box, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings } from 'lucide-react';
 import SprintCard from './SprintCard';
 import SprintIssueRow from './SprintIssueRow';
+import SprintLabelEditor from './SprintLabelEditor';
 import IssueDetailModal from '@/components/IssueDetailModal';
 import BurndownChart from '@/components/BurndownChart';
 import ComponentPieChart from '@/components/ComponentPieChart';
 import ComponentProgressChart from '@/components/ComponentProgressChart';
+import SprintDocumentCard from '@/components/SprintDocumentCard';
+import ConfluencePageModal from '@/components/ConfluencePageModal';
 import type { Board, Sprint, SprintIssue, Assignee, IssueStats } from '@/types/sprint';
+import type { ConfluencePage } from '@/types/confluence';
 
 interface Props {
   boards: Board[];
@@ -25,6 +29,18 @@ interface Props {
 
 type SortField = 'key' | 'status' | 'points' | 'assignee';
 type SortOrder = 'asc' | 'desc';
+
+// Convert sprint name to label format
+// "SCALED Sprint 14" → "scaled-sprint14"
+// "OQC Sprint 01" → "oqc-sprint01"
+// "EUV Sprint 5" → "euv-sprint5"
+function getSprintLabel(sprintName: string): string {
+  const normalized = sprintName
+    .toLowerCase()
+    .replace(/\s+sprint\s*/i, '-sprint')
+    .replace(/\s+/g, '-');
+  return normalized;
+}
 
 export default function SprintContent({
   boards,
@@ -48,6 +64,13 @@ export default function SprintContent({
   const [sortField, setSortField] = useState<SortField>('key');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
+  // Sprint Documents state
+  const [sprintDocuments, setSprintDocuments] = useState<ConfluencePage[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<ConfluencePage | null>(null);
+  const [showLabelEditor, setShowLabelEditor] = useState(false);
+  const [currentSprintLabels, setCurrentSprintLabels] = useState<string[]>([]);
+
   // Sync state with URL params when they change (e.g. browser back/forward)
   // Using join() to prevent unnecessary re-runs from array reference changes
   useEffect(() => {
@@ -60,24 +83,73 @@ export default function SprintContent({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialComponents.join(',')]);
 
-  // URL 업데이트 헬퍼
-  const updateUrl = useCallback((assignees: Set<string>, components: Set<string>) => {
+  // Fetch sprint documents when sprint changes
+  useEffect(() => {
+    if (!selectedSprint) {
+      setSprintDocuments([]);
+      setCurrentSprintLabels([]);
+      return;
+    }
+
+    const sprintLabel = getSprintLabel(selectedSprint.name);
+    const customLabels = selectedSprint.confluence_labels || [];
+    setCurrentSprintLabels(customLabels);
+
+    // Combine auto-generated label with custom labels
+    const allLabels = [sprintLabel, ...customLabels];
+
+    const fetchDocuments = async () => {
+      setIsLoadingDocuments(true);
+      try {
+        const response = await fetch(`/api/confluence/by-labels?labels=${encodeURIComponent(allLabels.join(','))}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSprintDocuments(data.pages || []);
+        } else {
+          setSprintDocuments([]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch sprint documents:', error);
+        setSprintDocuments([]);
+      } finally {
+        setIsLoadingDocuments(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [selectedSprint]);
+
+  // URL 업데이트 - useEffect로 상태 변경 후 동기화
+  useEffect(() => {
+    // Skip if both are at initial state (to avoid unnecessary URL update on mount)
+    const currentAssignees = searchParams.get('assignees')?.split(',').filter(Boolean) || [];
+    const currentComponents = searchParams.get('components')?.split(',').filter(Boolean) || [];
+
+    const assigneesChanged =
+      selectedAssignees.size !== currentAssignees.length ||
+      !currentAssignees.every(a => selectedAssignees.has(a));
+    const componentsChanged =
+      selectedComponents.size !== currentComponents.length ||
+      !currentComponents.every(c => selectedComponents.has(c));
+
+    if (!assigneesChanged && !componentsChanged) return;
+
     const params = new URLSearchParams(searchParams.toString());
 
-    if (assignees.size > 0) {
-      params.set('assignees', Array.from(assignees).join(','));
+    if (selectedAssignees.size > 0) {
+      params.set('assignees', Array.from(selectedAssignees).join(','));
     } else {
       params.delete('assignees');
     }
 
-    if (components.size > 0) {
-      params.set('components', Array.from(components).join(','));
+    if (selectedComponents.size > 0) {
+      params.set('components', Array.from(selectedComponents).join(','));
     } else {
       params.delete('components');
     }
 
     router.replace(`/sprints?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+  }, [selectedAssignees, selectedComponents, router, searchParams]);
 
   // Filter sprints by state
   const filteredSprints = useMemo(() => {
@@ -87,13 +159,20 @@ export default function SprintContent({
 
   // Extract assignees from issues
   const assignees = useMemo<Assignee[]>(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { count: number; avatarUrl: string | null }>();
     issues.forEach(issue => {
-      const name = issue.raw_data?.fields?.assignee?.displayName || 'Unassigned';
-      map.set(name, (map.get(name) || 0) + 1);
+      const assignee = issue.raw_data?.fields?.assignee;
+      const name = assignee?.displayName || 'Unassigned';
+      const avatarUrl = assignee?.avatarUrls?.['24x24'] || null;
+      const existing = map.get(name);
+      if (existing) {
+        existing.count++;
+      } else {
+        map.set(name, { count: 1, avatarUrl });
+      }
     });
     return Array.from(map.entries())
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, { count, avatarUrl }]) => ({ name, count, avatarUrl }))
       .sort((a, b) => b.count - a.count);
   }, [issues]);
 
@@ -245,14 +324,12 @@ export default function SprintContent({
       } else {
         next.add(name);
       }
-      updateUrl(next, selectedComponents);
       return next;
     });
   };
 
   const clearAssigneeFilter = () => {
     setSelectedAssignees(new Set());
-    updateUrl(new Set(), selectedComponents);
   };
 
   const toggleComponent = (name: string) => {
@@ -263,14 +340,12 @@ export default function SprintContent({
       } else {
         next.add(name);
       }
-      updateUrl(selectedAssignees, next);
       return next;
     });
   };
 
   const clearComponentFilter = () => {
     setSelectedComponents(new Set());
-    updateUrl(selectedAssignees, new Set());
   };
 
   const handleSort = (field: SortField) => {
@@ -401,11 +476,11 @@ export default function SprintContent({
                       <Calendar className="w-4 h-4" />
                       <span>
                         {selectedSprint.start_date
-                          ? new Date(selectedSprint.start_date).toLocaleDateString()
+                          ? new Date(selectedSprint.start_date).toLocaleDateString('ko-KR')
                           : '?'}
                         <ChevronRight className="w-4 h-4 inline mx-1" />
                         {selectedSprint.end_date
-                          ? new Date(selectedSprint.end_date).toLocaleDateString()
+                          ? new Date(selectedSprint.end_date).toLocaleDateString('ko-KR')
                           : '?'}
                       </span>
                     </div>
@@ -415,7 +490,7 @@ export default function SprintContent({
                   {selectedSprint.goal && (
                     <div className="mt-3 flex items-start gap-2">
                       <Target className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-gray-600">{selectedSprint.goal}</p>
+                      <p className="text-sm text-gray-600 whitespace-pre-line">{selectedSprint.goal}</p>
                     </div>
                   )}
                 </div>
@@ -532,7 +607,7 @@ export default function SprintContent({
 
                 {showAssigneeFilter && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {assignees.map(({ name, count }) => (
+                    {assignees.map(({ name, count, avatarUrl }) => (
                       <label
                         key={name}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer border transition-colors ${
@@ -547,6 +622,11 @@ export default function SprintContent({
                           onChange={() => toggleAssignee(name)}
                           className="sr-only"
                         />
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                        ) : (
+                          <Users className="w-5 h-5 text-gray-400" />
+                        )}
                         <span className="text-sm">{name}</span>
                         <span className="text-xs text-gray-500">({count})</span>
                       </label>
@@ -676,6 +756,70 @@ export default function SprintContent({
               </table>
             </div>
           </div>
+
+          {/* Sprint Documents Section */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Sprint Documents
+                    {!isLoadingDocuments && sprintDocuments.length > 0 && (
+                      <span className="ml-2 text-sm font-normal text-gray-500">
+                        ({sprintDocuments.length})
+                      </span>
+                    )}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowLabelEditor(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  Edit Labels
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className="text-xs text-gray-500">Labels:</span>
+                <code className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                  {getSprintLabel(selectedSprint.name)}
+                </code>
+                {currentSprintLabels.map(label => (
+                  <code key={label} className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                    {label}
+                  </code>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4">
+              {isLoadingDocuments ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : sprintDocuments.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sprintDocuments.map(page => (
+                    <SprintDocumentCard
+                      key={page.id}
+                      page={page}
+                      sprintLabel={getSprintLabel(selectedSprint.name)}
+                      onClick={() => setSelectedDocument(page)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="mb-2">No documents found for this sprint</p>
+                  <p className="text-xs">
+                    Add the label &quot;{getSprintLabel(selectedSprint.name)}&quot; to Confluence pages to show them here
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -684,6 +828,39 @@ export default function SprintContent({
         <IssueDetailModal
           issue={selectedIssue}
           onClose={() => setSelectedIssue(null)}
+        />
+      )}
+
+      {/* Confluence Page Modal */}
+      {selectedDocument && (
+        <ConfluencePageModal
+          page={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
+        />
+      )}
+
+      {/* Sprint Label Editor Modal */}
+      {showLabelEditor && selectedSprint && (
+        <SprintLabelEditor
+          sprint={{ ...selectedSprint, confluence_labels: currentSprintLabels }}
+          autoGeneratedLabel={getSprintLabel(selectedSprint.name)}
+          onClose={() => setShowLabelEditor(false)}
+          onSaved={(updatedSprint) => {
+            // Update local state with new labels
+            const newLabels = updatedSprint.confluence_labels || [];
+            setCurrentSprintLabels(newLabels);
+
+            // Re-fetch documents with updated labels
+            const sprintLabel = getSprintLabel(selectedSprint.name);
+            const allLabels = [sprintLabel, ...newLabels];
+
+            setIsLoadingDocuments(true);
+            fetch(`/api/confluence/by-labels?labels=${encodeURIComponent(allLabels.join(','))}`)
+              .then(res => res.ok ? res.json() : { pages: [] })
+              .then(data => setSprintDocuments(data.pages || []))
+              .catch(() => setSprintDocuments([]))
+              .finally(() => setIsLoadingDocuments(false));
+          }}
         />
       )}
     </div>
