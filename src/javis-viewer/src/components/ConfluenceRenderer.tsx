@@ -574,12 +574,29 @@ function HtmlElementRenderer({ element }: { element: Element }) {
   const tagName = element.tagName.toLowerCase();
 
   switch (tagName) {
-    case 'p':
+    case 'p': {
+      // Check if paragraph contains block elements (div, pre, table, etc.)
+      // If so, use div instead of p to avoid hydration errors
+      const hasBlockChild = Array.from(element.children).some(child => {
+        const tag = child.tagName.toLowerCase();
+        return ['div', 'pre', 'table', 'ul', 'ol', 'blockquote', 'figure', 'form', 'section', 'article', 'header', 'footer', 'nav', 'aside'].includes(tag)
+          || tag.startsWith('ac:');  // Confluence macros often render as blocks
+      });
+
+      if (hasBlockChild) {
+        return (
+          <div className="mb-3 leading-relaxed">
+            {renderChildren(element)}
+          </div>
+        );
+      }
+
       return (
         <p className="mb-3 leading-relaxed">
           {renderChildren(element)}
         </p>
       );
+    }
 
     case 'h1':
       return <h1 className="text-2xl font-bold mb-4 mt-6 text-gray-900">{renderChildren(element)}</h1>;
