@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 
 interface RouteContext {
   params: Promise<{ key: string }>;
@@ -54,6 +55,8 @@ export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { key } = await context.params;
 
   let body: Record<string, unknown>;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -74,6 +75,8 @@ export async function POST(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await context.params;
 
   // Validate UUID format
@@ -227,6 +230,8 @@ export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await context.params;
 
   // Validate UUID format
@@ -336,6 +341,8 @@ export async function DELETE(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await context.params;
 
   // Validate UUID format

@@ -22,6 +22,7 @@ import MilestoneCard from '@/components/MilestoneCard';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import EpicIssueTree from '@/components/EpicIssueTree';
 import VisionMemberSection from '@/components/VisionMemberSection';
+import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import type {
   VisionWithMilestones,
   VisionStatus,
@@ -45,6 +46,7 @@ const statusConfig: Record<VisionStatus, { icon: React.ReactNode; color: string;
 export default function VisionDetailPage({ params }: PageProps) {
   const { visionId } = use(params);
   const router = useRouter();
+  const isReadOnly = useReadOnly();
 
   const [vision, setVision] = useState<VisionWithMilestones | null>(null);
   const [loading, setLoading] = useState(true);
@@ -261,6 +263,11 @@ export default function VisionDetailPage({ params }: PageProps) {
                     {statusInfo.icon}
                     {statusInfo.label}
                   </span>
+                  {isReadOnly && (
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">
+                      Read-Only
+                    </span>
+                  )}
                 </div>
                 {editing ? (
                   <input
@@ -276,7 +283,7 @@ export default function VisionDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              {editing ? (
+              {!isReadOnly && editing ? (
                 <>
                   <button
                     onClick={() => setEditing(false)}
@@ -293,7 +300,7 @@ export default function VisionDetailPage({ params }: PageProps) {
                     Save
                   </button>
                 </>
-              ) : (
+              ) : !isReadOnly ? (
                 <>
                   <button
                     onClick={handleSyncEpics}
@@ -318,7 +325,7 @@ export default function VisionDetailPage({ params }: PageProps) {
                     Archive
                   </button>
                 </>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -477,26 +484,30 @@ export default function VisionDetailPage({ params }: PageProps) {
         {/* Milestones Section */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Milestones</h2>
-          <button
-            onClick={() => setShowNewMilestoneModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Milestone
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => setShowNewMilestoneModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Milestone
+            </button>
+          )}
         </div>
 
         {vision.milestones.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
             <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 mb-4">No milestones yet. Add your first milestone to track progress.</p>
-            <button
-              onClick={() => setShowNewMilestoneModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              <Plus className="w-4 h-4" />
-              Add Milestone
-            </button>
+            <p className="text-gray-500 mb-4">No milestones yet. {!isReadOnly && 'Add your first milestone to track progress.'}</p>
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowNewMilestoneModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                <Plus className="w-4 h-4" />
+                Add Milestone
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -617,7 +628,7 @@ export default function VisionDetailPage({ params }: PageProps) {
       </main>
 
       {/* New Milestone Modal */}
-      {showNewMilestoneModal && (
+      {!isReadOnly && showNewMilestoneModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
             <div className="p-6 border-b border-gray-200">

@@ -17,6 +17,7 @@ import {
   FileEdit,
   ExternalLink,
 } from 'lucide-react';
+import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import type {
   MilestoneWithStreams,
   MilestoneStatus,
@@ -58,6 +59,7 @@ interface EpicSuggestion {
 }
 
 export default function MilestoneCard({ milestone, onEdit, showVisionTitle = false, onEpicLinked }: Props) {
+  const isReadOnly = useReadOnly();
   const [expanded, setExpanded] = useState(false);
   const [showAddEpic, setShowAddEpic] = useState(false);
   const [newEpicKey, setNewEpicKey] = useState('');
@@ -327,20 +329,22 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs font-medium text-gray-500 uppercase">Linked Epics</div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowAddEpic(!showAddEpic);
-                }}
-                className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" />
-                Add Epic
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAddEpic(!showAddEpic);
+                  }}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add Epic
+                </button>
+              )}
             </div>
 
             {/* Add Epic Form */}
-            {showAddEpic && (
+            {!isReadOnly && showAddEpic && (
               <div className="mb-3" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 relative">
@@ -421,15 +425,17 @@ export default function MilestoneCard({ milestone, onEdit, showVisionTitle = fal
                     className="group px-2 py-1 bg-white border border-gray-200 rounded text-sm font-mono text-blue-600 hover:bg-blue-50 flex items-center gap-1"
                   >
                     {link.epic_key}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveEpic(link.epic_key);
-                      }}
-                      className="hidden group-hover:block text-gray-400 hover:text-red-500"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveEpic(link.epic_key);
+                        }}
+                        className="hidden group-hover:block text-gray-400 hover:text-red-500"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 
 // GET /api/confluence/suggestions/[id] - Get suggestion details
 export async function GET(
@@ -60,6 +61,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await params;
   const client = await pool.connect();
 
@@ -129,6 +132,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await params;
   const client = await pool.connect();
 

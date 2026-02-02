@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 
 // Valid operation types
 const VALID_OPERATION_TYPES = [
@@ -93,6 +94,8 @@ export async function GET(request: NextRequest) {
  * Create a new operation
  */
 export async function POST(request: NextRequest) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   let body: {
     operation_type: string;
     target_type: string;
