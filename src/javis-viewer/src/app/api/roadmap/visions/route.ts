@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 import type { Vision, CreateVisionInput, RoadmapSummary } from '@/types/roadmap';
 
 // GET /api/roadmap/visions - List visions with optional filters
@@ -92,6 +93,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/roadmap/visions - Create a new vision
 export async function POST(request: NextRequest) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const client = await pool.connect();
 
   try {

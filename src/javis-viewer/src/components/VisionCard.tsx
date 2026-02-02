@@ -13,6 +13,7 @@ import {
   Box,
   Tag,
 } from 'lucide-react';
+import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import type { Vision, VisionStatus } from '@/types/roadmap';
 
 interface VisionWithAggregates extends Vision {
@@ -34,6 +35,7 @@ const statusConfig: Record<VisionStatus, { icon: React.ReactNode; color: string;
 };
 
 export default function VisionCard({ vision, onClick, onEdit }: Props) {
+  const isReadOnly = useReadOnly();
   const statusInfo = statusConfig[vision.status];
   const progressPercent = Math.round(vision.overall_progress);
   const northStarProgress = vision.north_star_target && vision.north_star_current
@@ -83,7 +85,7 @@ export default function VisionCard({ vision, onClick, onEdit }: Props) {
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            {onEdit && (
+            {!isReadOnly && onEdit && (
               <button
                 onClick={(e) => {
                   e.preventDefault();

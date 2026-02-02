@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 import type { TeamMember, MemberDetail, UpdateMemberInput } from '@/types/member';
 
 interface RouteContext {
@@ -96,6 +97,8 @@ export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -165,6 +168,8 @@ export async function DELETE(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {

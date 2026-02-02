@@ -95,6 +95,26 @@ Environment variables in `.env`:
 - `BITBUCKET_*` - Bitbucket integration
 - `AI_PROVIDER`, `ANTHROPIC_API_KEY` - AI features
 - `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_DEFAULT_CHANNEL` - Slack integration
+- `NEXT_PUBLIC_READ_ONLY` - Read-only mode (see below)
+
+## Read-Only Mode
+
+서버 배포 시 데이터 수정을 방지하기 위한 read-only 모드를 지원합니다.
+
+```bash
+# .env 설정
+NEXT_PUBLIC_READ_ONLY=true   # 서버 배포 시 (모든 수정 작업 차단)
+NEXT_PUBLIC_READ_ONLY=false  # 로컬 개발 시 (기본값)
+```
+
+### Read-Only 모드 동작
+- **API**: 모든 POST/PUT/PATCH/DELETE 요청이 403 응답 반환 (Slack API 제외)
+- **UI**: 생성/편집/삭제 버튼이 숨겨짐
+- **영향 범위**: Vision, Milestone, Stream, Epic 링크, Sprint 라벨, Issue 수정, Member 정보, Operation, Confluence Suggestion
+
+### 구현 파일
+- `src/javis-viewer/src/contexts/ReadOnlyContext.tsx` - React Context + Hook
+- `src/javis-viewer/src/lib/readonly.ts` - API용 체크 함수
 
 ## Javis Skills (Claude Code)
 

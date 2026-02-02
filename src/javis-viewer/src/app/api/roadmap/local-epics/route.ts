@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 
 // GET /api/roadmap/local-epics - List all local epics
 // GET /api/roadmap/local-epics?milestone_id=xxx - List by milestone
@@ -48,6 +49,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/roadmap/local-epics - Create a new local epic
 export async function POST(request: NextRequest) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   try {
     const body = await request.json();
     const {

@@ -113,6 +113,7 @@ async function getStats() {
 
 export default async function Home() {
   const stats = await getStats();
+  const isReadOnly = process.env.NEXT_PUBLIC_READ_ONLY?.toLowerCase() === 'true';
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -207,26 +208,28 @@ export default async function Home() {
           </div>
         </Link>
 
-        {/* Operations Card */}
-        <Link href="/operations" className="group block">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-indigo-100 p-3 rounded-xl">
-                <Layers className="w-8 h-8 text-indigo-600" />
+        {/* Operations Card - Hidden in read-only mode */}
+        {!isReadOnly && (
+          <Link href="/operations" className="group block">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="bg-indigo-100 p-3 rounded-xl">
+                  <Layers className="w-8 h-8 text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">Operations</h2>
+                  <p className="text-gray-500 text-sm">AI Content Queue</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">Operations</h2>
-                <p className="text-gray-500 text-sm">AI Content Queue</p>
+              <div className="text-4xl font-black text-gray-900 mb-2">
+                {stats.opsCount}
+              </div>
+              <div className="text-gray-400 text-sm font-medium">
+                {stats.pendingOpsCount > 0 ? `${stats.pendingOpsCount} pending` : 'Operations'}
               </div>
             </div>
-            <div className="text-4xl font-black text-gray-900 mb-2">
-              {stats.opsCount}
-            </div>
-            <div className="text-gray-400 text-sm font-medium">
-              {stats.pendingOpsCount > 0 ? `${stats.pendingOpsCount} pending` : 'Operations'}
-            </div>
-          </div>
-        </Link>
+          </Link>
+        )}
 
         {/* Roadmap Card */}
         <Link href="/roadmap" className="group block">
@@ -270,26 +273,28 @@ export default async function Home() {
           </div>
         </Link>
 
-        {/* Members Card */}
-        <Link href="/members" className="group block">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-cyan-100 p-3 rounded-xl">
-                <Users className="w-8 h-8 text-cyan-600" />
+        {/* Members Card - Hidden in read-only mode */}
+        {!isReadOnly && (
+          <Link href="/members" className="group block">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="bg-cyan-100 p-3 rounded-xl">
+                  <Users className="w-8 h-8 text-cyan-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">Members</h2>
+                  <p className="text-gray-500 text-sm">Team Directory</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">Members</h2>
-                <p className="text-gray-500 text-sm">Team Directory</p>
+              <div className="text-4xl font-black text-gray-900 mb-2">
+                {stats.memberCount}
+              </div>
+              <div className="text-gray-400 text-sm font-medium">
+                {stats.activeMemberCount > 0 ? `${stats.activeMemberCount} active` : 'Team Members'}
               </div>
             </div>
-            <div className="text-4xl font-black text-gray-900 mb-2">
-              {stats.memberCount}
-            </div>
-            <div className="text-gray-400 text-sm font-medium">
-              {stats.activeMemberCount > 0 ? `${stats.activeMemberCount} active` : 'Team Members'}
-            </div>
-          </div>
-        </Link>
+          </Link>
+        )}
 
         {/* Bundle Board Card */}
         <Link href="/bundles" className="group block">

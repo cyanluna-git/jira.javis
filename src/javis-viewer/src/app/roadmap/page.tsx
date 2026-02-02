@@ -16,6 +16,7 @@ import { NavigationButtons } from '@/components/NavigationButtons';
 import VisionCard from '@/components/VisionCard';
 import VisionEditModal from '@/components/VisionEditModal';
 import MilestoneCard from '@/components/MilestoneCard';
+import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import type { Vision, RoadmapSummary, QuarterlyMilestones, MilestoneWithStreams } from '@/types/roadmap';
 
 interface VisionWithAggregates extends Vision {
@@ -25,6 +26,7 @@ interface VisionWithAggregates extends Vision {
 }
 
 export default function RoadmapPage() {
+  const isReadOnly = useReadOnly();
   const [visions, setVisions] = useState<VisionWithAggregates[]>([]);
   const [quarterlyMilestones, setQuarterlyMilestones] = useState<QuarterlyMilestones[]>([]);
   const [summary, setSummary] = useState<RoadmapSummary | null>(null);
@@ -123,15 +125,22 @@ export default function RoadmapPage() {
                 <h1 className="text-2xl font-bold text-gray-900">Roadmap</h1>
                 <p className="text-sm text-gray-500">Vision / Milestone / Stream</p>
               </div>
+              {isReadOnly && (
+                <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded">
+                  Read-Only
+                </span>
+              )}
             </div>
 
-            <button
-              onClick={() => setShowNewVisionModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Vision
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowNewVisionModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New Vision
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -224,14 +233,16 @@ export default function RoadmapPage() {
           {filteredVisions.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
               <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 mb-4">No visions yet. Create your first vision to start planning.</p>
-              <button
-                onClick={() => setShowNewVisionModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-              >
-                <Plus className="w-4 h-4" />
-                Create Vision
-              </button>
+              <p className="text-gray-500 mb-4">No visions yet. {!isReadOnly && 'Create your first vision to start planning.'}</p>
+              {!isReadOnly && (
+                <button
+                  onClick={() => setShowNewVisionModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Vision
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -239,7 +250,7 @@ export default function RoadmapPage() {
                 <VisionCard
                   key={vision.id}
                   vision={vision}
-                  onEdit={() => setEditingVision(vision)}
+                  onEdit={!isReadOnly ? () => setEditingVision(vision) : undefined}
                 />
               ))}
             </div>
@@ -280,7 +291,7 @@ export default function RoadmapPage() {
       </main>
 
       {/* New Vision Modal */}
-      {showNewVisionModal && (
+      {!isReadOnly && showNewVisionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
             <div className="p-6 border-b border-gray-200">
@@ -389,7 +400,7 @@ export default function RoadmapPage() {
       )}
 
       {/* Vision Edit Modal */}
-      {editingVision && (
+      {!isReadOnly && editingVision && (
         <VisionEditModal
           vision={editingVision}
           onClose={() => setEditingVision(null)}

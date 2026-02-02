@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 import type { RiskType, RiskLevel, MilestoneStatus } from '@/types/roadmap';
 
 interface MilestoneData {
@@ -302,6 +303,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/roadmap/risks - Run risk analysis
 export async function POST(request: NextRequest) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const body = await request.json();
   const visionId = body.vision_id;
 
@@ -487,6 +490,8 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/roadmap/risks - Update risk status
 export async function PATCH(request: NextRequest) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const body = await request.json();
   const { id, status, resolution_note } = body;
 

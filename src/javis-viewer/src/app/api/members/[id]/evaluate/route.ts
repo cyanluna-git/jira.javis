@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
 import type { ManagerEvaluation, CreateEvaluationInput } from '@/types/member';
 
 interface RouteContext {
@@ -68,6 +69,8 @@ export async function POST(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (isReadOnlyMode()) return readOnlyResponse();
+
   const { id } = await context.params;
   const searchParams = request.nextUrl.searchParams;
   const evaluatedBy = searchParams.get('evaluated_by');
