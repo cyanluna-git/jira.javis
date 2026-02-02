@@ -394,7 +394,7 @@ export default function MemberDetailClient({ memberId }: Props) {
                               {(h.delta || 0) > 0 ? '+' : ''}{h.delta}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {new Date(h.created_at).toLocaleDateString()}
+                              {new Date(h.created_at).toLocaleDateString('ko-KR')}
                             </div>
                           </div>
                         </div>
@@ -424,7 +424,7 @@ export default function MemberDetailClient({ memberId }: Props) {
                           <div className="flex items-center justify-between mb-3">
                             <span className="font-medium text-gray-900">{ev.evaluation_period}</span>
                             <span className="text-xs text-gray-500">
-                              {new Date(ev.evaluated_at).toLocaleDateString()}
+                              {new Date(ev.evaluated_at).toLocaleDateString('ko-KR')}
                             </span>
                           </div>
 

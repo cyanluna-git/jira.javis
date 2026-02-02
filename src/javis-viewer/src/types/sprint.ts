@@ -13,6 +13,7 @@ export interface Sprint {
   goal: string | null;
   start_date: string | null;
   end_date: string | null;
+  confluence_labels?: string[];
 }
 
 export interface SprintIssue {
@@ -30,6 +31,7 @@ export interface SprintIssue {
 export interface Assignee {
   name: string;
   count: number;
+  avatarUrl?: string | null;
 }
 
 export interface IssueStats {

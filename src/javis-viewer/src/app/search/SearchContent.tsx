@@ -70,6 +70,20 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function stripHtmlTags(html: string): string {
+  if (!html) return '';
+  // Remove HTML/XML tags and decode entities
+  return html
+    .replace(/<[^>]*>/g, ' ')  // Remove tags
+    .replace(/&nbsp;/g, ' ')   // Replace nbsp
+    .replace(/&amp;/g, '&')    // Decode &
+    .replace(/&lt;/g, '<')     // Decode <
+    .replace(/&gt;/g, '>')     // Decode >
+    .replace(/&quot;/g, '"')   // Decode "
+    .replace(/\s+/g, ' ')      // Collapse whitespace
+    .trim();
+}
+
 function JiraResultCard({
   result,
   onClick,
@@ -141,7 +155,7 @@ function ConfluenceResultCard({
             <span className="text-orange-600 font-medium text-sm">{result.title}</span>
           </div>
           {result.excerpt && (
-            <p className="text-gray-600 text-sm line-clamp-2 mt-1">{result.excerpt}...</p>
+            <p className="text-gray-600 text-sm line-clamp-2 mt-1">{stripHtmlTags(result.excerpt)}</p>
           )}
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
             <span className="bg-gray-100 px-2 py-0.5 rounded">{result.spaceName}</span>

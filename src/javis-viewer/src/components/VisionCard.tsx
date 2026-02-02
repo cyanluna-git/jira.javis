@@ -9,6 +9,9 @@ import {
   Clock,
   Archive,
   ChevronRight,
+  FileEdit,
+  Box,
+  Tag,
 } from 'lucide-react';
 import type { Vision, VisionStatus } from '@/types/roadmap';
 
@@ -21,6 +24,7 @@ interface VisionWithAggregates extends Vision {
 interface Props {
   vision: VisionWithAggregates;
   onClick?: () => void;
+  onEdit?: () => void;
 }
 
 const statusConfig: Record<VisionStatus, { icon: React.ReactNode; color: string; label: string }> = {
@@ -29,7 +33,7 @@ const statusConfig: Record<VisionStatus, { icon: React.ReactNode; color: string;
   archived: { icon: <Archive className="w-4 h-4" />, color: 'bg-gray-100 text-gray-600', label: 'Archived' },
 };
 
-export default function VisionCard({ vision, onClick }: Props) {
+export default function VisionCard({ vision, onClick, onEdit }: Props) {
   const statusInfo = statusConfig[vision.status];
   const progressPercent = Math.round(vision.overall_progress);
   const northStarProgress = vision.north_star_target && vision.north_star_current
@@ -60,8 +64,40 @@ export default function VisionCard({ vision, onClick }: Props) {
             {vision.description && (
               <p className="text-sm text-gray-500 mt-1 line-clamp-2">{vision.description}</p>
             )}
+            {/* Default Component & Labels */}
+            {(vision.default_component || (vision.default_labels && vision.default_labels.length > 0)) && (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {vision.default_component && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-xs">
+                    <Box className="w-3 h-3" />
+                    {vision.default_component}
+                  </span>
+                )}
+                {vision.default_labels && vision.default_labels.map(label => (
+                  <span key={label} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs">
+                    <Tag className="w-3 h-3" />
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" />
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {onEdit && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Edit Vision"
+              >
+                <FileEdit className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+              </button>
+            )}
+            <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
+          </div>
         </div>
       </div>
 

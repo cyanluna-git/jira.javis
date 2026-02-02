@@ -24,6 +24,8 @@ export interface Vision {
   status: VisionStatus;
   owner_account_id: string | null;
   jql_filter: string | null;
+  default_component: string | null;
+  default_labels: string[];
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +108,8 @@ export interface UpdateVisionInput {
   status?: VisionStatus;
   owner_account_id?: string;
   jql_filter?: string;
+  default_component?: string | null;
+  default_labels?: string[];
 }
 
 export interface CreateMilestoneInput {
