@@ -1,0 +1,37 @@
+services:
+  javis-viewer:
+    container_name: javis-viewer
+    image: javis-viewer:latest
+    restart: always
+    ports:
+      - "127.0.0.1:3009:3009"
+    env_file:
+      - .env
+    environment:
+      - PORT=3009
+      - POSTGRES_HOST=javis-db
+      - POSTGRES_PORT=5432
+    depends_on:
+      - javis-db
+    networks:
+      - javis_net
+
+  javis-db:
+    container_name: javis-db
+    image: pgvector/pgvector:pg16
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - javis_data:/var/lib/postgresql/data
+    networks:
+      - javis_net
+    ports:
+      - "127.0.0.1:5439:5432"
+
+networks:
+  javis_net:
+    driver: bridge
+
+volumes:
+  javis_data:
