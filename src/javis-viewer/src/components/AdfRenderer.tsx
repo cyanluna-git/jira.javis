@@ -86,7 +86,21 @@ function AdfNodeComponent({ node, attachments = [] }: { node: AdfNode; attachmen
     case 'media':
       return <MediaNode node={node} attachments={attachments} />;
 
-    case 'paragraph':
+    case 'paragraph': {
+      // Check if paragraph contains tree structure (├, └, │, ─)
+      const textContent = node.content?.map(c => c.text || '').join('') || '';
+      const isTreeStructure = /[├└│─┌┐┘┬┴┼]/.test(textContent);
+
+      if (isTreeStructure) {
+        return (
+          <pre className="mb-0.5 font-mono text-xs leading-snug whitespace-pre-wrap break-all">
+            {node.content?.map((child, idx) => (
+              <AdfNodeComponent key={idx} node={child} attachments={attachments} />
+            ))}
+          </pre>
+        );
+      }
+
       return (
         <p className="mb-3 leading-relaxed">
           {node.content?.map((child, idx) => (
@@ -94,6 +108,7 @@ function AdfNodeComponent({ node, attachments = [] }: { node: AdfNode; attachmen
           ))}
         </p>
       );
+    }
 
     case 'text':
       return <TextNode node={node} />;

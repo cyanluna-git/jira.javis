@@ -39,6 +39,29 @@ function escapeIlike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
 
+// Strip HTML, XML, and Confluence markup from text for excerpts
+function stripMarkupForExcerpt(html: string): string {
+  if (!html) return '';
+
+  return html
+    // First decode HTML entities for encoded tags
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    // Remove CDATA sections
+    .replace(/<!\[CDATA\[[\s\S]*?\]\]>/gi, '')
+    // Remove Confluence/Atlassian macros (ac:, ri:, at: namespaced tags)
+    .replace(/<\/?(?:ac|ri|at):[^>]*>/gi, '')
+    // Remove all other XML/HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Clean up whitespace
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function searchJira(query: string, page: number): Promise<SearchResults> {
   if (!query || query.length < 2) return { results: [], total: 0 };
 
@@ -176,7 +199,7 @@ async function searchConfluence(query: string, page: number): Promise<SearchResu
         spaceKey: row.space_id,
         spaceName: row.space_name,
         updated: row.updated || '',
-        excerpt: row.excerpt?.replace(/<[^>]*>/g, '').substring(0, 150) || '',
+        excerpt: stripMarkupForExcerpt(row.excerpt || '').substring(0, 200) || '',
       })),
       total,
     };

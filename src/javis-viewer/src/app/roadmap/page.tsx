@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { NavigationButtons } from '@/components/NavigationButtons';
 import VisionCard from '@/components/VisionCard';
+import VisionEditModal from '@/components/VisionEditModal';
 import MilestoneCard from '@/components/MilestoneCard';
 import type { Vision, RoadmapSummary, QuarterlyMilestones, MilestoneWithStreams } from '@/types/roadmap';
 
@@ -29,6 +30,7 @@ export default function RoadmapPage() {
   const [summary, setSummary] = useState<RoadmapSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNewVisionModal, setShowNewVisionModal] = useState(false);
+  const [editingVision, setEditingVision] = useState<VisionWithAggregates | null>(null);
   const [filterProject, setFilterProject] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
 
@@ -234,7 +236,11 @@ export default function RoadmapPage() {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filteredVisions.map((vision) => (
-                <VisionCard key={vision.id} vision={vision} />
+                <VisionCard
+                  key={vision.id}
+                  vision={vision}
+                  onEdit={() => setEditingVision(vision)}
+                />
               ))}
             </div>
           )}
@@ -380,6 +386,23 @@ export default function RoadmapPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Vision Edit Modal */}
+      {editingVision && (
+        <VisionEditModal
+          vision={editingVision}
+          onClose={() => setEditingVision(null)}
+          onSaved={(updatedVision) => {
+            // Update the vision in the local state
+            setVisions(prev => prev.map(v =>
+              v.id === updatedVision.id
+                ? { ...v, ...updatedVision }
+                : v
+            ));
+            setEditingVision(null);
+          }}
+        />
       )}
     </div>
   );

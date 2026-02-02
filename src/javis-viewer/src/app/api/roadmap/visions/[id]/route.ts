@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Build dynamic update query
     const updates: string[] = [];
-    const values: (string | number | null)[] = [];
+    const values: (string | number | string[] | null)[] = [];
     let paramIndex = 1;
 
     if (body.title !== undefined) {
@@ -137,6 +137,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (body.jql_filter !== undefined) {
       updates.push(`jql_filter = $${paramIndex++}`);
       values.push(body.jql_filter);
+    }
+    if (body.default_component !== undefined) {
+      updates.push(`default_component = $${paramIndex++}`);
+      values.push(body.default_component);
+    }
+    if (body.default_labels !== undefined) {
+      updates.push(`default_labels = $${paramIndex++}`);
+      values.push(body.default_labels);
     }
 
     if (updates.length === 0) {

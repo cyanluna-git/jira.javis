@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
         FROM confluence_v2_content
         WHERE
           type = 'page'
+          AND title NOT ILIKE 'Archived%'
+          AND NOT ('archived' = ANY(labels))
           AND (
             search_vector @@ plainto_tsquery('simple', $1)
             OR similarity(title, $1) > 0.1
@@ -77,17 +79,22 @@ export async function GET(request: NextRequest) {
 
     if (parentId === null || parentId === 'null' || parentId === '') {
       // Fetch root nodes (no parent or orphan roots)
+      // Exclude archived pages: title starts with "Archived" or has 'archived' label
       const rootQuery = includeOrphans
         ? `
           SELECT id, title, type, parent_id, depth, child_count, is_orphan, sort_order
           FROM confluence_v2_content
           WHERE (parent_id IS NULL OR is_orphan = TRUE)
+            AND title NOT ILIKE 'Archived%'
+            AND NOT ('archived' = ANY(labels))
           ORDER BY is_orphan, sort_order, title
         `
         : `
           SELECT id, title, type, parent_id, depth, child_count, is_orphan, sort_order
           FROM confluence_v2_content
           WHERE parent_id IS NULL AND is_orphan = FALSE
+            AND title NOT ILIKE 'Archived%'
+            AND NOT ('archived' = ANY(labels))
           ORDER BY sort_order, title
         `;
 
@@ -109,6 +116,7 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // Fetch children of specific parent with recursive CTE
+      // Exclude archived pages: title starts with "Archived" or has 'archived' label
       const childQuery = `
         WITH RECURSIVE tree AS (
           -- Base case: direct children
@@ -117,6 +125,8 @@ export async function GET(request: NextRequest) {
             1 as level
           FROM confluence_v2_content
           WHERE parent_id = $1
+            AND title NOT ILIKE 'Archived%'
+            AND NOT ('archived' = ANY(labels))
 
           UNION ALL
 
@@ -127,6 +137,8 @@ export async function GET(request: NextRequest) {
           FROM confluence_v2_content c
           JOIN tree t ON c.parent_id = t.id
           WHERE t.level < $2
+            AND c.title NOT ILIKE 'Archived%'
+            AND NOT ('archived' = ANY(c.labels))
         )
         SELECT * FROM tree
         ORDER BY level, sort_order, title
@@ -173,10 +185,13 @@ async function fetchChildrenRecursive(
   const nodeIds = nodes.filter(n => n.child_count > 0).map(n => n.id);
   if (nodeIds.length === 0) return;
 
+  // Exclude archived pages: title starts with "Archived" or has 'archived' label
   const childQuery = `
     SELECT id, title, type, parent_id, depth, child_count, is_orphan, sort_order
     FROM confluence_v2_content
     WHERE parent_id = ANY($1)
+      AND title NOT ILIKE 'Archived%'
+      AND NOT ('archived' = ANY(labels))
     ORDER BY sort_order, title
   `;
 
