@@ -9,6 +9,7 @@ services:
       - .env
     environment:
       - PORT=3009
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
       - POSTGRES_HOST=javis-db
       - POSTGRES_PORT=5432
     depends_on:
