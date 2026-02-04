@@ -26,7 +26,7 @@ python3 scripts/sync_bidirectional.py --force-local
 python3 scripts/sync_bidirectional.py --force-remote
 ```
 
-### Boards/Sprints 동기화
+### Boards 동기화
 
 ```bash
 # 전체 보드
@@ -34,6 +34,25 @@ python3 scripts/sync_boards.py
 
 # 특정 프로젝트만
 python3 scripts/sync_boards.py --project EUV
+```
+
+### Sprints 동기화 (스프린트 메타데이터 + 이슈 매핑)
+
+```bash
+# 전체 스프린트
+python3 scripts/sync_sprints.py
+
+# 특정 프로젝트만
+python3 scripts/sync_sprints.py --project EUV
+
+# Active 스프린트만
+python3 scripts/sync_sprints.py --active-only
+
+# 전체 재동기화
+python3 scripts/sync_sprints.py --force
+
+# DB 목록 조회
+python3 scripts/sync_sprints.py --list
 ```
 
 ### Member 통계 동기화
@@ -93,8 +112,8 @@ python3 scripts/sync_bitbucket.py --dry-run
 |--------|------|---------------|
 | `jira_issues` | Jira 이슈 | sync_bidirectional.py |
 | `jira_boards` | 보드 목록 | sync_boards.py |
-| `jira_sprints` | 스프린트 | sync_boards.py |
-| `jira_issue_sprints` | 이슈-스프린트 매핑 | sync_boards.py |
+| `jira_sprints` | 스프린트 | sync_sprints.py |
+| `jira_issue_sprints` | 이슈-스프린트 매핑 | sync_sprints.py |
 | `team_members` | 팀원 정보 | sync_member_stats.py |
 | `member_stats` | 멤버 통계 | sync_member_stats.py |
 | `confluence_v2_content` | Confluence 페이지 | sync_confluence_bidirectional.py |
