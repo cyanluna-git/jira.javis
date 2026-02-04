@@ -39,3 +39,4 @@ workthrough/.vitepress/dist/
 
 # Story Drafts (local only)
 docs/stories/
+deploy/javis/build/
