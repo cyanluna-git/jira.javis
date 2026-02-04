@@ -68,13 +68,52 @@ Write-Host "  Upload complete." -ForegroundColor Green
 Write-Host ""
 Write-Host "[3/3] Restoring DB on VM..." -ForegroundColor Yellow
 
-ssh "${VMUser}@${VMHost}" "pg_restore -h localhost -U javis -d javis_brain --clean --if-exists $RemotePath && rm -f $RemotePath"
+# Create temp script
+$TempScript = Join-Path $env:TEMP "javis_restore.sh"
+$RemoteScriptPath = "/tmp/javis_restore.sh"
+
+$ScriptContent = @"
+#!/bin/bash
+set -e
+
+echo "[Remote] Copying dump to container..."
+docker cp $RemotePath javis-db:/tmp/restore.dump
+
+echo "[Remote] Terminating connections..."
+# Ignore error if no connections to kill
+docker exec javis-db psql -U javis -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'javis_brain' AND pid <> pg_backend_pid();" || true
+
+echo "[Remote] Restoring Data..."
+# --clean will drop objects, --if-exists prevents errors if they don't exist
+docker exec javis-db pg_restore -U javis -d javis_brain --clean --if-exists /tmp/restore.dump
+
+echo "[Remote] Cleaning up..."
+rm -f $RemotePath
+docker exec javis-db rm /tmp/restore.dump
+rm -f $RemoteScriptPath
+echo "[Remote] Success!"
+"@
+
+# Write with LF line endings
+$ScriptContent -split "`r`n" -join "`n" | Set-Content -Path $TempScript -NoNewline -Encoding ASCII
+
+# Upload script
+Write-Host "  Uploading helper script..."
+scp $TempScript "${VMUser}@${VMHost}:${RemoteScriptPath}"
+if ($LASTEXITCODE -ne 0) { throw "Script upload failed" }
+
+# Execute
+Write-Host "  Executing restore..."
+ssh "${VMUser}@${VMHost}" "chmod +x $RemoteScriptPath && $RemoteScriptPath"
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "  WARNING: Restore may have had errors (partial restore is normal)." -ForegroundColor Yellow
+    Write-Host "  WARNING: Restore may have had errors." -ForegroundColor Yellow
 } else {
     Write-Host "  Restore complete." -ForegroundColor Green
 }
+
+# Cleanup local
+if (Test-Path $TempScript) { Remove-Item $TempScript }
 
 # --- Done ---
 Write-Host ""
