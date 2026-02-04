@@ -2,7 +2,7 @@ name: gerald-javis
 
 services:
   javis-db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg17
     container_name: javis_db
     restart: always
     environment:
