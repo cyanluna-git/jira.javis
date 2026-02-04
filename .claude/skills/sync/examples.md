@@ -13,6 +13,7 @@
 ```bash
 python3 scripts/sync_bidirectional.py --pull-only
 python3 scripts/sync_boards.py
+python3 scripts/sync_sprints.py
 python3 scripts/sync_member_stats.py
 ```
 
@@ -20,6 +21,7 @@ python3 scripts/sync_member_stats.py
 
 ```bash
 /javis-sync boards
+/javis-sync sprints
 /javis-sync members --init
 ```
 
@@ -35,6 +37,7 @@ python3 scripts/sync_member_stats.py
 ```bash
 python3 scripts/sync_bidirectional.py
 python3 scripts/sync_boards.py
+python3 scripts/sync_sprints.py
 python3 scripts/sync_member_stats.py --recalculate
 python3 scripts/sync_confluence_bidirectional.py
 python3 scripts/sync_bitbucket.py

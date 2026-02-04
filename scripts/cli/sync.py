@@ -23,7 +23,7 @@ SYNC_SCRIPTS = {
     'jira': 'mirror_jira.py',
     'bidirectional': 'sync_bidirectional.py',
     'bitbucket': 'sync_bitbucket.py',
-    'sprints': 'mirror_jira_sprints.py',
+    'sprints': 'sync_sprints.py',
     'roadmap': 'sync_roadmap_epics.py',
     'members': 'sync_member_stats.py',
 }
@@ -80,7 +80,7 @@ def show_sync_status():
     # Sprints
     try:
         result = db.fetch_one("""
-            SELECT MAX(synced_at) as last_sync, COUNT(*) as count
+            SELECT MAX(last_synced_at) as last_sync, COUNT(*) as count
             FROM jira_sprints
         """)
         if result:
