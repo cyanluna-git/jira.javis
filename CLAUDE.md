@@ -94,119 +94,14 @@ NEXT_PUBLIC_READ_ONLY=true   # Server: all modifications blocked
 NEXT_PUBLIC_READ_ONLY=false  # Local: modifications allowed
 ```
 
-### Read-Only 모드 동작
-- **API**: 모든 POST/PUT/PATCH/DELETE 요청이 403 응답 반환 (Slack API 제외)
-- **UI**: 생성/편집/삭제 버튼이 숨겨짐
-- **영향 범위**: Vision, Milestone, Stream, Epic 링크, Sprint 라벨, Issue 수정, Member 정보, Operation, Confluence Suggestion
-
-### 구현 파일
-- `src/javis-viewer/src/contexts/ReadOnlyContext.tsx` - React Context + Hook
-- `src/javis-viewer/src/lib/readonly.ts` - API용 체크 함수
-
-## Model Selection for This Project
-
-### When to Use Each Model
-
-#### 🟢 Haiku (Fast, Cost-efficient)
-Use for quick lookups and simple queries:
-- Code search: "What files use the Modbus pattern?"
-- Quick questions: "How does the risk detection work?"
-- Configuration: "What's the current database setup?"
-- Simple reads: "List all Vision statuses"
-
-#### 🟡 Sonnet (Balanced, Recommended Default)
-Use for most development tasks:
-- Feature implementation: "Add new API endpoint for..."
-- Code review: "Review this PR against best practices"
-- Medium refactoring: "Refactor the sync logic"
-- Performance optimization: "Analyze slow milestone queries"
-- Story/Task creation: `/javis-stories create [epic]`
-- Data analysis: "Show velocity trend for Sprint X"
-
-#### 🔵 Opus (Deep, Comprehensive)
-Use for complex architecture and planning:
-- System design: "Design the entire auth flow for..."
-- Large refactoring: "Refactor the entire sync architecture"
-- Complex analysis: "How to optimize data sync across Jira/Confluence/DB?"
-- Planning: "Plan Phase 4 implementation roadmap"
-- Multi-module coordination: "Design better separation between UI/API/DB"
-
-### Model Router Integration
-
-The global **model-router** skill provides automatic suggestions based on your input. However, you can override it if needed:
-
-```
-Default behavior (no action needed):
-"Implement new risk detection endpoint" → Auto-selects Sonnet ✅
-
-Override when needed:
-[Opus] Design the entire risk system → Forces Opus
-
-Use project skills for standard workflows:
-/javis-stories context OQC    # Predefined workflows, optimal model
-/review-pr <PR_URL>            # Code review skill
-/javis-dev team                 # Developer dashboard
-```
-
-### Project-Specific Optimizations
-
-#### Javis is a complex project with:
-- **Bidirectional Sync** (Jira ↔ DB ↔ Confluence) → Higher complexity
-- **Risk Detection Logic** → Requires deep understanding
-- **Permission/Read-only System** → Requires careful handling
-- **Python + Next.js Stack** → Multi-layer coordination
-
-Therefore:
-- ✅ Favor **Sonnet** for most tasks
-- ✅ Use **Opus** for architecture decisions
-- 🟢 Use **Haiku** only for simple lookups
-- ⚠️ Avoid Haiku for sync, API, or business logic changes
-
----
-
-## Javis Skills (Claude Code)
-
-프로젝트 전용 slash commands. 자세한 사용법: `docs/skills-usage.md`
-
-| Skill | 용도 | 예시 |
-|-------|------|------|
-| `/javis-stories` | Story 관리 (생성, 정제, Jira push) | `/javis-stories context OQC` |
-| `/javis-sprint` | 스프린트 관리 (현황, velocity) | `/javis-sprint velocity` |
-| `/javis-dev` | 개발자 대시보드 (작업, 커밋/PR) | `/javis-dev team` |
-| `/javis-report` | 프로젝트 리포트 생성 | `/javis-report weekly` |
-| `/javis-risk` | 리스크 감지/관리 | `/javis-risk detect` |
-| `/javis-sync` | 데이터 동기화 | `/javis-sync all` |
-
-### 주요 워크플로우
-
-```bash
-# 아침 동기화
-/javis-sync all
-
-# Story 작업
-/javis-stories context OQC      # 맥락 파악
-/javis-stories list EUV-3299    # Epic의 Story 확인
-/javis-stories create EUV-3299  # AI Story 생성
-/javis-stories push EUV-3299    # Jira에 생성
-
-# 스프린트 관리
-/javis-sprint                   # 현재 스프린트 현황
-/javis-sprint velocity          # Velocity 추이
-
-# 리스크 체크
-/javis-risk detect              # 자동 리스크 감지
-/javis-risk analyze EUV-3299    # Epic 리스크 분석
-
-# Slack 연동 테스트
-python3 scripts/javis_cli.py slack test     # 테스트 메시지 전송
-python3 scripts/javis_cli.py slack risk     # 리스크 알림 전송
-python3 scripts/javis_cli.py slack status   # 연동 상태 확인
-```
-=======
 **Behavior:**
 - API: 403 response on POST/PUT/PATCH/DELETE (Slack API excluded)
 - UI: Edit/create/delete buttons hidden
->>>>>>> 628860fa8f123c1d7983897ca14381226fceeec4
+- Scope: Vision, Milestone, Stream, Epic links, Sprint labels, Issue edits, Member info, Operations, Confluence Suggestions
+
+**Implementation files:**
+- `src/javis-viewer/src/contexts/ReadOnlyContext.tsx` — React Context + Hook
+- `src/javis-viewer/src/lib/readonly.ts` — API check utility
 
 ## Key Concepts
 
@@ -241,16 +136,41 @@ Submodules:
 
 ## Skills & Workflows
 
-Project-specific Claude Code skills (`.claude/skills/`):
+Project-specific Claude Code skills (`.claude/skills/`). See `docs/skills-usage.md` for details.
 
-| Skill | Purpose |
-|-------|----------|
-| `/javis-stories` | Story management (CRUD, Jira push) |
-| `/javis-sprint` | Sprint tracking (velocity, health) |
-| `/javis-dev` | Developer dashboard |
-| `/javis-report` | Project reports |
-| `/javis-risk` | Risk detection |
-| `/javis-sync` | Data sync automation |
+| Skill | Purpose | Example |
+|-------|---------|---------|
+| `/javis-stories` | Story management (CRUD, Jira push) | `/javis-stories context OQC` |
+| `/javis-sprint` | Sprint tracking (velocity, health) | `/javis-sprint velocity` |
+| `/javis-dev` | Developer dashboard | `/javis-dev team` |
+| `/javis-report` | Project reports | `/javis-report weekly` |
+| `/javis-risk` | Risk detection | `/javis-risk detect` |
+| `/javis-sync` | Data sync automation | `/javis-sync all` |
+
+### Common Workflows
+```bash
+# Morning sync
+/javis-sync all
+
+# Story workflow
+/javis-stories context OQC      # Understand context
+/javis-stories list EUV-3299    # List stories in Epic
+/javis-stories create EUV-3299  # AI-generate stories
+/javis-stories push EUV-3299    # Push to Jira
+
+# Sprint management
+/javis-sprint                   # Current sprint status
+/javis-sprint velocity          # Velocity trend
+
+# Risk check
+/javis-risk detect              # Auto-detect risks
+/javis-risk analyze EUV-3299    # Analyze Epic risks
+
+# Slack integration
+python3 scripts/javis_cli.py slack test     # Send test message
+python3 scripts/javis_cli.py slack risk     # Send risk alerts
+python3 scripts/javis_cli.py slack status   # Check connection
+```
 
 ## Model Routing Guidelines
 
