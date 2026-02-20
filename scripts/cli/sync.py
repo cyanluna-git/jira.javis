@@ -7,6 +7,7 @@ Usage:
   javis sync bitbucket              # Sync Bitbucket data
   javis sync sprints                # Sync Jira sprints
   javis sync roadmap                # Sync roadmap epics
+  javis sync confluence             # Sync Confluence pages
   javis sync --status               # Show sync status
 """
 
@@ -26,6 +27,7 @@ SYNC_SCRIPTS = {
     'sprints': 'sync_sprints.py',
     'roadmap': 'sync_roadmap_epics.py',
     'members': 'sync_member_stats.py',
+    'confluence': 'sync_confluence_bidirectional.py',
 }
 
 
@@ -121,12 +123,25 @@ def show_sync_status():
     except:
         pass
 
+    # Confluence pages
+    try:
+        result = db.fetch_one("""
+            SELECT MAX(last_synced_at) as last_sync, COUNT(*) as count
+            FROM confluence_v2_content
+        """)
+        if result and result['count']:
+            print(f"\nConfluence Pages:")
+            print(f"  Last sync: {result['last_sync'] or 'Never'}")
+            print(f"  Total pages: {result['count']}")
+    except:
+        pass
+
 
 def run(args):
     """Run sync command."""
     parser = argparse.ArgumentParser(prog='javis sync', description='Sync data from external sources')
     parser.add_argument('target', nargs='?', default='status',
-                        choices=['all', 'jira', 'bitbucket', 'sprints', 'roadmap', 'members', 'status'],
+                        choices=['all', 'jira', 'bitbucket', 'sprints', 'roadmap', 'members', 'confluence', 'status'],
                         help='What to sync')
     parser.add_argument('--dry-run', action='store_true',
                         help='Show what would happen')

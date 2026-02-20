@@ -65,7 +65,6 @@ export default function VisionDetailPage({ params }: PageProps) {
     north_star_current: '',
     target_date: '',
     status: 'active' as VisionStatus,
-    jql_filter: '',
   });
 
   // New milestone form state
@@ -95,7 +94,6 @@ export default function VisionDetailPage({ params }: PageProps) {
           north_star_current: data.north_star_current?.toString() || '',
           target_date: data.target_date || '',
           status: data.status,
-          jql_filter: data.jql_filter || '',
         });
       } else {
         router.push('/roadmap');
@@ -137,14 +135,12 @@ export default function VisionDetailPage({ params }: PageProps) {
           north_star_target: editForm.north_star_target ? Number(editForm.north_star_target) : null,
           north_star_current: editForm.north_star_current ? Number(editForm.north_star_current) : null,
           target_date: editForm.target_date || null,
-          jql_filter: editForm.jql_filter || null,
         }),
       });
 
       if (res.ok) {
         setEditing(false);
         fetchVision();
-        fetchIssues();
       }
     } catch (error) {
       console.error('Error updating vision:', error);
@@ -535,27 +531,13 @@ export default function VisionDetailPage({ params }: PageProps) {
             </button>
           </div>
 
-          {/* JQL Filter Display / Edit */}
-          {editing ? (
-            <div className="mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-              <label className="block text-xs font-medium text-indigo-600 mb-1">JQL Filter</label>
-              <textarea
-                value={editForm.jql_filter}
-                onChange={(e) => setEditForm({ ...editForm, jql_filter: e.target.value })}
-                rows={2}
-                placeholder='project = EUV AND component = "EUVGen4V2"'
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm bg-white"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Jira JQL query to filter related issues for this Vision.
-              </p>
-            </div>
-          ) : (issuesData?.jql_filter || vision?.jql_filter) && (
+          {/* JQL Filter Display */}
+          {issuesData?.jql_filter && (
             <div className="mb-4 p-3 bg-gray-100 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
                 <span className="font-medium">JQL Filter:</span>
               </div>
-              <code className="text-sm text-gray-700 font-mono">{issuesData?.jql_filter || vision?.jql_filter}</code>
+              <code className="text-sm text-gray-700 font-mono">{issuesData.jql_filter}</code>
             </div>
           )}
 
