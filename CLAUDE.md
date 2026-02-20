@@ -116,6 +116,67 @@ NEXT_PUBLIC_READ_ONLY=false  # 로컬 개발 시 (기본값)
 - `src/javis-viewer/src/contexts/ReadOnlyContext.tsx` - React Context + Hook
 - `src/javis-viewer/src/lib/readonly.ts` - API용 체크 함수
 
+## Model Selection for This Project
+
+### When to Use Each Model
+
+#### 🟢 Haiku (Fast, Cost-efficient)
+Use for quick lookups and simple queries:
+- Code search: "What files use the Modbus pattern?"
+- Quick questions: "How does the risk detection work?"
+- Configuration: "What's the current database setup?"
+- Simple reads: "List all Vision statuses"
+
+#### 🟡 Sonnet (Balanced, Recommended Default)
+Use for most development tasks:
+- Feature implementation: "Add new API endpoint for..."
+- Code review: "Review this PR against best practices"
+- Medium refactoring: "Refactor the sync logic"
+- Performance optimization: "Analyze slow milestone queries"
+- Story/Task creation: `/javis-stories create [epic]`
+- Data analysis: "Show velocity trend for Sprint X"
+
+#### 🔵 Opus (Deep, Comprehensive)
+Use for complex architecture and planning:
+- System design: "Design the entire auth flow for..."
+- Large refactoring: "Refactor the entire sync architecture"
+- Complex analysis: "How to optimize data sync across Jira/Confluence/DB?"
+- Planning: "Plan Phase 4 implementation roadmap"
+- Multi-module coordination: "Design better separation between UI/API/DB"
+
+### Model Router Integration
+
+The global **model-router** skill provides automatic suggestions based on your input. However, you can override it if needed:
+
+```
+Default behavior (no action needed):
+"Implement new risk detection endpoint" → Auto-selects Sonnet ✅
+
+Override when needed:
+[Opus] Design the entire risk system → Forces Opus
+
+Use project skills for standard workflows:
+/javis-stories context OQC    # Predefined workflows, optimal model
+/review-pr <PR_URL>            # Code review skill
+/javis-dev team                 # Developer dashboard
+```
+
+### Project-Specific Optimizations
+
+#### Javis is a complex project with:
+- **Bidirectional Sync** (Jira ↔ DB ↔ Confluence) → Higher complexity
+- **Risk Detection Logic** → Requires deep understanding
+- **Permission/Read-only System** → Requires careful handling
+- **Python + Next.js Stack** → Multi-layer coordination
+
+Therefore:
+- ✅ Favor **Sonnet** for most tasks
+- ✅ Use **Opus** for architecture decisions
+- 🟢 Use **Haiku** only for simple lookups
+- ⚠️ Avoid Haiku for sync, API, or business logic changes
+
+---
+
 ## Javis Skills (Claude Code)
 
 프로젝트 전용 slash commands. 자세한 사용법: `docs/skills-usage.md`
