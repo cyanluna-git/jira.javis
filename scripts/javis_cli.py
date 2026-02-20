@@ -19,9 +19,10 @@ Usage:
   javis tag ASP-123 urgent          # Add tag to issue
   javis tag search urgent           # Find issues with tag
 
-  javis sync all                    # Sync all data sources
+  javis sync all                    # Sync all data sources (jira, bitbucket, sprints, roadmap, members, confluence)
   javis sync jira                   # Sync Jira issues
   javis sync bitbucket              # Sync Bitbucket data
+  javis sync confluence             # Sync Confluence pages
 """
 
 import sys
