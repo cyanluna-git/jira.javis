@@ -142,6 +142,70 @@ Project-specific Claude Code skills (`.claude/skills/`):
 | `/javis-risk` | Risk detection |
 | `/javis-sync` | Data sync automation |
 
+## Model Routing Guidelines
+
+When spawning subagents via the Task tool, select the appropriate `model` parameter based on task complexity to optimize cost.
+
+### Tier 1 — Haiku (`model: "haiku"`)
+Simple, local tasks requiring minimal reasoning:
+- Git operations: commit message generation, status, log, diff
+- Single file reads, lookups, or searches
+- Typo fixes, formatting, variable renaming
+- 1-3 line code edits
+- Config value lookups, directory structure listing
+- Simple Q&A, translations, rewording
+
+### Tier 2 — Sonnet (`model: "sonnet"`)
+Tasks requiring analysis, moderate code changes, or design thinking:
+- Code analysis or review across 1-5 files
+- Small to medium feature implementation
+- Bug investigation and fix across 2-5 files
+- Module-level design discussion and architecture suggestions
+- API integration, writing/updating tests
+- Refactoring 2-5 files, business logic code generation
+
+### Tier 3 — Opus (default, omit `model` or `model: "opus"`)
+Deep, broad tasks requiring expert-level reasoning:
+- Architecture analysis spanning 6+ files or entire codebase
+- Large-scale refactoring or restructuring
+- Complex system design (multi-component, cross-cutting concerns)
+- Performance profiling and optimization strategy
+- Security analysis, complex algorithmic problem solving
+- Multi-step planning with many unknowns
+
+### Routing Principles
+- **When in doubt, choose the lower-cost model** — escalate only if needed
+- **Main context always keeps the current model** — only subagents are routed
+- **For parallel work, assign appropriate models per independent task**
+
+### Usage Examples
+```
+# Haiku — generate commit message
+Task(subagent_type="Bash", model="haiku", prompt="Analyze changes and generate commit message")
+
+# Sonnet — code analysis (3 files)
+Task(subagent_type="Explore", model="sonnet", prompt="Analyze the authentication module")
+
+# Opus — large-scale architecture design (default, model can be omitted)
+Task(subagent_type="Plan", prompt="Plan microservices migration strategy")
+```
+
+### Scenario Quick Reference
+
+| Scenario | Model |
+|----------|-------|
+| "What does this function do?" (single function) | Haiku |
+| "Fix this typo" | Haiku |
+| "Write a commit message" | Haiku |
+| "Explain this file" | Haiku |
+| "Add error handling to this function" | Sonnet |
+| "Implement user authentication" | Sonnet |
+| "Refactor this module to a new pattern" | Sonnet |
+| "Review my PR (4 files)" | Sonnet |
+| "Redesign the entire state management" | Opus |
+| "Find performance bottlenecks across the codebase" | Opus |
+| "Plan a microservices migration" | Opus |
+
 ## Deployment
 
 - **Local Dev:** `npm run dev` (frontend) + `python3 scripts/...` (backend)
