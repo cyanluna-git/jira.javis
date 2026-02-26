@@ -138,14 +138,53 @@ Submodules:
 
 Project-specific Claude Code skills (`.claude/skills/`). See `docs/skills-usage.md` for details.
 
-| Skill | Purpose | Example |
-|-------|---------|---------|
-| `/javis-story` | Story management (CRUD, Jira push) | `/javis-story context OQC` |
-| `/javis-sprint` | Sprint tracking (velocity, health) | `/javis-sprint velocity` |
-| `/javis-dev` | Developer dashboard | `/javis-dev team` |
-| `/javis-report` | Project reports | `/javis-report weekly` |
-| `/javis-risk` | Risk detection | `/javis-risk detect` |
-| `/javis-sync` | Data sync automation | `/javis-sync all` |
+| Skill | Scope | Purpose | Example |
+|-------|-------|---------|---------|
+| `/javis-init` | **Global** | Initialize per-project Javis config | `/javis-init EUV` |
+| `/javis-review-pr` | **Global** | Bitbucket PR code review (auto-detects backend/frontend/PLC) | `/javis-review-pr <PR_URL>` or `/javis-review-pr 42` |
+| `/javis-story` | **Global** | Story lifecycle (context, list, create, add, refine, push to Jira) | `/javis-story context` |
+| `/javis-sprint` | Local | Sprint management (current, velocity, burndown, plan, member) | `/javis-sprint velocity` |
+| `/javis-sync` | Local | Data sync orchestration (Jira, Confluence, Bitbucket, Boards, Sprints, Members) | `/javis-sync all` |
+| `/javis-sync-deploy` | Local | Sync local DB + deploy to remote server | `/javis-sync-deploy` |
+
+### Global Skills (Available from Any Project)
+
+Skills marked **Global** are symlinked to `~/.claude/skills/` and can be used from any repository after running `/javis-init`.
+
+**Setup (one-time per project):**
+```bash
+cd ~/Dev/my-other-project
+# Run /javis-init to create .claude/javis.json and .claude/.javis-env
+/javis-init
+```
+
+**What `/javis-init` creates:**
+- `.claude/javis.json` — Project config (Jira project key, component, labels, repos, vision)
+- `.claude/.javis-env` — Symlink to `~/Dev/jarvis.gerald/.env` (shared credentials)
+
+**Cross-project shortcuts:**
+- `/javis-review-pr 42` — Review PR #42 using repo from `javis.json`
+- `/javis-story context` — Auto-uses vision from `javis.json`
+- `/javis-story add ...` — Auto-applies component/labels from `javis.json`
+
+**javis.json schema:**
+```json
+{
+  "jira_project": "EUV",
+  "default_component": "OQCDigitalization",
+  "default_labels": ["oqc-digitalization"],
+  "bitbucket_repos": ["ac-avi/edwards.oqc.infra"],
+  "vision": "OQC"
+}
+```
+
+**Symlink registration** (managed in `~/.claude/skills/`):
+```
+~/.claude/skills/javis-init/       → jarvis.gerald/.claude/skills/javis-init/
+~/.claude/skills/javis-review-pr/  → jarvis.gerald/.claude/skills/javis-review-pr/
+~/.claude/skills/javis-story/      → jarvis.gerald/.claude/skills/javis-story/
+~/.claude/skills/_shared/          → jarvis.gerald/.claude/skills/_shared/
+```
 
 ### Common Workflows
 ```bash
@@ -162,9 +201,12 @@ Project-specific Claude Code skills (`.claude/skills/`). See `docs/skills-usage.
 /javis-sprint                   # Current sprint status
 /javis-sprint velocity          # Velocity trend
 
-# Risk check
-/javis-risk detect              # Auto-detect risks
-/javis-risk analyze EUV-3299    # Analyze Epic risks
+# Code review
+/javis-review-pr <PR_URL>                 # Full review + post comment
+/javis-review-pr <PR_URL> --no-post       # Analysis only
+
+# Deploy to server
+/javis-sync-deploy
 
 # Slack integration
 python3 scripts/javis_cli.py slack test     # Send test message
