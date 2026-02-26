@@ -140,7 +140,7 @@ Project-specific Claude Code skills (`.claude/skills/`). See `docs/skills-usage.
 
 | Skill | Purpose | Example |
 |-------|---------|---------|
-| `/javis-stories` | Story management (CRUD, Jira push) | `/javis-stories context OQC` |
+| `/javis-story` | Story management (CRUD, Jira push) | `/javis-story context OQC` |
 | `/javis-sprint` | Sprint tracking (velocity, health) | `/javis-sprint velocity` |
 | `/javis-dev` | Developer dashboard | `/javis-dev team` |
 | `/javis-report` | Project reports | `/javis-report weekly` |
@@ -153,10 +153,10 @@ Project-specific Claude Code skills (`.claude/skills/`). See `docs/skills-usage.
 /javis-sync all
 
 # Story workflow
-/javis-stories context OQC      # Understand context
-/javis-stories list EUV-3299    # List stories in Epic
-/javis-stories create EUV-3299  # AI-generate stories
-/javis-stories push EUV-3299    # Push to Jira
+/javis-story context OQC      # Understand context
+/javis-story list EUV-3299    # List stories in Epic
+/javis-story create EUV-3299  # AI-generate stories
+/javis-story push EUV-3299    # Push to Jira
 
 # Sprint management
 /javis-sprint                   # Current sprint status
