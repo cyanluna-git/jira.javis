@@ -1,81 +1,115 @@
 ---
 name: javis-review-pr
-description: Bitbucket PR 코드 리뷰. URL 입력 → 코드 분석 → 구조화된 리뷰 코멘트 자동 게시 + MD 저장. 사용법: /javis-review-pr <PR_URL>
+description: Bitbucket PR code review. Input URL → code analysis → post structured review comment + save MD. Auto-detects domain (backend/frontend/PLC). Usage: /javis-review-pr <PR_URL>
 argument-hint: "<bitbucket_pr_url> [--no-post] [--no-save]"
 allowed-tools: Bash(python3 *), Read, Grep, WebFetch
 ---
 
-# /javis-review-pr - Bitbucket PR 코드 리뷰
+# /javis-review-pr - Bitbucket PR Code Review
 
-Bitbucket PR URL을 입력받아 코드를 분석하고, 구조화된 리뷰 코멘트를 PR에 자동으로 게시합니다.
+Analyzes code from a Bitbucket PR URL and automatically posts structured review comments to the PR. Auto-detects the code domain (backend, frontend, PLC) from file extensions in the diff.
 
-## 옵션
+## Options
 
-| 옵션 | 설명 |
-|------|------|
-| (없음) | 리뷰 + PR 코멘트 게시 + 로컬 MD 저장 |
-| `--no-post` | PR 코멘트 게시 생략 (분석만) |
-| `--no-save` | 로컬 MD 저장 생략 |
+| Option | Description |
+|--------|-------------|
+| (none) | Review + post PR comment + save local MD |
+| `--no-post` | Skip posting PR comment (analysis only) |
+| `--no-save` | Skip saving local MD file |
 
-## 필수 실행 워크플로우
+## Cross-Project Config (javis.json)
 
-아래 단계를 반드시 순서대로 실행하세요. 건너뛰지 마세요.
+When invoked from a non-jarvis project (via global symlink), read `.claude/javis.json` for defaults:
 
-### Step 1: 인자 파싱
-
-사용자 입력에서 PR URL과 옵션을 파싱합니다.
-
-```
-입력: <pr_url> [--no-post] [--no-save]
+```bash
+cat .claude/javis.json 2>/dev/null
 ```
 
-### Step 2: PR 데이터 수집
+If found, the `bitbucket_repos` field enables a **PR-number shortcut**:
+- Full URL: `/javis-review-pr https://bitbucket.org/ac-avi/edwards.oqc.infra/pull-requests/42`
+- Shortcut: `/javis-review-pr 42` (uses first repo from `bitbucket_repos`)
+- Shortcut with repo: `/javis-review-pr 42 edwards.oqc.infra` (matches repo slug)
+
+---
+
+## Required Execution Workflow
+
+Follow the steps below in order. Do not skip any step.
+
+### Step 1: Parse Arguments
+
+Parse the PR URL and options from user input.
+
+```
+Input: <pr_url_or_number> [--no-post] [--no-save]
+```
+
+**PR-number shortcut:** If the input is a plain number (not a URL), load `.claude/javis.json` and construct the full URL:
+1. Read `bitbucket_repos` from `.claude/javis.json`
+2. If a second argument matches a repo slug, use that repo; otherwise use the first repo
+3. Construct: `https://bitbucket.org/{workspace}/{repo}/pull-requests/{number}`
+
+### Step 2: Fetch PR Data
 
 ```bash
 python3 .claude/skills/javis-review-pr/scripts/review_pr.py fetch <pr_url>
 ```
 
-JSON 출력을 분석합니다. `diff_file` 키가 있으면 diff가 별도 파일로 저장된 것이므로 Read 도구로 해당 파일을 읽으세요.
+Analyze the JSON output. If a `diff_file` key exists, the diff was saved to a separate file — read it using the Read tool.
 
-### Step 3: 코드 분석 & 리뷰 작성
+### Step 3: Auto-Detect Domain & Analyze Code
 
-1. diff 전체를 읽고 [reference.md](reference.md)의 **8가지 관점**으로 분석합니다.
-2. target branch 히스토리에서 관련 커밋을 파악하여 root cause를 이해합니다.
-3. [reference.md](reference.md)의 **출력 포맷**에 맞춰 구조화된 리뷰를 작성합니다.
-4. `/tmp/review_pr_{id}.md`에 임시 저장합니다.
+1. Read the entire diff and detect the primary domain from file extensions:
+   - **Backend**: `.py`, `.go`, `.java`, `.cs`, `.rb`, `.rs`, `.sql`, `.env`, `Dockerfile`
+   - **Frontend**: `.tsx`, `.jsx`, `.ts` (in `src/components/`), `.css`, `.scss`, `.vue`, `.svelte`
+   - **PLC**: `.ST`, `.st`, `.xml` (PLCOpen format)
+   - **Mixed/General**: Falls back to the generic review rubric
+2. Load the appropriate domain reference file:
+   - Backend → [reference-backend.md](reference-backend.md)
+   - Frontend → [reference-frontend.md](reference-frontend.md)
+   - PLC → [reference-plc.md](reference-plc.md) + [plc-architecture-guide.md](plc-architecture-guide.md)
+   - Mixed/General → [reference.md](reference.md)
+3. Analyze the diff using the domain-specific review perspectives.
+4. Review the target branch history for related commits to understand root cause.
+5. Write a structured review following the domain reference's **output format**.
+6. Save to `/tmp/review_pr_{id}.md` as a temp file.
 
-**리뷰 언어**: 한국어로 작성합니다.
+**Review language**: Write the review in Korean.
 
-### Step 4: PR에 코멘트 게시
+### Step 4: Post Comment to PR
 
-`--no-post` 옵션이 **없는 경우**에만 실행합니다.
+Execute only if `--no-post` option is **NOT** present.
 
 ```bash
 python3 .claude/skills/javis-review-pr/scripts/review_pr.py comment <pr_url> < /tmp/review_pr_{id}.md
 ```
 
-### Step 5: 로컬 MD 저장
+### Step 5: Save Local MD
 
-`--no-save` 옵션이 **없는 경우**에만 실행합니다.
+Execute only if `--no-save` option is **NOT** present.
 
-1. 파일명 정보 조회:
+1. Get filename info:
 ```bash
 python3 .claude/skills/javis-review-pr/scripts/review_pr.py save <pr_url>
 ```
 
-2. `/tmp/review_pr_{id}.md` 내용을 `reviews/{filename}`에 저장합니다. `reviews/` 디렉토리가 없으면 생성합니다.
+2. Save the `/tmp/review_pr_{id}.md` content to `reviews/{filename}`. Create the `reviews/` directory if it doesn't exist.
 
-### Step 6: 결과 요약
+### Step 6: Summary
 
-사용자에게 결과를 요약하여 보여줍니다:
-- 리뷰한 PR 정보 (제목, 브랜치, 작성자)
-- 발견한 이슈 수 (머지 전 확인 필요 / 개선 권장)
-- 최종 판정 (APPROVED / APPROVED with suggestions / CHANGES REQUESTED)
-- 코멘트 게시 여부 및 URL
-- MD 저장 경로
+Show the user a summary of results:
+- PR info reviewed (title, branch, author)
+- Number of issues found (must-fix before merge / suggested improvements)
+- Final verdict (APPROVED / APPROVED with suggestions / CHANGES REQUESTED)
+- Comment posting status and URL
+- MD save path
 
-## 추가 리소스
+## Resources
 
-- 리뷰 관점 및 출력 포맷: [reference.md](reference.md)
-- 사용 예시: [examples.md](examples.md)
-- API 헬퍼 스크립트: [scripts/review_pr.py](scripts/review_pr.py)
+- General review rubric & output format: [reference.md](reference.md)
+- Backend-specific review rubric: [reference-backend.md](reference-backend.md)
+- Frontend-specific review rubric: [reference-frontend.md](reference-frontend.md)
+- PLC-specific review rubric: [reference-plc.md](reference-plc.md)
+- PLC architecture guide: [plc-architecture-guide.md](plc-architecture-guide.md)
+- Usage examples: [examples.md](examples.md)
+- API helper script: [scripts/review_pr.py](scripts/review_pr.py)

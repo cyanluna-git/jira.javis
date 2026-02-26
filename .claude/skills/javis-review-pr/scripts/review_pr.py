@@ -19,15 +19,14 @@ from typing import Any, Dict, Optional, Tuple
 def load_env() -> Dict[str, str]:
     """프로젝트 루트의 .env 파일을 로드합니다."""
     env = {}
-    possible_roots = [
-        Path(__file__).resolve().parents[4],  # .claude/skills/javis-review-pr/scripts -> 프로젝트 루트
-        Path.cwd(),
-        Path.home() / 'dev' / 'jira.javis',
+    possible_paths = [
+        Path(__file__).resolve().parents[4] / '.env',  # jarvis.gerald 루트 (symlink resolved)
+        Path.cwd() / '.claude' / '.javis-env',         # javis-init이 만든 symlink (cross-project)
+        Path.cwd() / '.env',                           # 현재 디렉토리 fallback
     ]
 
     env_file = None
-    for root in possible_roots:
-        candidate = root / '.env'
+    for candidate in possible_paths:
         if candidate.exists():
             env_file = candidate
             break

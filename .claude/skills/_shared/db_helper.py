@@ -29,15 +29,14 @@ def load_env() -> Dict[str, str]:
     env = {}
 
     # 프로젝트 루트 찾기 (여러 경로 시도)
-    possible_roots = [
-        Path(__file__).resolve().parents[3],  # .claude/skills/_shared -> 프로젝트 루트
-        Path.cwd(),
-        Path.home() / 'dev' / 'jira.javis',
+    possible_paths = [
+        Path(__file__).resolve().parents[3] / '.env',  # jarvis.gerald 루트 (symlink resolved)
+        Path.cwd() / '.claude' / '.javis-env',         # javis-init이 만든 symlink (cross-project)
+        Path.cwd() / '.env',                           # 현재 디렉토리 fallback
     ]
 
     env_file = None
-    for root in possible_roots:
-        candidate = root / '.env'
+    for candidate in possible_paths:
         if candidate.exists():
             env_file = candidate
             break

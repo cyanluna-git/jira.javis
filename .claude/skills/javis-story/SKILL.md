@@ -1,214 +1,242 @@
 ---
 name: javis-story
-description: 로컬 DB 기반 Story 관리. Vision/Epic 맥락 조회, Story 목록, AI 생성/정제, Jira 동기화. 사용법: /javis-story context, /javis-story list <epic>, /javis-story create <epic>, /javis-story add <자연어>, /javis-story push <epic>
-argument-hint: "[context|list|create|add|refine|push] [vision_title|epic_key|자연어설명]"
+description: Local DB-based Story management. Vision/Epic context lookup, Story listing, AI generation/refinement, Jira sync. Usage: /javis-story context, /javis-story list <epic>, /javis-story create <epic>, /javis-story add <description>, /javis-story push <epic>
+argument-hint: "[context|list|create|add|refine|push] [vision_title|epic_key|description]"
 allowed-tools: Bash(python3 *), Read, Grep
 ---
 
-# /javis-story - Story 관리
+# /javis-story - Story Management
 
-로컬 PostgreSQL DB를 기반으로 Story를 관리하고 Jira와 동기화합니다.
+Manages Stories in the local PostgreSQL DB and synchronizes them with Jira.
 
-## 명령어
+## Commands
 
-| 명령어 | 설명 |
-|--------|------|
-| `/javis-story context [vision]` | Vision의 프로젝트 맥락 조회 |
-| `/javis-story list <epic_key>` | Epic 하위 Story 목록 |
-| `/javis-story create <epic_key>` | AI가 Epic 기반 Story 다수 생성 |
-| `/javis-story add <자연어>` | **자연어 → 단일 Story 생성 (Epic/라벨 자동)** |
-| `/javis-story refine <epic_key>` | 기존 Story AC/Points 정제 |
-| `/javis-story push <epic_key>` | Story를 Jira에 생성 |
+| Command | Description |
+|---------|-------------|
+| `/javis-story context [vision]` | View project context for a Vision |
+| `/javis-story list <epic_key>` | List Stories under an Epic |
+| `/javis-story create <epic_key>` | AI generates multiple Stories based on Epic |
+| `/javis-story add <description>` | **Natural language → single Story (auto-assigns Epic/labels)** |
+| `/javis-story refine <epic_key>` | Refine existing Story AC/Points |
+| `/javis-story push <epic_key>` | Create Stories in Jira |
 
-## 빠른 실행
+## Quick Run
 
 ```bash
-# Vision 맥락 조회
+# View Vision context
 python3 .claude/skills/javis-story/scripts/stories.py context OQC
 
-# Epic Story 목록
+# List Epic Stories
 python3 .claude/skills/javis-story/scripts/stories.py list EUV-3299
 
-# Epic 개발 현황 (커밋/PR)
+# Epic development activity (commits/PRs)
 python3 .claude/skills/javis-story/scripts/stories.py dev EUV-3299
 ```
 
-## 추가 리소스
+## Resources
 
-- 상세 쿼리 및 API 문서: [reference.md](reference.md)
-- 사용 예시 및 워크플로우: [examples.md](examples.md)
-- 헬퍼 스크립트: [scripts/stories.py](scripts/stories.py)
+- Detailed queries & API docs: [reference.md](reference.md)
+- Usage examples & workflows: [examples.md](examples.md)
+- Helper script: [scripts/stories.py](scripts/stories.py)
 
-## 데이터 소스
+## Data Sources
 
-| 정보 | 테이블 |
-|------|--------|
-| Vision 목표 | `roadmap_visions` |
-| Milestone 현황 | `roadmap_milestones` |
+| Info | Table |
+|------|-------|
+| Vision goals | `roadmap_visions` |
+| Milestone status | `roadmap_milestones` |
 | Epic/Story | `jira_issues` |
-| 팀 구성 | `roadmap_vision_members` + `team_members` |
-| 커밋 이력 | `bitbucket_commits` |
-| PR 현황 | `bitbucket_pullrequests` |
+| Team composition | `roadmap_vision_members` + `team_members` |
+| Commit history | `bitbucket_commits` |
+| PR status | `bitbucket_pullrequests` |
 
-## Vision 기본값 자동 적용
+## Vision Defaults Auto-Applied
 
-Jira에 Story/Epic 생성 시 **Vision의 `default_component`와 `default_labels`가 자동 적용**됩니다.
+When creating Stories/Epics in Jira, **Vision's `default_component` and `default_labels` are automatically applied**.
 
-| 프로젝트 | Component | Labels |
-|----------|-----------|--------|
+| Project | Component | Labels |
+|---------|-----------|--------|
 | EUV | OQCDigitalization | oqc-digitalization |
 | ASP | Unify Plasma | unify-plasma-single |
 
-Vision별 기본값 확인:
+Check Vision defaults:
 ```bash
 python3 .claude/skills/javis-story/scripts/stories.py push {epic_key} --dry-run
 ```
 
-Vision 기본값 수정:
+Modify Vision defaults:
 ```sql
 UPDATE roadmap_visions
-SET default_component = '컴포넌트명', default_labels = ARRAY['label1', 'label2']
+SET default_component = 'ComponentName', default_labels = ARRAY['label1', 'label2']
 WHERE project_key = 'EUV';
 ```
 
 ---
 
-## `/javis-story add` 상세
+## `/javis-story add` Details
 
-자연어로 Story를 설명하면 AI가 **프로젝트 맥락을 분석**하여 구체적인 유저스토리를 생성합니다.
+Describe a Story in natural language and AI will **analyze project context** to generate a concrete user story.
 
-### 입력 형식
+### Input Format
 
 ```
-/javis-story add {프로젝트}에 유저스토리를 추가하고 싶어.
-지금 {현재 상황}까지 있는데.
-{추가할 기능}을 확인하고 추가해야해.
-그러면 {기대 결과}를 할 수 있게 돼.
+/javis-story add I want to add a user story to {project}.
+Currently we have {current state}.
+We need to add {feature to add}.
+Then we can {expected outcome}.
 ```
 
 ---
 
-## ⚠️ AI 필수 실행 단계 (MUST FOLLOW)
+## Cross-Project Config (javis.json)
 
-`add` 명령 수신 시 **반드시** 아래 순서로 맥락을 수집한 후 Story를 생성하세요.
-
-### Step 1: 프로젝트 맥락 조회
+When invoked from a non-jarvis project (via global symlink), read `.claude/javis.json` for defaults:
 
 ```bash
-python3 .claude/skills/javis-story/scripts/stories.py context {프로젝트명}
+cat .claude/javis.json 2>/dev/null
 ```
 
-**수집 정보:**
-- Vision 목표 및 North Star
-- Milestone 현황 및 진행률
-- 팀 구성 및 역할
+If found, use these defaults automatically:
+- **`vision`** → default project name for `context` command (no need for user to specify)
+- **`default_component`** → auto-apply when creating/pushing Stories to Jira
+- **`default_labels`** → auto-apply when creating/pushing Stories to Jira
+- **`jira_project`** → default Jira project key
 
-### Step 2: 관련 Epic 탐색 및 기존 Story 확인
+If `.claude/javis.json` is not found, fall back to requiring explicit arguments (existing behavior).
 
-사용자 입력에서 키워드를 추출하여 관련 Epic을 찾습니다.
+---
+
+## AI Required Execution Steps (MUST FOLLOW)
+
+When receiving the `add` command, **you must** collect context in the following order before generating a Story.
+
+### Step 0: Load Project Config (if available)
 
 ```bash
-# Epic 하위 Story 목록 조회
+cat .claude/javis.json 2>/dev/null
+```
+
+If found, use `vision` as the default project name for Step 1. Use `default_component` and `default_labels` when pushing to Jira.
+
+### Step 1: Fetch Project Context
+
+```bash
+python3 .claude/skills/javis-story/scripts/stories.py context {project_name}
+```
+
+If `project_name` is not provided by the user, use the `vision` value from `javis.json`.
+
+**Collected info:**
+- Vision goals and North Star
+- Milestone status and progress
+- Team composition and roles
+
+### Step 2: Find Related Epic & Check Existing Stories
+
+Extract keywords from user input to find the related Epic.
+
+```bash
+# List Stories under the Epic
 python3 .claude/skills/javis-story/scripts/stories.py list {epic_key}
 ```
 
-**수집 정보:**
-- Epic 목표 및 설명
-- 기존 Story 목록 (중복 방지)
-- 현재 진행 상태
+**Collected info:**
+- Epic goals and description
+- Existing Story list (to prevent duplicates)
+- Current progress status
 
-### Step 3: 최근 개발 현황 파악
+### Step 3: Check Recent Development Activity
 
 ```bash
 python3 .claude/skills/javis-story/scripts/stories.py dev {epic_key}
 ```
 
-**수집 정보:**
-- 최근 7일 커밋 로그 (작업 중인 파일, 패턴)
-- 오픈 PR 상태
-- 개발자별 작업 영역
+**Collected info:**
+- Last 7 days commit log (files worked on, patterns)
+- Open PR status
+- Per-developer work areas
 
-### Step 4: 맥락 기반 Story 생성
+### Step 4: Context-Based Story Generation
 
-위에서 수집한 정보를 바탕으로 **구체적이고 현실적인** Story를 생성합니다.
+Generate a **concrete and realistic** Story based on the collected information.
 
-**생성 시 반드시 반영할 것:**
-- 기존 코드베이스의 **용어/네이밍** 사용 (커밋 메시지, Epic 설명 참조)
-- 실제 **파일명/함수명** 참조 (커밋 로그에서 확인)
-- 기존 **패턴/아키텍처** 따르기
-- 현재 진행 중인 작업과 **의존성** 명시
-- **중복 Story 방지** (기존 Story 목록 확인)
-
----
-
-## 라벨 분류 기준
-
-| 라벨 | 키워드 힌트 |
-|------|-------------|
-| `frontend` | UI, 화면, React, 컴포넌트, 버튼, 폼, 모달, 페이지 |
-| `backend` | API, 서버, DB, 엔드포인트, 인증, 데이터 처리 |
-| `plc` | PLC, Modbus, 프로토콜, 장비, Gateway, Simulator, 통신 |
-| `infra` | CI/CD, 배포, Docker, 설정, 환경변수 |
-| `test` | 테스트, QA, 검증, 자동화 테스트 |
-| `docs` | 문서, README, 가이드 |
+**Must reflect when generating:**
+- Use **terminology/naming** from the existing codebase (from commit messages, Epic descriptions)
+- Reference actual **file names/function names** (from commit logs)
+- Follow existing **patterns/architecture**
+- Specify **dependencies** with current in-progress work
+- **Prevent duplicate Stories** (check existing Story list)
 
 ---
 
-## 출력 형식 (맥락 반영)
+## Label Classification Criteria
+
+| Label | Keyword Hints |
+|-------|---------------|
+| `frontend` | UI, screen, React, component, button, form, modal, page |
+| `backend` | API, server, DB, endpoint, auth, data processing |
+| `plc` | PLC, Modbus, protocol, equipment, Gateway, Simulator, communication |
+| `infra` | CI/CD, deployment, Docker, config, environment variables |
+| `test` | test, QA, validation, automation testing |
+| `docs` | documentation, README, guide |
+
+---
+
+## Output Format (Context-Aware)
 
 ```markdown
-## Story: [구체적인 Summary]
+## Story: [Concrete Summary]
 
 **Epic**: {epic_key} ({epic_summary})
 **Labels**: `{label1}`, `{label2}`
 **Project**: {project_name}
-**의존성**: {관련 Story 또는 "없음"}
+**Dependencies**: {related Story or "None"}
 
 ### Description
-As a {역할}, I want {기능}
-so that {기대 효과}.
+As a {role}, I want {feature}
+so that {expected benefit}.
 
-### Context (현재 상황)
-- 현재 {epic_key}에서 {진행 중인 작업} 진행 중
-- 최근 커밋: `{recent_commit_message}` by {author}
-- 관련 파일: `{file_path}`
+### Context (Current State)
+- Currently {epic_key} has {in-progress work} in progress
+- Recent commit: `{recent_commit_message}` by {author}
+- Related files: `{file_path}`
 
 ### Acceptance Criteria
-- [ ] {기존 패턴/클래스명 활용한 구체적 조건 1}
-- [ ] {실제 파일/함수 참조한 조건 2}
-- [ ] {기존 설정 파일 참조한 조건 3}
-- [ ] {테스트 조건}
+- [ ] {Concrete condition using existing patterns/class names 1}
+- [ ] {Condition referencing actual files/functions 2}
+- [ ] {Condition referencing existing config files 3}
+- [ ] {Test condition}
 
 ### Technical Notes
-- 기존 `{클래스/패턴명}` 패턴 따르기 (`{파일경로}` 참조)
-- {epic_key}의 기존 Story `{관련_story_key}` 완료 후 착수 권장
-- 설정값은 `{config_file}`에서 관리
+- Follow existing `{class/pattern name}` pattern (see `{file_path}`)
+- Recommended to start after {epic_key}'s existing Story `{related_story_key}` is complete
+- Config values managed in `{config_file}`
 
 ### Story Points: {points}
 ```
 
 ---
 
-## 예시: 맥락 기반 Story 생성
+## Example: Context-Based Story Generation
 
-### 사용자 입력
+### User Input
 ```
-/javis-story add OQC에 유저스토리를 추가하고 싶어.
-지금 Simulation Engine 기본 구조까지 있는데.
-에러 핸들링 기능을 확인하고 추가해야해.
-그러면 시뮬레이터 실패 시 자동 재시도가 가능해져.
+/javis-story add I want to add a user story to OQC.
+Currently we have the Simulation Engine basic structure.
+We need to add error handling.
+Then we can have automatic retry on simulator failures.
 ```
 
-### AI 실행 흐름
+### AI Execution Flow
 
-1. `context OQC` → Vision 목표, North Star 확인
-2. 키워드 "Simulation Engine" → EUV-3299 Epic 탐색
-3. `list EUV-3299` → 기존 Story 6개 확인 (에러 핸들링 없음 확인)
-4. `dev EUV-3299` → 최근 커밋 확인:
+1. `context OQC` → Confirm Vision goals, North Star
+2. Keyword "Simulation Engine" → Find EUV-3299 Epic
+3. `list EUV-3299` → Check existing 6 Stories (confirm no error handling Story)
+4. `dev EUV-3299` → Check recent commits:
    - `feat: add ISimulator interface` (Gerald, 01-15)
    - `feat: implement EUV simulator config` (Tushar, 01-14)
 
-### 생성된 Story
+### Generated Story
 
 ```markdown
 ## Story: Implement Error Handling with Auto-Retry for Simulators
@@ -216,35 +244,35 @@ so that {기대 효과}.
 **Epic**: EUV-3299 (Simulation Engine)
 **Labels**: `backend`, `plc`
 **Project**: OQC
-**의존성**: EUV-3301 (ISimulator interface) 완료 필요
+**Dependencies**: EUV-3301 (ISimulator interface) must be complete
 
 ### Description
 As a developer, I want automatic retry mechanism on simulator connection failures
 so that transient network errors don't interrupt the BDD test execution.
 
-### Context (현재 상황)
-- 현재 EUV-3299에서 ISimulator 인터페이스 정의 완료
-- 최근 커밋: `feat: add ISimulator interface` by Gerald (01-15)
-- 관련 파일: `src/simulator/interface.py`, `src/simulator/euv_simulator.py`
+### Context (Current State)
+- Currently EUV-3299 has ISimulator interface definition complete
+- Recent commit: `feat: add ISimulator interface` by Gerald (01-15)
+- Related files: `src/simulator/interface.py`, `src/simulator/euv_simulator.py`
 
 ### Acceptance Criteria
-- [ ] `ISimulator.connect()` 실패 시 최대 3회 재시도 (Gateway의 `RetryPolicy` 패턴 적용)
-- [ ] 재시도 간격: exponential backoff 1s → 2s → 4s (`config/simulator.yaml`의 `retry.backoff` 설정)
-- [ ] 실패 로그를 `edge_gateway/logs/simulator.log`에 기록 (기존 `LogManager` 활용)
-- [ ] 영구 실패 시 `SimulatorConnectionError` 예외 발생 및 BDD step 실패 처리
-- [ ] 재시도 횟수/결과를 `/api/simulator/status` 엔드포인트에서 조회 가능
+- [ ] `ISimulator.connect()` retries up to 3 times on failure (apply Gateway's `RetryPolicy` pattern)
+- [ ] Retry interval: exponential backoff 1s → 2s → 4s (`config/simulator.yaml` `retry.backoff` setting)
+- [ ] Failure logs written to `edge_gateway/logs/simulator.log` (use existing `LogManager`)
+- [ ] On permanent failure, raise `SimulatorConnectionError` and fail the BDD step
+- [ ] Retry count/results queryable via `/api/simulator/status` endpoint
 
 ### Technical Notes
-- Gateway의 기존 `RetryPolicy` 클래스 재사용 (`src/common/retry.py`)
-- EUV-3301 (ISimulator interface) 완료 후 착수 권장
-- 설정값은 `config/simulator.yaml`에서 관리
-- 단위 테스트: `tests/simulator/test_retry.py` 추가
+- Reuse Gateway's existing `RetryPolicy` class (`src/common/retry.py`)
+- Recommended to start after EUV-3301 (ISimulator interface) is complete
+- Config values managed in `config/simulator.yaml`
+- Unit test: add `tests/simulator/test_retry.py`
 
 ### Story Points: 3
 ```
 
 ---
 
-## 저장 위치
+## Save Location
 
-생성된 Story는 `docs/stories/{epic_key}-stories.md`에 추가됩니다.
+Generated Stories are appended to `docs/stories/{epic_key}-stories.md`.
