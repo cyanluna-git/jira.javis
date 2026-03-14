@@ -16,8 +16,12 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 
-def load_env() -> Dict[str, str]:
-    """프로젝트 루트의 .env 파일을 로드합니다."""
+def _load_dotenv_fallback() -> Dict[str, str]:
+    """프로젝트 .env 파일에서 환경변수를 로드합니다 (폴백용).
+
+    .env 파일이 없으면 빈 딕셔너리를 반환합니다.
+    환경변수가 직접 설정된 경우 .env 파일 없이도 동작할 수 있습니다.
+    """
     env = {}
     possible_paths = [
         Path(__file__).resolve().parents[4] / '.env',  # jira.javis 루트 (symlink resolved)
@@ -32,8 +36,7 @@ def load_env() -> Dict[str, str]:
             break
 
     if not env_file:
-        print("Error: .env file not found", file=sys.stderr)
-        sys.exit(1)
+        return {}
 
     with open(env_file) as f:
         for line in f:
@@ -49,19 +52,32 @@ _env_cache: Optional[Dict[str, str]] = None
 
 
 def get_env() -> Dict[str, str]:
+    """환경변수를 로드합니다. os.environ이 .env 파일보다 우선합니다."""
     global _env_cache
     if _env_cache is None:
-        _env_cache = load_env()
+        # 1. .env 파일에서 base 값 로드 (폴백)
+        file_env = _load_dotenv_fallback()
+        # 2. os.environ 값으로 override (우선)
+        file_env.update({k: v for k, v in os.environ.items()
+                        if k.startswith(('BITBUCKET_', 'JIRA_'))})
+        _env_cache = file_env
     return _env_cache
 
 
 def get_auth() -> Tuple[str, str]:
-    """Bitbucket Basic Auth 자격증명을 반환합니다."""
+    """Bitbucket Basic Auth 자격증명을 반환합니다.
+
+    환경변수 우선순위:
+        이메일: BITBUCKET_EMAIL > JIRA_EMAIL
+        토큰: BITBUCKET_API_TOKEN > BITBUCKET_APP_PASSWORD
+    """
     env = get_env()
-    email = env.get('JIRA_EMAIL', '')
-    token = env.get('BITBUCKET_API_TOKEN', '') or env.get('BITBUCKET_APP_PASSWORD', '')
+    email = env.get('BITBUCKET_EMAIL') or env.get('JIRA_EMAIL', '')
+    token = env.get('BITBUCKET_API_TOKEN') or env.get('BITBUCKET_APP_PASSWORD', '')
     if not email or not token:
-        print("Error: JIRA_EMAIL and BITBUCKET_API_TOKEN must be set in .env", file=sys.stderr)
+        print("Error: BITBUCKET_EMAIL (or JIRA_EMAIL) and BITBUCKET_API_TOKEN required.",
+              file=sys.stderr)
+        print("Set via environment variables or .env file.", file=sys.stderr)
         sys.exit(1)
     return (email, token)
 
