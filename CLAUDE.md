@@ -168,7 +168,7 @@ Project-specific Claude Code skills (`.claude/skills/`). See `docs/skills-usage.
 | Skill | Scope | Purpose | Example |
 |-------|-------|---------|---------|
 | `/javis-init` | **Global** | Initialize per-project Javis config | `/javis-init EUV` |
-| `/javis-review-pr` | **Global** | Bitbucket PR code review (auto-detects backend/frontend/PLC) | `/javis-review-pr <PR_URL>` or `/javis-review-pr 42` |
+| `/javis-review-pr` | **Global** | Bitbucket PR code review (auto-detects backend/frontend/PLC) — now in `cyanluna.skills/review-*` | `/javis-review-pr <PR_URL>` or `/javis-review-pr 42` |
 | `/javis-story` | **Global** | Story lifecycle (context, list, create, add, refine, push to Jira) | `/javis-story context` |
 | `/javis-sprint` | Local | Sprint management (current, velocity, burndown, plan, member) | `/javis-sprint velocity` |
 | `/javis-sync` | Local | Data sync orchestration (Jira, Confluence, Bitbucket, Boards, Sprints, Members) | `/javis-sync all` |
@@ -208,9 +208,16 @@ cd ~/dev/my-other-project
 **Symlink registration** (managed in `~/.claude/skills/`):
 ```
 ~/.claude/skills/javis-init/       → jira.javis/.claude/skills/javis-init/
-~/.claude/skills/javis-review-pr/  → jira.javis/.claude/skills/javis-review-pr/
 ~/.claude/skills/javis-story/      → jira.javis/.claude/skills/javis-story/
 ~/.claude/skills/_shared/          → jira.javis/.claude/skills/_shared/
+```
+
+**Review skills** have been moved to `cyanluna.skills/review-*` (public skills, installed via `bootstrap.sh`):
+```
+~/.claude/skills/javis-review-pr/       → cyanluna.skills/review-pr/
+~/.claude/skills/javis-review-backend/  → cyanluna.skills/review-backend/
+~/.claude/skills/javis-review-frontend/ → cyanluna.skills/review-frontend/
+~/.claude/skills/javis-review-plc/      → cyanluna.skills/review-plc/
 ```
 
 ### Common Workflows
