@@ -20,7 +20,7 @@ def load_env() -> Dict[str, str]:
     """프로젝트 루트의 .env 파일을 로드합니다."""
     env = {}
     possible_paths = [
-        Path(__file__).resolve().parents[4] / '.env',  # jarvis.gerald 루트 (symlink resolved)
+        Path(__file__).resolve().parents[4] / '.env',  # jira.javis 루트 (symlink resolved)
         Path.cwd() / '.claude' / '.javis-env',         # javis-init이 만든 symlink (cross-project)
         Path.cwd() / '.env',                           # 현재 디렉토리 fallback
     ]

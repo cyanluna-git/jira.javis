@@ -103,6 +103,33 @@ NEXT_PUBLIC_READ_ONLY=false  # Local: modifications allowed
 - `src/javis-viewer/src/contexts/ReadOnlyContext.tsx` — React Context + Hook
 - `src/javis-viewer/src/lib/readonly.ts` — API check utility
 
+## Dependency Direction (Must Not Violate)
+
+```
+Frontend: Pages → Components → Contexts → lib/db.ts → PostgreSQL
+Python:   CLI → Commands (cli/) → Sync Engines → lib/ (db, jira_client, ai_client)
+```
+
+- Frontend API Routes must not contain complex SQL — extract to query functions
+- Python sync scripts must not share Frontend DB pool — use separate connections
+- Bidirectional sync must always be incremental (full-scan mirror forbidden)
+
+## Forbidden Patterns
+
+- ❌ Bypassing read-only mode (no write API access when NEXT_PUBLIC_READ_ONLY=true)
+- ❌ Hardcoding Jira API tokens in code
+- ❌ Violating roadmap hierarchy (Vision → Milestone → Stream → Epic order)
+- ❌ Bypassing conflict detection logic in sync_bidirectional.py
+- ❌ Sending sensitive information (DB connection strings, etc.) via Slack webhooks
+
+## Required Patterns
+
+- ✅ Jira sync must always be `last_synced_at`-based incremental
+- ✅ DB schema changes require SQL migration files (`scripts/`)
+- ✅ Conflicts must record `local_modified_at` and `local_modified_fields`
+- ✅ Risk detection must cover all 5 types (delay, blocker, velocity_drop, dependency_block, resource_conflict)
+- ✅ Verify `SLACK_SIGNING_SECRET` before sending Slack messages
+
 ## Key Concepts
 
 - **Roadmap Hierarchy:** Vision → Milestone → Stream → Epic
@@ -153,14 +180,14 @@ Skills marked **Global** are symlinked to `~/.claude/skills/` and can be used fr
 
 **Setup (one-time per project):**
 ```bash
-cd ~/Dev/my-other-project
+cd ~/dev/my-other-project
 # Run /javis-init to create .claude/javis.json and .claude/.javis-env
 /javis-init
 ```
 
 **What `/javis-init` creates:**
 - `.claude/javis.json` — Project config (Jira project key, component, labels, repos, vision)
-- `.claude/.javis-env` — Symlink to `~/Dev/jarvis.gerald/.env` (shared credentials)
+- `.claude/.javis-env` — Symlink to `~/dev/jira.javis/.env` (shared credentials)
 
 **Cross-project shortcuts:**
 - `/javis-review-pr 42` — Review PR #42 using repo from `javis.json`
@@ -180,10 +207,10 @@ cd ~/Dev/my-other-project
 
 **Symlink registration** (managed in `~/.claude/skills/`):
 ```
-~/.claude/skills/javis-init/       → jarvis.gerald/.claude/skills/javis-init/
-~/.claude/skills/javis-review-pr/  → jarvis.gerald/.claude/skills/javis-review-pr/
-~/.claude/skills/javis-story/      → jarvis.gerald/.claude/skills/javis-story/
-~/.claude/skills/_shared/          → jarvis.gerald/.claude/skills/_shared/
+~/.claude/skills/javis-init/       → jira.javis/.claude/skills/javis-init/
+~/.claude/skills/javis-review-pr/  → jira.javis/.claude/skills/javis-review-pr/
+~/.claude/skills/javis-story/      → jira.javis/.claude/skills/javis-story/
+~/.claude/skills/_shared/          → jira.javis/.claude/skills/_shared/
 ```
 
 ### Common Workflows

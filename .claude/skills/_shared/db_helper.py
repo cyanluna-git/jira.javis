@@ -30,7 +30,7 @@ def load_env() -> Dict[str, str]:
 
     # 프로젝트 루트 찾기 (여러 경로 시도)
     possible_paths = [
-        Path(__file__).resolve().parents[3] / '.env',  # jarvis.gerald 루트 (symlink resolved)
+        Path(__file__).resolve().parents[3] / '.env',  # jira.javis 루트 (symlink resolved)
         Path.cwd() / '.claude' / '.javis-env',         # javis-init이 만든 symlink (cross-project)
         Path.cwd() / '.env',                           # 현재 디렉토리 fallback
     ]
