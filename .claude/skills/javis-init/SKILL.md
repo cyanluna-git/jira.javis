@@ -45,7 +45,7 @@ Create the `.claude/.javis-env` symlink first (needed for DB access):
 
 ```bash
 mkdir -p .claude
-ln -sf ~/Dev/jarvis.gerald/.env .claude/.javis-env
+ln -sf ~/dev/jira.javis/.env .claude/.javis-env
 ```
 
 Then query the DB for all active Visions:
@@ -124,7 +124,7 @@ Config: .claude/javis.json
   - Bitbucket Repos: ac-avi/edwards.oqc.infra
   - Vision: OQC
 
-Credentials: .claude/.javis-env → ~/Dev/jarvis.gerald/.env
+Credentials: .claude/.javis-env → ~/dev/jira.javis/.env
 
 Available skills:
   /javis-review-pr <PR_URL>    — Code review (auto-detects domain)
@@ -149,7 +149,7 @@ Tip: Add `.claude/.javis-env` to .gitignore (it's a symlink to secrets)
 
 ## Notes
 
-- The `.javis-env` symlink shares credentials from the central jarvis.gerald installation
+- The `.javis-env` symlink shares credentials from the central jira.javis installation
 - Add `.claude/.javis-env` to your project's `.gitignore` (it's a symlink to secrets)
 - The `javis.json` file can be committed — it contains no secrets
 - Re-run `/javis-init` anytime to update the config
