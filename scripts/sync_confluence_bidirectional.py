@@ -21,6 +21,7 @@ import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import Optional, Dict, List, Tuple
 
 
@@ -807,10 +808,17 @@ def sync_all_labels(conn, stats: SyncStats, dry_run: bool = False):
 
 
 # --- Main ---
+def is_business_hours() -> bool:
+    """Check if current time is within KST business hours (weekdays 08:00-18:59)."""
+    now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
+    return now_kst.weekday() < 5 and 8 <= now_kst.hour < 19
+
+
 def main():
     parser = argparse.ArgumentParser(description='Bidirectional Confluence <-> DB Sync')
     parser.add_argument('--pull-only', action='store_true', help='Only pull from Confluence')
     parser.add_argument('--push-only', action='store_true', help='Only push to Confluence')
+    parser.add_argument('--force', action='store_true', help='Bypass business hours check')
     parser.add_argument('--force-local', action='store_true', help='Force local changes on conflicts')
     parser.add_argument('--force-remote', action='store_true', help='Force remote changes on conflicts')
     parser.add_argument('--dry-run', action='store_true', help='Show what would happen without making changes')
@@ -819,6 +827,12 @@ def main():
     parser.add_argument('--sync-labels', action='store_true',
                         help='Re-fetch labels for ALL pages (label changes bypass page versioning)')
     args = parser.parse_args()
+
+    if not args.force and not is_business_hours():
+        now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
+        print(f"Skipping sync: outside KST business hours "
+              f"(now: {now_kst.strftime('%A %H:%M KST')}). Use --force to override.")
+        sys.exit(0)
 
     if not CONFLUENCE_BASE or not TOKEN:
         print("Error: JIRA_URL or JIRA_TOKEN missing in .env")
