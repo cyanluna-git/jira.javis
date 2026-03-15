@@ -1,14 +1,14 @@
-# Sync Examples - 사용 예시 및 워크플로우
+# Sync Examples - Usage Examples & Workflows
 
-## 워크플로우 예시
+## Workflow Examples
 
-### 1. 아침 전체 동기화
+### 1. Morning Full Sync
 
 ```bash
 /javis-sync all
 ```
 
-또는 개별 실행:
+Or run individually:
 
 ```bash
 python3 scripts/sync_bidirectional.py --pull-only
@@ -17,7 +17,7 @@ python3 scripts/sync_sprints.py
 python3 scripts/sync_member_stats.py
 ```
 
-### 2. 스프린트 시작 시
+### 2. Sprint Kickoff
 
 ```bash
 /javis-sync boards
@@ -25,14 +25,14 @@ python3 scripts/sync_member_stats.py
 /javis-sync members --init
 ```
 
-### 3. 작업 후 Push
+### 3. Push After Local Work
 
 ```bash
 /javis-sync issues push --dry-run
 /javis-sync issues push
 ```
 
-### 4. 주간 전체 동기화
+### 4. Weekly Full Sync
 
 ```bash
 python3 scripts/sync_bidirectional.py
@@ -43,14 +43,14 @@ python3 scripts/sync_confluence_bidirectional.py
 python3 scripts/sync_bitbucket.py
 ```
 
-### 5. 상태 확인
+### 5. Status Check
 
 ```bash
 /javis-sync status
 python3 .claude/skills/javis-sync/scripts/sync.py status
 ```
 
-## 출력 예시
+## Output Examples
 
 ### `/javis-sync status`
 
@@ -135,21 +135,21 @@ Resolution options:
   --force-remote  : Apply Jira values to local DB
 ```
 
-## 스크립트 사용
+## Script Usage
 
 ```bash
-# 상태 확인
+# Status check
 python3 .claude/skills/javis-sync/scripts/sync.py status
 
-# 전체 동기화 (프로젝트 루트에서)
+# Full sync (from project root)
 python3 scripts/sync_bidirectional.py --pull-only
 python3 scripts/sync_boards.py
 python3 scripts/sync_member_stats.py
 python3 scripts/sync_bitbucket.py
 ```
 
-## 대상 프로젝트
+## Target Projects
 
-기본: `EUV`, `ASP`, `PSSM`
+Default: `EUV`, `ASP`, `PSSM`
 
-프로젝트 설정은 각 스크립트 또는 `.env` 파일에서 관리합니다.
+Project settings are managed in each script or the `.env` file.

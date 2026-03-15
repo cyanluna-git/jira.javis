@@ -1,26 +1,26 @@
-# Sprint Reference - 상세 쿼리 및 분석
+# Sprint Reference - Detailed Queries & Analysis
 
-## 데이터베이스 스키마
+## Database Schema
 
 ```sql
--- 스프린트
+-- Sprints
 jira_sprints (id, name, state, goal, start_date, end_date, board_id)
 
--- 보드
+-- Boards
 jira_boards (id, name, type, project_key)
 
--- 이슈-스프린트 매핑
+-- Issue-Sprint mapping
 jira_issue_sprints (issue_key, sprint_id)
 
--- 이슈
+-- Issues
 jira_issues (key, summary, status, raw_data)
   - raw_data->'fields'->'assignee'->>'displayName'
   - raw_data->'fields'->>'customfield_10016' (Story Points)
 ```
 
-## SQL 쿼리 모음
+## SQL Query Collection
 
-### 현재 스프린트 상태
+### Current Sprint Status
 
 ```sql
 WITH active_sprint AS (
@@ -58,7 +58,7 @@ SELECT
 FROM sprint_issues;
 ```
 
-### 담당자별 작업량
+### Per-Assignee Workload
 
 ```sql
 WITH active_sprint AS (
@@ -77,7 +77,7 @@ GROUP BY ji.raw_data->'fields'->'assignee'->>'displayName'
 ORDER BY issues DESC;
 ```
 
-### Velocity 추이 (최근 6개 스프린트)
+### Velocity Trend (Last 6 Sprints)
 
 ```sql
 WITH sprint_velocity AS (
@@ -85,7 +85,7 @@ WITH sprint_velocity AS (
         s.name,
         s.start_date,
         COUNT(CASE WHEN ji.status = 'Done' THEN 1 END) as stories_done,
-        COALESCE(SUM(CASE WHEN ji.status = 'Done' 
+        COALESCE(SUM(CASE WHEN ji.status = 'Done'
             THEN (ji.raw_data->'fields'->>'customfield_10016')::numeric END), 0) as points_done,
         COUNT(jis.issue_key) as total_issues,
         COALESCE(SUM((ji.raw_data->'fields'->>'customfield_10016')::numeric), 0) as total_points
@@ -107,12 +107,12 @@ FROM sprint_velocity
 ORDER BY start_date;
 ```
 
-### 평균 Velocity 계산
+### Average Velocity Calculation
 
 ```sql
 WITH recent_sprints AS (
     SELECT
-        COALESCE(SUM(CASE WHEN ji.status = 'Done' 
+        COALESCE(SUM(CASE WHEN ji.status = 'Done'
             THEN (ji.raw_data->'fields'->>'customfield_10016')::numeric END), 0) as points_done,
         COUNT(CASE WHEN ji.status = 'Done' THEN 1 END) as stories_done
     FROM jira_sprints s
@@ -131,7 +131,7 @@ SELECT
 FROM recent_sprints;
 ```
 
-### 백로그 이슈 (스프린트 미배정)
+### Backlog Issues (Not Assigned to Sprint)
 
 ```sql
 SELECT
@@ -158,7 +158,7 @@ ORDER BY
 LIMIT 20;
 ```
 
-### 번다운 차트 데이터
+### Burndown Chart Data
 
 ```sql
 WITH active_sprint AS (
@@ -190,9 +190,9 @@ LEFT JOIN daily_progress dp ON dp.day = d.day
 ORDER BY d.day;
 ```
 
-## Bitbucket 연동
+## Bitbucket Integration
 
-### 스프린트 이슈 관련 개발 활동
+### Sprint Issue Development Activity
 
 ```sql
 WITH active_sprint AS (

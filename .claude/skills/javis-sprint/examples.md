@@ -1,37 +1,37 @@
-# Sprint Examples - 사용 예시 및 워크플로우
+# Sprint Examples - Usage Examples & Workflows
 
-## 워크플로우 예시
+## Workflow Examples
 
-### 1. 스프린트 시작 시
-
-```bash
-/javis-sprint current      # 현재 스프린트 확인
-/javis-sprint velocity     # velocity 추이 확인
-```
-
-### 2. 데일리 스크럼
+### 1. Sprint Kickoff
 
 ```bash
-/javis-sprint              # 진행 상황 확인
-/javis-sprint member Gerald  # 내 작업 확인
+/javis-sprint current      # Check current sprint
+/javis-sprint velocity     # Review velocity trend
 ```
 
-### 3. 스프린트 계획
+### 2. Daily Standup
 
 ```bash
-/javis-sprint velocity      # 예상 capacity 확인
-/javis-sprint plan          # 백로그에서 이슈 선택
-/javis-sprint plan EUV-3299 # 특정 Epic 이슈만 확인
+/javis-sprint              # Check progress
+/javis-sprint member Gerald  # Check my tasks
 ```
 
-### 4. 스프린트 회고
+### 3. Sprint Planning
 
 ```bash
-/javis-sprint "Scaled Sprint13"  # 완료된 스프린트 상세
-/javis-sprint velocity           # velocity 변화 분석
+/javis-sprint velocity      # Check expected capacity
+/javis-sprint plan          # Select issues from backlog
+/javis-sprint plan EUV-3299 # View issues for a specific Epic only
 ```
 
-## 출력 예시
+### 4. Sprint Retrospective
+
+```bash
+/javis-sprint "Scaled Sprint13"  # Completed sprint details
+/javis-sprint velocity           # Analyze velocity changes
+```
+
+## Output Examples
 
 ### `/javis-sprint`
 
@@ -121,21 +121,21 @@ Day        | Completed | Cumulative | Ideal
 Status: On track (within 10% of ideal)
 ```
 
-## 스크립트 사용
+## Script Usage
 
 ```bash
-# 현재 스프린트
+# Current sprint
 python3 .claude/skills/javis-sprint/scripts/sprint.py current
 
-# 스프린트 목록
+# Sprint list
 python3 .claude/skills/javis-sprint/scripts/sprint.py list
 
-# Velocity 분석
+# Velocity analysis
 python3 .claude/skills/javis-sprint/scripts/sprint.py velocity
 
-# 담당자별 현황
+# Per-assignee status
 python3 .claude/skills/javis-sprint/scripts/sprint.py assignees
 
-# 특정 스프린트
+# Specific sprint
 python3 .claude/skills/javis-sprint/scripts/sprint.py show "Sprint 13"
 ```

@@ -1,80 +1,80 @@
-# Sync Reference - 동기화 스크립트 상세
+# Sync Reference - Sync Script Details
 
-## 동기화 스크립트
+## Sync Scripts
 
-### Jira Issues 양방향 동기화
+### Jira Issues Bidirectional Sync
 
 ```bash
-# 전체 양방향 싱크
+# Full bidirectional sync
 python3 scripts/sync_bidirectional.py
 
-# Jira → DB만
+# Jira → DB only
 python3 scripts/sync_bidirectional.py --pull-only
 
-# DB → Jira만
+# DB → Jira only
 python3 scripts/sync_bidirectional.py --push-only
 
-# 특정 프로젝트만
+# Specific project only
 python3 scripts/sync_bidirectional.py --pull-only --project EUV
 
 # Dry run
 python3 scripts/sync_bidirectional.py --push-only --dry-run
 
-# 충돌 해결
+# Conflict resolution
 python3 scripts/sync_bidirectional.py --show-conflicts
 python3 scripts/sync_bidirectional.py --force-local
 python3 scripts/sync_bidirectional.py --force-remote
 ```
 
-### Boards 동기화
+### Boards Sync
 
 ```bash
-# 전체 보드
+# All boards
 python3 scripts/sync_boards.py
 
-# 특정 프로젝트만
+# Specific project only
 python3 scripts/sync_boards.py --project EUV
 ```
 
-### Sprints 동기화 (스프린트 메타데이터 + 이슈 매핑)
+### Sprints Sync (Sprint Metadata + Issue Mapping)
 
 ```bash
-# 전체 스프린트
+# All sprints
 python3 scripts/sync_sprints.py
 
-# 특정 프로젝트만
+# Specific project only
 python3 scripts/sync_sprints.py --project EUV
 
-# Active 스프린트만
+# Active sprints only
 python3 scripts/sync_sprints.py --active-only
 
-# 전체 재동기화
+# Full re-sync
 python3 scripts/sync_sprints.py --force
 
-# DB 목록 조회
+# List DB sprints
 python3 scripts/sync_sprints.py --list
 ```
 
-### Member 통계 동기화
+### Member Statistics Sync
 
 ```bash
-# 증분 업데이트
+# Incremental update
 python3 scripts/sync_member_stats.py
 
-# 전체 초기화
+# Full initialization
 python3 scripts/sync_member_stats.py --init
 
-# 통계 재계산
+# Recalculate statistics
 python3 scripts/sync_member_stats.py --recalculate
 
-# 특정 스프린트 통계
+# Specific sprint statistics
 python3 scripts/sync_member_stats.py --sprint <sprint_id>
 ```
 
-### Confluence 양방향 동기화
+### Confluence Bidirectional Sync
 
 ```bash
-# 전체 양방향
+# Full bidirectional
 python3 scripts/sync_confluence_bidirectional.py
 
 # Pull only
@@ -84,48 +84,48 @@ python3 scripts/sync_confluence_bidirectional.py --pull-only
 python3 scripts/sync_confluence_bidirectional.py --push-only
 ```
 
-### Bitbucket 동기화
+### Bitbucket Sync
 
 ```bash
-# 전체 동기화 (Repos + Commits + PRs)
+# Full sync (Repos + Commits + PRs)
 python3 scripts/sync_bitbucket.py
 
-# 레포지토리만
+# Repositories only
 python3 scripts/sync_bitbucket.py --repos-only
 
-# 커밋만 (기본 30일)
+# Commits only (default 30 days)
 python3 scripts/sync_bitbucket.py --commits-only
 
-# 최근 7일 커밋만
+# Last 7 days commits only
 python3 scripts/sync_bitbucket.py --commits-only --days 7
 
-# PR만 (OPEN + MERGED)
+# PRs only (OPEN + MERGED)
 python3 scripts/sync_bitbucket.py --prs-only
 
 # Dry run
 python3 scripts/sync_bitbucket.py --dry-run
 ```
 
-## DB 테이블
+## DB Tables
 
-| 테이블 | 용도 | Sync 스크립트 |
-|--------|------|---------------|
-| `jira_issues` | Jira 이슈 | sync_bidirectional.py |
-| `jira_boards` | 보드 목록 | sync_boards.py |
-| `jira_sprints` | 스프린트 | sync_sprints.py |
-| `jira_issue_sprints` | 이슈-스프린트 매핑 | sync_sprints.py |
-| `team_members` | 팀원 정보 | sync_member_stats.py |
-| `member_stats` | 멤버 통계 | sync_member_stats.py |
-| `confluence_v2_content` | Confluence 페이지 | sync_confluence_bidirectional.py |
-| `bitbucket_repositories` | Bitbucket 레포지토리 | sync_bitbucket.py |
-| `bitbucket_commits` | Bitbucket 커밋 | sync_bitbucket.py |
-| `bitbucket_pullrequests` | Bitbucket PR | sync_bitbucket.py |
-| `sync_conflicts` | 충돌 기록 | sync_bidirectional.py |
+| Table | Purpose | Sync Script |
+|-------|---------|-------------|
+| `jira_issues` | Jira issues | sync_bidirectional.py |
+| `jira_boards` | Board list | sync_boards.py |
+| `jira_sprints` | Sprints | sync_sprints.py |
+| `jira_issue_sprints` | Issue-Sprint mapping | sync_sprints.py |
+| `team_members` | Team member info | sync_member_stats.py |
+| `member_stats` | Member statistics | sync_member_stats.py |
+| `confluence_v2_content` | Confluence pages | sync_confluence_bidirectional.py |
+| `bitbucket_repositories` | Bitbucket repositories | sync_bitbucket.py |
+| `bitbucket_commits` | Bitbucket commits | sync_bitbucket.py |
+| `bitbucket_pullrequests` | Bitbucket PRs | sync_bitbucket.py |
+| `sync_conflicts` | Conflict records | sync_bidirectional.py |
 
-## 동기화 상태 확인 쿼리
+## Sync Status Check Query
 
 ```sql
--- Issues 동기화 상태
+-- Issues sync status
 SELECT 'Issues' as type, project,
        COUNT(*) as total,
        MAX(last_synced_at)::date as last_sync
@@ -133,7 +133,7 @@ FROM jira_issues GROUP BY project
 
 UNION ALL
 
--- Boards 동기화 상태
+-- Boards sync status
 SELECT 'Boards' as type, project_key,
        COUNT(*),
        MAX(synced_at)::date
@@ -141,7 +141,7 @@ FROM jira_boards GROUP BY project_key
 
 UNION ALL
 
--- Members 동기화 상태
+-- Members sync status
 SELECT 'Members' as type, '-',
        COUNT(*),
        MAX(updated_at)::date
@@ -149,7 +149,7 @@ FROM team_members WHERE is_active = true
 
 UNION ALL
 
--- Bitbucket Repos 동기화 상태
+-- Bitbucket Repos sync status
 SELECT 'BB Repos' as type, workspace,
        COUNT(*),
        MAX(last_synced_at)::date
@@ -157,7 +157,7 @@ FROM bitbucket_repositories GROUP BY workspace
 
 UNION ALL
 
--- Bitbucket Commits 동기화 상태 (최근 30일)
+-- Bitbucket Commits sync status (last 30 days)
 SELECT 'BB Commits' as type, '-',
        COUNT(*),
        MAX(synced_at)::date
@@ -165,7 +165,7 @@ FROM bitbucket_commits WHERE committed_at > NOW() - INTERVAL '30 days'
 
 UNION ALL
 
--- Bitbucket PRs 동기화 상태
+-- Bitbucket PRs sync status
 SELECT 'BB PRs' as type, state,
        COUNT(*),
        MAX(synced_at)::date
@@ -174,20 +174,20 @@ FROM bitbucket_pullrequests GROUP BY state
 ORDER BY type;
 ```
 
-## 양방향 동기화 개념
+## Bidirectional Sync Concepts
 
-### 증분 동기화
-- `last_synced_at` 타임스탬프 이후 변경분만 동기화
+### Incremental Sync
+- Only syncs changes since the `last_synced_at` timestamp
 
-### 로컬 수정 추적
-- PostgreSQL 트리거가 `local_modified_at`, `local_modified_fields` 자동 기록
+### Local Modification Tracking
+- PostgreSQL triggers automatically record `local_modified_at` and `local_modified_fields`
 
-### 충돌 감지
-- 같은 필드가 로컬/원격 모두 변경된 경우 `sync_conflicts` 테이블에 저장
+### Conflict Detection
+- When the same field is modified both locally and remotely, records are saved to the `sync_conflicts` table
 
-### 충돌 해결
+### Conflict Resolution
 ```bash
-python3 scripts/sync_bidirectional.py --show-conflicts   # 충돌 목록
-python3 scripts/sync_bidirectional.py --force-local      # 로컬 우선
-python3 scripts/sync_bidirectional.py --force-remote     # 원격 우선
+python3 scripts/sync_bidirectional.py --show-conflicts   # List conflicts
+python3 scripts/sync_bidirectional.py --force-local      # Local wins
+python3 scripts/sync_bidirectional.py --force-remote     # Remote wins
 ```
