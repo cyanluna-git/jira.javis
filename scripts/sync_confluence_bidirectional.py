@@ -758,6 +758,54 @@ def resolve_all_conflicts(conn, resolution: str, dry_run: bool = False):
         conn.commit()
 
 
+# --- Label Sync ---
+def sync_all_labels(conn, stats: SyncStats, dry_run: bool = False):
+    """Re-fetch labels for all known pages from Confluence (for label-only changes).
+
+    Confluence label updates do NOT bump page version, so they are invisible to
+    the normal incremental pull which filters by version.createdAt. This function
+    iterates every page in the local DB and refreshes labels directly.
+    """
+    print("\n[LABELS] Syncing labels for all pages in DB...")
+
+    cur = conn.cursor()
+    cur.execute("SELECT id, title, labels FROM confluence_v2_content WHERE type = 'page' ORDER BY id")
+    rows = cur.fetchall()
+    print(f"  Checking {len(rows)} pages...")
+
+    updated = 0
+    for page_id, title, local_labels in rows:
+        remote_labels = fetch_remote_labels(page_id)
+        local_set = set(local_labels or [])
+        remote_set = set(remote_labels or [])
+
+        if local_set != remote_set:
+            added = remote_set - local_set
+            removed = local_set - remote_set
+            label_display = title[:40] if title else page_id
+            print(f"  Labels changed: {label_display}")
+            if added:
+                print(f"    + {sorted(added)}")
+            if removed:
+                print(f"    - {sorted(removed)}")
+
+            if not dry_run:
+                cur.execute("""
+                    UPDATE confluence_v2_content
+                    SET labels = %s, last_synced_at = NOW()
+                    WHERE id = %s
+                """, [list(remote_set), page_id])
+            updated += 1
+
+        time.sleep(0.1)  # Rate limiting
+
+    if not dry_run and updated:
+        conn.commit()
+
+    print(f"  Labels updated: {updated} pages")
+    stats.pulled += updated
+
+
 # --- Main ---
 def main():
     parser = argparse.ArgumentParser(description='Bidirectional Confluence <-> DB Sync')
@@ -768,6 +816,8 @@ def main():
     parser.add_argument('--dry-run', action='store_true', help='Show what would happen without making changes')
     parser.add_argument('--show-conflicts', action='store_true', help='Show unresolved conflicts and exit')
     parser.add_argument('--init-db', action='store_true', help='Initialize database schema and exit')
+    parser.add_argument('--sync-labels', action='store_true',
+                        help='Re-fetch labels for ALL pages (label changes bypass page versioning)')
     args = parser.parse_args()
 
     if not CONFLUENCE_BASE or not TOKEN:
@@ -803,6 +853,12 @@ def main():
             print("Conflict resolution: FORCE LOCAL")
         elif args.force_remote:
             print("Conflict resolution: FORCE REMOTE")
+        if args.sync_labels:
+            print("Label sync: FULL (all pages)")
+
+        # Label-only sync (label changes are invisible to version-based incremental sync)
+        if args.sync_labels:
+            sync_all_labels(conn, stats, args.dry_run)
 
         # Pull phase
         if not args.push_only:

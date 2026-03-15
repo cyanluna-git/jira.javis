@@ -1,28 +1,28 @@
-# Stories Reference - 상세 쿼리 및 API 문서
+# Stories Reference - Detailed Queries & API Documentation
 
-## 데이터베이스 스키마
+## Database Schema
 
-### 주요 테이블
+### Key Tables
 
 ```sql
--- Vision 목표 (컴포넌트/라벨 기본값 포함)
+-- Vision goals (includes component/label defaults)
 roadmap_visions (
   id, title, description, status,
   north_star_metric, north_star_target, project_key,
-  default_component,  -- Jira 컴포넌트 기본값
-  default_labels      -- TEXT[] 라벨 기본값
+  default_component,  -- Jira component default
+  default_labels      -- TEXT[] label defaults
 )
 
 -- Milestone
 roadmap_milestones (id, vision_id, title, quarter, progress_percent, status)
 
--- Epic-Milestone 연결
+-- Epic-Milestone link
 roadmap_epic_links (epic_key, milestone_id)
 
--- Jira 이슈 (Epic, Story, Task, Bug)
+-- Jira issues (Epic, Story, Task, Bug)
 jira_issues (key, summary, status, project, raw_data, created_at, updated_at)
 
--- 팀 구성
+-- Team composition
 roadmap_vision_members (vision_id, member_account_id, role_title, role_category, mm_allocation)
 team_members (account_id, display_name, email, role, team, skills)
 
@@ -31,9 +31,9 @@ bitbucket_commits (hash, repo_uuid, author_name, message, jira_keys[], committed
 bitbucket_pullrequests (id, repo_uuid, pr_number, title, state, author_name, jira_keys[])
 ```
 
-## SQL 쿼리 모음
+## SQL Query Collection
 
-### Vision Context 조회
+### Vision Context Lookup
 
 ```sql
 SELECT v.title, v.description, v.status, v.north_star_metric, v.north_star_target,
@@ -46,16 +46,16 @@ GROUP BY v.id
 ORDER BY v.created_at DESC;
 ```
 
-### Epic + Story 목록
+### Epic + Story List
 
 ```sql
--- Epic 정보
+-- Epic info
 SELECT key, summary, status,
        raw_data->'fields'->>'description' as description
 FROM jira_issues
 WHERE key = '{epic_key}';
 
--- Epic 하위 Story
+-- Stories under Epic
 SELECT
     key,
     summary,
@@ -76,10 +76,10 @@ ORDER BY
     key;
 ```
 
-### Bitbucket 개발 현황
+### Bitbucket Development Activity
 
 ```sql
--- Epic 관련 최근 커밋 (7일)
+-- Recent commits related to Epic (7 days)
 WITH epic_stories AS (
     SELECT key FROM jira_issues
     WHERE key = '{epic_key}'
@@ -98,7 +98,7 @@ WHERE bc.committed_at > NOW() - INTERVAL '7 days'
 ORDER BY bc.committed_at DESC
 LIMIT 10;
 
--- Epic 관련 오픈 PR
+-- Open PRs related to Epic
 WITH epic_stories AS (
     SELECT key FROM jira_issues
     WHERE key = '{epic_key}'
@@ -119,7 +119,7 @@ ORDER BY bp.created_at DESC
 LIMIT 10;
 ```
 
-### Epic별 진행률
+### Epic Progress
 
 ```sql
 SELECT
@@ -142,43 +142,43 @@ ORDER BY completion_pct DESC NULLS LAST;
 
 ## Jira API
 
-### Vision 기본값 조회
+### Vision Defaults Lookup
 
 ```python
 from db_helper import get_vision_defaults
 
-# 프로젝트의 Vision 기본값 조회
+# Get Vision defaults for a project
 defaults = get_vision_defaults('EUV')
-# 반환: {'default_component': 'OQCDigitalization', 'default_labels': ['oqc-digitalization']}
+# Returns: {'default_component': 'OQCDigitalization', 'default_labels': ['oqc-digitalization']}
 ```
 
-### Story 생성 (Vision 기본값 자동 적용)
+### Story Creation (Vision Defaults Auto-Applied)
 
 ```python
 from stories import create_jira_story
 
-# Vision의 component/labels가 자동으로 적용됨
+# Vision's component/labels are automatically applied
 result = create_jira_story(
     project_key='EUV',
     epic_key='EUV-3304',
     summary='Implement Test Set Selection UI',
     description='As a tester, I want to select a Test Set...',
-    labels=['frontend'],       # Vision 기본 라벨에 추가됨
+    labels=['frontend'],       # Added to Vision default labels
     story_points=3,
     dry_run=False
 )
-# 생성 결과: {'key': 'EUV-3313', ...}
-# 적용된 component: OQCDigitalization
-# 적용된 labels: ['oqc-digitalization', 'frontend']
+# Result: {'key': 'EUV-3313', ...}
+# Applied component: OQCDigitalization
+# Applied labels: ['oqc-digitalization', 'frontend']
 ```
 
-### Story 생성 (기존 방식)
+### Story Creation (Direct Method)
 
 ```python
 import requests
 
 def create_story(epic_key, summary, description, story_points, jira_config):
-    """Jira에 Story 직접 생성 (Vision 기본값 미적용)"""
+    """Create Story directly in Jira (Vision defaults not applied)"""
     project_key = epic_key.split('-')[0]
 
     payload = {
@@ -209,11 +209,11 @@ def create_story(epic_key, summary, description, story_points, jira_config):
         raise Exception(f"Error: {response.status_code} - {response.text}")
 ```
 
-### ADF (Atlassian Document Format) 변환
+### ADF (Atlassian Document Format) Conversion
 
 ```python
 def markdown_to_adf(md_text):
-    """간단한 마크다운 → ADF 변환"""
+    """Simple markdown → ADF conversion"""
     lines = md_text.strip().split('\n')
     content = []
 
@@ -242,70 +242,70 @@ def markdown_to_adf(md_text):
     return {"type": "doc", "version": 1, "content": content}
 ```
 
-## Story 템플릿
+## Story Template
 
 ```markdown
 ## Story: [Summary]
 
 ### Description
-[사용자 스토리 형식: As a [role], I want [feature] so that [benefit]]
+[User story format: As a [role], I want [feature] so that [benefit]]
 
 ### Acceptance Criteria
-- [ ] [검증 가능한 조건 1]
-- [ ] [검증 가능한 조건 2]
-- [ ] [검증 가능한 조건 3]
+- [ ] [Verifiable condition 1]
+- [ ] [Verifiable condition 2]
+- [ ] [Verifiable condition 3]
 
 ### Technical Notes
-[구현 힌트, 주의사항]
+[Implementation hints, caveats]
 
 ### Story Points: [1/2/3/5/8]
 ```
 
 ---
 
-## 라벨 시스템
+## Label System
 
-### 라벨 분류 기준
+### Label Classification Criteria
 
-| 라벨 | 키워드 힌트 | 설명 |
-|------|-------------|------|
-| `frontend` | UI, 화면, React, 컴포넌트, 버튼, 폼, 모달, 페이지, 대시보드 | 프론트엔드/UI 작업 |
-| `backend` | API, 서버, DB, 엔드포인트, 인증, 데이터, 처리, 로직 | 백엔드/서버 작업 |
-| `plc` | PLC, Modbus, 프로토콜, 장비, Gateway, Simulator, 통신, Hostlink | 장비 통신/제어 |
-| `infra` | CI/CD, 배포, Docker, 설정, 환경변수, 파이프라인 | 인프라/DevOps |
-| `test` | 테스트, QA, 검증, 자동화, unit, integration, e2e | 테스트/QA |
-| `docs` | 문서, README, 가이드, 매뉴얼 | 문서화 |
+| Label | Keyword Hints | Description |
+|-------|---------------|-------------|
+| `frontend` | UI, screen, React, component, button, form, modal, page, dashboard | Frontend/UI work |
+| `backend` | API, server, DB, endpoint, auth, data, processing, logic | Backend/server work |
+| `plc` | PLC, Modbus, protocol, equipment, Gateway, Simulator, communication, Hostlink | Equipment communication/control |
+| `infra` | CI/CD, deployment, Docker, config, environment variables, pipeline | Infrastructure/DevOps |
+| `test` | test, QA, validation, automation, unit, integration, e2e | Testing/QA |
+| `docs` | documentation, README, guide, manual | Documentation |
 
-### 라벨 자동 부여 로직
+### Auto-Label Detection Logic
 
 ```python
 LABEL_KEYWORDS = {
-    'frontend': ['ui', '화면', 'react', '컴포넌트', '버튼', '폼', '모달', '페이지', '대시보드', 'css', 'style'],
-    'backend': ['api', '서버', 'db', '엔드포인트', '인증', '데이터', '처리', '로직', 'rest', 'graphql'],
-    'plc': ['plc', 'modbus', '프로토콜', '장비', 'gateway', 'simulator', '통신', 'hostlink', '시뮬레이터'],
-    'infra': ['ci/cd', '배포', 'docker', '설정', '환경변수', 'pipeline', 'kubernetes'],
-    'test': ['테스트', 'qa', '검증', '자동화', 'unit', 'integration', 'e2e'],
-    'docs': ['문서', 'readme', '가이드', '매뉴얼', 'documentation']
+    'frontend': ['ui', 'screen', 'react', 'component', 'button', 'form', 'modal', 'page', 'dashboard', 'css', 'style'],
+    'backend': ['api', 'server', 'db', 'endpoint', 'auth', 'data', 'processing', 'logic', 'rest', 'graphql'],
+    'plc': ['plc', 'modbus', 'protocol', 'equipment', 'gateway', 'simulator', 'communication', 'hostlink'],
+    'infra': ['ci/cd', 'deploy', 'docker', 'config', 'environment', 'pipeline', 'kubernetes'],
+    'test': ['test', 'qa', 'validation', 'automation', 'unit', 'integration', 'e2e'],
+    'docs': ['documentation', 'readme', 'guide', 'manual']
 }
 
 def detect_labels(text: str) -> list[str]:
-    """텍스트에서 라벨 자동 감지"""
+    """Auto-detect labels from text"""
     text_lower = text.lower()
     labels = []
     for label, keywords in LABEL_KEYWORDS.items():
         if any(kw in text_lower for kw in keywords):
             labels.append(label)
-    return labels or ['backend']  # 기본값
+    return labels or ['backend']  # default
 ```
 
 ---
 
-## Epic 자동 탐색
+## Epic Auto-Search
 
-### 키워드 기반 Epic 찾기
+### Keyword-Based Epic Finder
 
 ```sql
--- 프로젝트 내 키워드로 관련 Epic 탐색
+-- Find related Epics by keyword within a project
 SELECT
     key,
     summary,
@@ -324,10 +324,10 @@ ORDER BY
 LIMIT 5;
 ```
 
-### Vision → Project 매핑
+### Vision → Project Mapping
 
 ```sql
--- Vision 이름으로 프로젝트 키 찾기
+-- Find project key by Vision name
 SELECT
     v.title as vision,
     v.project_key,
@@ -340,10 +340,10 @@ GROUP BY v.id
 ORDER BY v.created_at DESC;
 ```
 
-### 활성 Epic 목록 (Story 배치용)
+### Active Epic List (for Story placement)
 
 ```sql
--- 프로젝트의 활성 Epic 목록 (Story 추가 대상)
+-- Active Epics in a project (candidates for new Stories)
 SELECT
     key,
     summary,
@@ -359,12 +359,12 @@ ORDER BY e.updated_at DESC;
 
 ---
 
-## `/javis-story add` 맥락 수집 쿼리
+## `/javis-story add` Context Collection Queries
 
-### 최근 커밋에서 파일 패턴 추출
+### Extract File Patterns from Recent Commits
 
 ```sql
--- Epic 관련 최근 커밋의 변경 파일 패턴
+-- Recent commit file patterns for an Epic
 WITH epic_keys AS (
     SELECT key FROM jira_issues
     WHERE key = '{epic_key}'
@@ -383,10 +383,10 @@ ORDER BY bc.committed_at DESC
 LIMIT 10;
 ```
 
-### Epic 설명에서 기술 키워드 추출
+### Extract Tech Keywords from Epic Description
 
 ```sql
--- Epic description에서 기술 스택 파악
+-- Identify tech stack from Epic description
 SELECT
     key,
     summary,
@@ -395,10 +395,10 @@ FROM jira_issues
 WHERE key = '{epic_key}';
 ```
 
-### 기존 Story에서 패턴 파악
+### Identify Patterns from Existing Stories
 
 ```sql
--- Epic 하위 Story들의 AC/Description 패턴 분석
+-- Analyze AC/Description patterns in existing Stories under Epic
 SELECT
     key,
     summary,
@@ -411,10 +411,10 @@ ORDER BY created_at DESC
 LIMIT 5;
 ```
 
-### 오픈 PR에서 진행 중인 작업 파악
+### Identify In-Progress Work from Open PRs
 
 ```sql
--- Epic 관련 오픈 PR
+-- Open PRs related to Epic
 WITH epic_keys AS (
     SELECT key FROM jira_issues
     WHERE key = '{epic_key}'
@@ -436,14 +436,14 @@ ORDER BY bp.created_at DESC;
 
 ---
 
-## Story 생성 시 참조할 정보 체크리스트
+## Story Generation Info Checklist
 
-| 정보 | 용도 | 쿼리/스크립트 |
-|------|------|---------------|
-| Vision 목표 | 전체 방향성 이해 | `context {project}` |
-| Milestone 상태 | 우선순위 판단 | `context {project}` |
-| Epic 설명 | 도메인 용어 파악 | `list {epic}` |
-| 기존 Story | 중복 방지, 패턴 참조 | `list {epic}` |
-| 최근 커밋 | 진행 중 작업, 파일 구조 | `dev {epic}` |
-| 오픈 PR | 의존성 파악 | `dev {epic}` |
-| 팀 구성 | 담당자 제안 | `context {project}` |
+| Info | Purpose | Query/Script |
+|------|---------|--------------|
+| Vision goals | Understand overall direction | `context {project}` |
+| Milestone status | Prioritization | `context {project}` |
+| Epic description | Domain terminology | `list {epic}` |
+| Existing Stories | Prevent duplicates, reference patterns | `list {epic}` |
+| Recent commits | In-progress work, file structure | `dev {epic}` |
+| Open PRs | Identify dependencies | `dev {epic}` |
+| Team composition | Suggest assignees | `context {project}` |
