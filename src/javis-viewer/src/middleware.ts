@@ -41,9 +41,21 @@ export async function middleware(request: NextRequest) {
 
       if (res.ok) {
         // Build clean URL (strip token & refresh params)
-        const cleanUrl = request.nextUrl.clone();
-        cleanUrl.searchParams.delete("token");
-        cleanUrl.searchParams.delete("refresh");
+        // Use external URL so redirect goes to public domain, not internal 0.0.0.0
+        const proto =
+          request.headers.get("x-forwarded-proto") ||
+          (request.nextUrl.protocol === "https:" ? "https" : "http");
+        const host =
+          request.headers.get("x-forwarded-host") ||
+          request.headers.get("host") ||
+          request.nextUrl.host;
+        const cleanUrl = new URL(
+          `${proto}://${host}${request.nextUrl.pathname}`,
+        );
+        // Copy all search params except token & refresh
+        request.nextUrl.searchParams.forEach((v, k) => {
+          if (k !== "token" && k !== "refresh") cleanUrl.searchParams.set(k, v);
+        });
 
         const response = NextResponse.redirect(cleanUrl);
         response.cookies.set(COOKIE_NAME, refresh, {
@@ -75,12 +87,27 @@ export async function middleware(request: NextRequest) {
 }
 
 /**
+ * Get the external (public-facing) URL from the request,
+ * respecting X-Forwarded-* headers set by the nginx reverse proxy.
+ */
+function getExternalUrl(request: NextRequest): string {
+  const proto =
+    request.headers.get("x-forwarded-proto") ||
+    (request.nextUrl.protocol === "https:" ? "https" : "http");
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
+  return `${proto}://${host}${request.nextUrl.pathname}${request.nextUrl.search}`;
+}
+
+/**
  * Build EOB login URL with return parameter pointing back to the current page.
  */
 function buildLoginRedirect(request: NextRequest): URL {
   const eobLoginUrl = getEobLoginUrl();
   const loginUrl = new URL(eobLoginUrl);
-  loginUrl.searchParams.set("return", request.url);
+  loginUrl.searchParams.set("return", getExternalUrl(request));
   return loginUrl;
 }
 

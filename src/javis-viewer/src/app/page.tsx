@@ -118,7 +118,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans">
       <header className="mb-8 text-center">
-        <h1 className="text-4xl font-extrabold text-gray-900">Jarvis</h1>
+        <h1 className="text-4xl font-extrabold text-gray-900">IS Software Portal</h1>
       </header>
 
       {/* Search Bar */}
