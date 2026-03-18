@@ -75,9 +75,12 @@ export default function ServiceDeskContent({ initialData }: Props) {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
+  const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  const [selectedReporters, setSelectedReporters] = useState<string[]>([]);
 
   // Dropdown state for accessibility
-  const [openDropdown, setOpenDropdown] = useState<'status' | 'assignee' | 'priority' | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<'status' | 'assignee' | 'priority' | 'component' | 'reporter' | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -115,9 +118,12 @@ export default function ServiceDeskContent({ initialData }: Props) {
       params.set('businessUnit', activeTab);
       params.set('page', currentPage.toString());
       params.set('pageSize', '50');
+      params.set('period', selectedPeriod);
       if (selectedStatuses.length > 0) params.set('status', selectedStatuses.join(','));
       if (selectedAssignees.length > 0) params.set('assignee', selectedAssignees.join(','));
       if (selectedPriorities.length > 0) params.set('priority', selectedPriorities.join(','));
+      if (selectedComponents.length > 0) params.set('component', selectedComponents.join(','));
+      if (selectedReporters.length > 0) params.set('reporter', selectedReporters.join(','));
       if (debouncedSearch) params.set('search', debouncedSearch);
 
       const res = await fetch(`/api/service-desk?${params.toString()}`);
@@ -145,13 +151,13 @@ export default function ServiceDeskContent({ initialData }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, selectedStatuses, selectedAssignees, selectedPriorities, debouncedSearch, page]);
+  }, [activeTab, selectedStatuses, selectedAssignees, selectedPriorities, selectedPeriod, selectedComponents, selectedReporters, debouncedSearch, page]);
 
   // Fetch when filters change (reset to page 1)
   useEffect(() => {
     fetchData(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedStatuses, selectedAssignees, selectedPriorities, debouncedSearch]);
+  }, [activeTab, selectedStatuses, selectedAssignees, selectedPriorities, selectedPeriod, selectedComponents, selectedReporters, debouncedSearch]);
 
   // Fetch when page changes (don't reset)
   const handlePageChange = (newPage: number) => {
@@ -170,9 +176,11 @@ export default function ServiceDeskContent({ initialData }: Props) {
     setSelectedStatuses([]);
     setSelectedAssignees([]);
     setSelectedPriorities([]);
+    setSelectedComponents([]);
+    setSelectedReporters([]);
   };
 
-  const hasActiveFilters = searchInput || selectedStatuses.length > 0 || selectedAssignees.length > 0 || selectedPriorities.length > 0;
+  const hasActiveFilters = searchInput || selectedStatuses.length > 0 || selectedAssignees.length > 0 || selectedPriorities.length > 0 || selectedComponents.length > 0 || selectedReporters.length > 0;
 
   const toggleStatus = (status: string) => {
     setSelectedStatuses(prev =>
@@ -192,7 +200,19 @@ export default function ServiceDeskContent({ initialData }: Props) {
     );
   };
 
-  const toggleDropdown = (dropdown: 'status' | 'assignee' | 'priority') => {
+  const toggleComponent = (name: string) => {
+    setSelectedComponents(prev =>
+      prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
+    );
+  };
+
+  const toggleReporter = (accountId: string) => {
+    setSelectedReporters(prev =>
+      prev.includes(accountId) ? prev.filter(r => r !== accountId) : [...prev, accountId]
+    );
+  };
+
+  const toggleDropdown = (dropdown: 'status' | 'assignee' | 'priority' | 'component' | 'reporter') => {
     setOpenDropdown(prev => prev === dropdown ? null : dropdown);
   };
 
@@ -260,6 +280,27 @@ export default function ServiceDeskContent({ initialData }: Props) {
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" ref={dropdownRef}>
         <div className="flex flex-wrap items-center gap-3">
+          {/* Period Selector */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            {([
+              { label: '1개월', value: '30' },
+              { label: '3개월', value: '90' },
+              { label: '6개월', value: '180' },
+            ] as const).map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setSelectedPeriod(value)}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  selectedPeriod === value
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                } ${value !== '30' ? 'border-l border-gray-200' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* Search */}
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -344,6 +385,90 @@ export default function ServiceDeskContent({ initialData }: Props) {
                     <span className="text-sm">{assignee.displayName}</span>
                   </label>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reporter Filter */}
+          <div className="relative">
+            <button
+              onClick={() => toggleDropdown('reporter')}
+              onKeyDown={(e) => e.key === 'Enter' && toggleDropdown('reporter')}
+              aria-expanded={openDropdown === 'reporter'}
+              aria-haspopup="listbox"
+              className={`px-3 py-2 border rounded-lg text-sm flex items-center gap-2 ${
+                selectedReporters.length > 0 ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Reporter
+              {selectedReporters.length > 0 && (
+                <span className="bg-purple-600 text-white text-xs px-1.5 rounded-full">
+                  {selectedReporters.length}
+                </span>
+              )}
+            </button>
+            {openDropdown === 'reporter' && (
+              <div
+                role="listbox"
+                className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-10 min-w-[200px] max-h-64 overflow-y-auto"
+              >
+                {filterOptions.reporters && filterOptions.reporters.length > 0 ? (
+                  filterOptions.reporters.map(rep => (
+                    <label key={rep.accountId} className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedReporters.includes(rep.accountId)}
+                        onChange={() => toggleReporter(rep.accountId)}
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                      <span className="text-sm">{rep.displayName}</span>
+                    </label>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-sm text-gray-400">No options</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Component Filter */}
+          <div className="relative">
+            <button
+              onClick={() => toggleDropdown('component')}
+              onKeyDown={(e) => e.key === 'Enter' && toggleDropdown('component')}
+              aria-expanded={openDropdown === 'component'}
+              aria-haspopup="listbox"
+              className={`px-3 py-2 border rounded-lg text-sm flex items-center gap-2 ${
+                selectedComponents.length > 0 ? 'border-teal-300 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Component
+              {selectedComponents.length > 0 && (
+                <span className="bg-teal-600 text-white text-xs px-1.5 rounded-full">
+                  {selectedComponents.length}
+                </span>
+              )}
+            </button>
+            {openDropdown === 'component' && (
+              <div
+                role="listbox"
+                className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-10 min-w-[200px] max-h-64 overflow-y-auto"
+              >
+                {filterOptions.components && filterOptions.components.length > 0 ? (
+                  filterOptions.components.map(comp => (
+                    <label key={comp} className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedComponents.includes(comp)}
+                        onChange={() => toggleComponent(comp)}
+                        className="w-4 h-4 text-teal-600 rounded"
+                      />
+                      <span className="text-sm">{comp}</span>
+                    </label>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-sm text-gray-400">No options</div>
+                )}
               </div>
             )}
           </div>
@@ -446,6 +571,25 @@ export default function ServiceDeskContent({ initialData }: Props) {
                 </button>
               </span>
             ))}
+            {selectedComponents.map(comp => (
+              <span key={comp} className="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                {comp}
+                <button onClick={() => toggleComponent(comp)} className="hover:text-teal-900" aria-label={`Remove ${comp} filter`}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            {selectedReporters.map(accountId => {
+              const rep = filterOptions.reporters?.find(r => r.accountId === accountId);
+              return (
+                <span key={accountId} className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                  {rep?.displayName || accountId}
+                  <button onClick={() => toggleReporter(accountId)} className="hover:text-purple-900" aria-label={`Remove ${rep?.displayName || accountId} filter`}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
