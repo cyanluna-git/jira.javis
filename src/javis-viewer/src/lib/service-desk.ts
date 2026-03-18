@@ -34,6 +34,9 @@ export interface ServiceDeskQueryParams {
   search?: string;
   page?: number;
   pageSize?: number;
+  period?: '30' | '90' | '180';
+  component?: string;
+  reporter?: string;
 }
 
 export interface ServiceDeskDataResult extends ServiceDeskResponse {

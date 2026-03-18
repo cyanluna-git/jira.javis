@@ -70,6 +70,8 @@ export interface ServiceDeskFilterOptions {
   statuses: string[];
   assignees: { accountId: string; displayName: string }[];
   priorities: string[];
+  components?: string[];
+  reporters?: { accountId: string; displayName: string }[];
 }
 
 // Pagination
