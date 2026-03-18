@@ -64,6 +64,8 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     page = 1,
     pageSize = 50,
     period,
+    component,
+    reporter,
   } = params;
 
   const periodDays = parseInt(period || '30');
@@ -111,6 +113,21 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     values.push(priorities);
   }
 
+  if (component) {
+    const components = component.split(',').map(c => c.trim());
+    conditions.push(`EXISTS (
+      SELECT 1 FROM jsonb_array_elements(raw_data->'fields'->'components') AS comp
+      WHERE comp->>'name' = ANY($${paramIndex++})
+    )`);
+    values.push(components);
+  }
+
+  if (reporter) {
+    const reporters = reporter.split(',').map(r => r.trim());
+    conditions.push(`raw_data->'fields'->'reporter'->>'accountId' = ANY($${paramIndex++})`);
+    values.push(reporters);
+  }
+
   if (search) {
     conditions.push(`(key ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
     values.push(`%${search}%`);
@@ -134,6 +151,7 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     componentBreakdownResult,
     ticketsResult,
     filterOptionsResult,
+    componentOptionsResult,
   ] = await Promise.all([
     // Tab counts (independent)
     pool.query(`
@@ -225,9 +243,19 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
         status,
         raw_data->'fields'->'assignee'->>'accountId' as assignee_id,
         raw_data->'fields'->'assignee'->>'displayName' as assignee_name,
-        raw_data->'fields'->'priority'->>'name' as priority
+        raw_data->'fields'->'priority'->>'name' as priority,
+        raw_data->'fields'->'reporter'->>'accountId' as reporter_id,
+        raw_data->'fields'->'reporter'->>'displayName' as reporter_name
       FROM jira_issues
       WHERE project = 'PSSM'
+    `),
+
+    // Component options (independent)
+    pool.query(`
+      SELECT DISTINCT comp->>'name' as name
+      FROM jira_issues, jsonb_array_elements(raw_data->'fields'->'components') AS comp
+      WHERE project = 'PSSM'
+      ORDER BY 1
     `),
   ]);
 
@@ -303,6 +331,18 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
   const priorities = [...new Set(filterOptionsResult.rows.map(r => r.priority))].filter(Boolean);
 
+  const reportersMap = new Map<string, string>();
+  filterOptionsResult.rows.forEach(r => {
+    if (r.reporter_id && r.reporter_name) {
+      reportersMap.set(r.reporter_id, r.reporter_name);
+    }
+  });
+  const reporters = Array.from(reportersMap.entries())
+    .map(([accountId, displayName]) => ({ accountId, displayName }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  const componentOptions = componentOptionsResult.rows.map(r => r.name).filter(Boolean);
+
   const stats: ServiceDeskStats = {
     total,
     open,
@@ -317,6 +357,8 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     statuses,
     assignees,
     priorities,
+    components: componentOptions,
+    reporters,
   };
 
   return {
