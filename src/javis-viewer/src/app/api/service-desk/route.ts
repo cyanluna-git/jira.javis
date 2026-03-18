@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') || undefined;
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '50');
+  const period = (searchParams.get('period') || undefined) as '30' | '90' | '180' | undefined;
+  const component = searchParams.get('component') || undefined;
+  const reporter = searchParams.get('reporter') || undefined;
 
   try {
     const data = await getServiceDeskData({
@@ -22,6 +25,9 @@ export async function GET(request: NextRequest) {
       search,
       page,
       pageSize,
+      period,
+      component,
+      reporter,
     });
 
     return NextResponse.json(data);
