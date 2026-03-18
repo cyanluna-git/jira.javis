@@ -10,16 +10,21 @@ export const IN_PROGRESS_STATUSES = ['IN PROGRESS', 'IN STAGING', 'IN REVIEW', '
 // Statuses to hide after 1 month
 const HIDE_OLD_STATUSES = ['DONE', 'CLOSED', 'COMPLETED', 'NOT REQUIRED'];
 
-// SQL condition to hide old resolved tickets (older than 1 month)
-const HIDE_OLD_TICKETS_CONDITION = `
-  NOT (
-    UPPER(status) IN (${HIDE_OLD_STATUSES.map(s => `'${s}'`).join(',')})
-    AND COALESCE(
-      (raw_data->'fields'->>'resolutiondate')::timestamp,
-      updated_at
-    ) < NOW() - INTERVAL '1 month'
-  )
-`;
+// Whitelisted period values (days) for hiding old resolved tickets
+const VALID_PERIOD_DAYS = [30, 90, 180] as const;
+
+function buildHideOldCondition(days: number): string {
+  const safeDays = VALID_PERIOD_DAYS.includes(days as 30 | 90 | 180) ? days : 30;
+  return `
+    NOT (
+      UPPER(status) IN (${HIDE_OLD_STATUSES.map(s => `'${s}'`).join(',')})
+      AND COALESCE(
+        (raw_data->'fields'->>'resolutiondate')::timestamp,
+        updated_at
+      ) < NOW() - INTERVAL '${safeDays} days'
+    )
+  `;
+}
 
 function getComponentsForBusinessUnit(businessUnit: BusinessUnit): string[] | null {
   if (businessUnit === 'all') return null;
@@ -58,13 +63,16 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
     search,
     page = 1,
     pageSize = 50,
+    period,
   } = params;
+
+  const periodDays = parseInt(period || '30');
 
   // Build base conditions for business unit
   const buildConditions = (bu: BusinessUnit) => {
     const conditions: string[] = [
       "project = 'PSSM'",
-      HIDE_OLD_TICKETS_CONDITION,
+      buildHideOldCondition(periodDays),
     ];
     const values: (string | string[])[] = [];
     let paramIndex = 1;
@@ -139,7 +147,7 @@ export async function getServiceDeskData(params: ServiceDeskQueryParams = {}): P
           ) as components
         FROM jira_issues
         WHERE project = 'PSSM'
-          AND ${HIDE_OLD_TICKETS_CONDITION}
+          AND ${buildHideOldCondition(periodDays)}
       )
       SELECT
         COUNT(*) as all_count,
@@ -333,7 +341,7 @@ export async function getServiceDeskStats(): Promise<{ total: number; open: numb
       COUNT(*) FILTER (WHERE UPPER(status) NOT IN (${RESOLVED_STATUSES.map(s => `'${s}'`).join(',')})) as open
     FROM jira_issues
     WHERE project = 'PSSM'
-      AND ${HIDE_OLD_TICKETS_CONDITION}
+      AND ${buildHideOldCondition(30)}
   `);
   return {
     total: parseInt(result.rows[0].total) || 0,
