@@ -42,5 +42,8 @@ workthrough/.vitepress/dist/
 docs/stories/
 deploy/javis/build/
 
+# VM credentials (contains passwords — NEVER commit)
+config/.env.vm
+
 # Sync Logs
 logs/
