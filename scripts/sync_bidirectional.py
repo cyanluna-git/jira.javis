@@ -421,8 +421,8 @@ def pull_changes(
                     updated_at = EXCLUDED.updated_at,
                     raw_data = EXCLUDED.raw_data,
                     last_synced_at = NOW(),
-                    local_modified_at = NULL,
-                    local_modified_fields = NULL
+                    local_modified_at = jira_issues.local_modified_at,
+                    local_modified_fields = jira_issues.local_modified_fields
             """, [key, project, summary, status, created, updated, Json(remote_issue)])
 
             log_sync(conn, key, 'pull', 'success', {
@@ -660,10 +660,12 @@ def main():
         sys.exit(1)
 
     if args.force_local and not is_legacy_write_mode(args.write_mode):
+        print("WARNING: --force-local push queue semantics are deprecated. Use direct write via Javis UI.", file=sys.stderr)
         print("Error: --force-local requires --write-mode legacy because DB -> Jira push is disabled in direct mode")
         sys.exit(1)
 
     if args.push_only and not is_legacy_write_mode(args.write_mode):
+        print("WARNING: --push-only push queue semantics are deprecated. Use direct write via Javis UI.", file=sys.stderr)
         print("Error: --push-only requires --write-mode legacy because direct mode disables DB -> Jira push")
         sys.exit(1)
 

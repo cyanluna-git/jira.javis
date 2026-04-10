@@ -2,6 +2,7 @@
 
 import { ExternalLink, Calendar, Tag, FileText, ChevronRight } from 'lucide-react';
 import { ConfluenceRenderer } from '@/components/ConfluenceRenderer';
+import WriteActivitySection from '@/components/WriteActivitySection';
 import type { ConfluencePage, ConfluenceBreadcrumb } from '@/types/confluence';
 
 interface Props {
@@ -77,6 +78,11 @@ export default function ConfluenceFullPage({ page, breadcrumbs }: Props) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Write Activity */}
+      <div className="max-w-5xl mx-auto px-6 pb-4">
+        <WriteActivitySection targetType="confluence_page" targetId={page.id} />
       </div>
 
       {/* Footer */}

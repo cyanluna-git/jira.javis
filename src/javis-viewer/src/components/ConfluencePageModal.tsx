@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { X, ExternalLink, Calendar, Tag, FileText, ChevronRight } from 'lucide-react';
 import { ConfluenceRenderer } from './ConfluenceRenderer';
+import WriteActivitySection from './WriteActivitySection';
 import type { ConfluencePage, ConfluenceBreadcrumb } from '@/types/confluence';
 
 interface Props {
@@ -119,6 +120,11 @@ export default function ConfluencePageModal({ page, breadcrumbs = [], onClose }:
               </div>
             )}
           </div>
+        </div>
+
+        {/* Write Activity */}
+        <div className="px-6 pb-4">
+          <WriteActivitySection targetType="confluence_page" targetId={page.id} />
         </div>
 
         {/* Footer - Metadata */}

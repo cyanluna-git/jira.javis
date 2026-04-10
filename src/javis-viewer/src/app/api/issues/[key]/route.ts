@@ -142,8 +142,8 @@ export async function PATCH(
             COALESCE($6::timestamp, NOW()),
             $7::jsonb,
             NOW(),
-            NULL,
-            NULL
+            NOW(),
+            $8::jsonb
           )
           ON CONFLICT (key) DO UPDATE SET
             project = COALESCE(EXCLUDED.project, jira_issues.project),
@@ -152,8 +152,8 @@ export async function PATCH(
             updated_at = COALESCE(EXCLUDED.updated_at, jira_issues.updated_at),
             raw_data = EXCLUDED.raw_data,
             last_synced_at = NOW(),
-            local_modified_at = NULL,
-            local_modified_fields = NULL
+            local_modified_at = NOW(),
+            local_modified_fields = EXCLUDED.local_modified_fields
           RETURNING key, project, summary, status, raw_data, last_synced_at, local_modified_at, local_modified_fields
         `,
         [
@@ -164,6 +164,7 @@ export async function PATCH(
           createdAt,
           updatedAt,
           JSON.stringify(remoteIssue),
+          JSON.stringify(updates),
         ]
       );
 

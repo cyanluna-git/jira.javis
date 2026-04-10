@@ -184,7 +184,9 @@ export async function PATCH(
             `
               UPDATE confluence_v2_content
               SET labels = $2::text[],
-                  last_synced_at = NOW()
+                  last_synced_at = NOW(),
+                  local_modified_at = NOW(),
+                  local_modified_fields = '["labels"]'::jsonb
               WHERE id = $1
             `,
             [pageId, applied.labels]
@@ -219,7 +221,9 @@ export async function PATCH(
             `
               UPDATE confluence_v2_content
               SET parent_id = $2,
-                  last_synced_at = NOW()
+                  last_synced_at = NOW(),
+                  local_modified_at = NOW(),
+                  local_modified_fields = '["parent_id"]'::jsonb
               WHERE id = $1
             `,
             [pageId, moved.targetParentId]
@@ -254,7 +258,9 @@ export async function PATCH(
                     WHEN jsonb_typeof(raw_data) = 'object' THEN jsonb_set(raw_data, '{status}', '"archived"', true)
                     ELSE raw_data
                   END,
-                  last_synced_at = NOW()
+                  last_synced_at = NOW(),
+                  local_modified_at = NOW(),
+                  local_modified_fields = '["status"]'::jsonb
               WHERE id = $1
             `,
             [pageId]

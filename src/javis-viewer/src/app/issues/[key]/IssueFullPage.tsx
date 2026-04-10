@@ -1,6 +1,7 @@
 'use client';
 
 import { User, Tag, Calendar, MessageSquare, AlertCircle, ExternalLink, Paperclip, Link2 } from 'lucide-react';
+import WriteActivitySection from '@/components/WriteActivitySection';
 import { AdfRenderer } from '@/components/AdfRenderer';
 import type { SprintIssue } from '@/types/sprint';
 
@@ -197,6 +198,7 @@ export default function IssueFullPage({ issue, jiraBaseUrl }: Props) {
                 </div>
               </section>
             )}
+            <WriteActivitySection targetType="jira_issue" targetId={issue.key} />
           </div>
 
           {/* Sidebar */}

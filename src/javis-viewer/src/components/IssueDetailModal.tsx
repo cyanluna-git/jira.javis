@@ -2,6 +2,7 @@
 
 import { X, User, Tag, Calendar, MessageSquare, AlertCircle, ExternalLink } from 'lucide-react';
 import { AdfRenderer } from './AdfRenderer';
+import WriteActivitySection from './WriteActivitySection';
 import type { SprintIssue } from '@/types/sprint';
 
 interface Props {
@@ -138,6 +139,8 @@ export default function IssueDetailModal({ issue, onClose }: Props) {
                   </div>
                 </section>
               )}
+
+              <WriteActivitySection targetType="jira_issue" targetId={issue.key} />
             </div>
 
             {/* Sidebar */}
