@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import IssueRow from './IssueRow';
 import { AtlassianConnectionBanner } from '@/components/AtlassianConnectionBanner';
@@ -106,7 +106,9 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
   return (
     <>
       <div className="mb-6">
-        <AtlassianConnectionBanner product="jira" />
+        <Suspense fallback={null}>
+          <AtlassianConnectionBanner product="jira" />
+        </Suspense>
       </div>
 
       {/* Search and Filter Bar */}

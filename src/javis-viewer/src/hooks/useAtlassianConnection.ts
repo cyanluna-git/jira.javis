@@ -62,7 +62,7 @@ export function useAtlassianConnection(product: AtlassianProduct) {
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  const returnTo = useMemo(() => {
+  const resolvedReturnTo = useMemo(() => {
     const query = searchParams.toString();
     return `${pathname}${query ? `?${query}` : ''}`;
   }, [pathname, searchParams]);
@@ -87,8 +87,9 @@ export function useAtlassianConnection(product: AtlassianProduct) {
   }, [refresh]);
 
   const connect = () => {
-    window.location.assign(`/api/auth/atlassian/connect?returnTo=${encodeURIComponent(returnTo)}`);
+    window.location.assign(`/api/auth/atlassian/connect?returnTo=${encodeURIComponent(resolvedReturnTo)}`);
   };
+
 
   const disconnect = useCallback(async () => {
     setDisconnecting(true);
@@ -125,7 +126,7 @@ export function useAtlassianConnection(product: AtlassianProduct) {
     appCapability,
     connectionCapability,
     writeEnabled,
-    returnTo,
+    returnTo: resolvedReturnTo,
     oauthResult: searchParams.get('atlassian_oauth'),
     oauthError: searchParams.get('atlassian_oauth_error'),
     refresh,

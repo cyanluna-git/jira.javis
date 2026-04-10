@@ -92,7 +92,9 @@ function ConfluencePageContent() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <div className="border-b border-gray-200 bg-white p-4">
-          <AtlassianConnectionBanner product="confluence" compact />
+          <Suspense fallback={null}>
+            <AtlassianConnectionBanner product="confluence" compact />
+          </Suspense>
         </div>
 
         {loading ? (
