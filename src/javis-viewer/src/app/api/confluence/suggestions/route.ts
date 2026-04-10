@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 import type { SuggestionType, SuggestionStatus } from '@/types/confluence';
 
 const VALID_SUGGESTION_TYPES: SuggestionType[] = ['merge', 'update', 'restructure', 'label', 'archive', 'split'];
@@ -114,7 +114,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/confluence/suggestions - Create a new suggestion
 export async function POST(request: NextRequest) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request, 'confluence');
+  if (accessDenied) return accessDenied;
 
   const client = await pool.connect();
 

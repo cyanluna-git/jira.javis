@@ -5,8 +5,10 @@ Bidirectional Sync: Confluence <-> PostgreSQL
 Usage:
   python scripts/sync_confluence_bidirectional.py                    # Full bidirectional sync
   python scripts/sync_confluence_bidirectional.py --pull-only        # Confluence -> DB only
-  python scripts/sync_confluence_bidirectional.py --push-only        # DB -> Confluence only
-  python scripts/sync_confluence_bidirectional.py --force-local      # Resolve conflicts with local data
+  python scripts/sync_confluence_bidirectional.py --push-only --write-mode legacy
+                                                      # DB -> Confluence only (legacy write-back)
+  python scripts/sync_confluence_bidirectional.py --force-local --write-mode legacy
+                                                      # Resolve conflicts with local data
   python scripts/sync_confluence_bidirectional.py --force-remote     # Resolve conflicts with remote data
   python scripts/sync_confluence_bidirectional.py --dry-run          # Show what would happen
 """
@@ -49,6 +51,7 @@ CONFLUENCE_BASE = config.get("JIRA_URL", "").rstrip('/')
 EMAIL = config.get("JIRA_EMAIL")
 TOKEN = config.get("JIRA_TOKEN")
 AUTH = HTTPBasicAuth(EMAIL, TOKEN)
+DEFAULT_WRITE_MODE = (config.get("JAVIS_CONFLUENCE_WRITE_MODE", "direct") or "direct").strip().lower()
 
 DB_HOST = config.get("DB_HOST", "localhost")
 DB_PORT = config.get("DB_PORT", "5439")
@@ -358,6 +361,11 @@ def sync_labels_to_confluence(page_id: str, local_labels: List[str], remote_labe
     return success
 
 
+def is_legacy_write_mode(write_mode: str) -> bool:
+    """Return True when DB -> Confluence write-back is allowed."""
+    return write_mode == 'legacy'
+
+
 # --- Sync Logging ---
 def log_sync(conn, page_id: str, direction: str, status: str, details: Dict = None):
     """Log sync operation."""
@@ -451,7 +459,7 @@ def get_unresolved_conflicts(conn) -> List[Dict]:
 
 
 # --- Pull Phase ---
-def pull_changes(conn, stats: SyncStats, force_remote: bool = False, dry_run: bool = False):
+def pull_changes(conn, stats: SyncStats, write_mode: str, force_remote: bool = False, dry_run: bool = False):
     """Pull changes from Confluence to local DB."""
     print("\n[PULL] Fetching updates from Confluence...")
 
@@ -489,20 +497,23 @@ def pull_changes(conn, stats: SyncStats, force_remote: bool = False, dry_run: bo
                 'last_synced_at': local_row[7]
             }
 
-            has_conflict, conflicting_fields = detect_conflict(local_page, remote_page)
+            if not is_legacy_write_mode(write_mode):
+                print(f"  Direct mode: ignoring stale local write markers for {page_id}")
+            else:
+                has_conflict, conflicting_fields = detect_conflict(local_page, remote_page)
 
-            if has_conflict and not force_remote:
-                print(f"  CONFLICT: {page_id} ({remote_page.get('title', '')[:30]}) - fields: {conflicting_fields}")
-                if not dry_run:
-                    save_conflict(conn, page_id, local_page, remote_page, conflicting_fields)
-                    log_sync(conn, page_id, 'pull', 'conflict', {'conflicting_fields': conflicting_fields})
-                stats.conflicts += 1
-                continue
+                if has_conflict and not force_remote:
+                    print(f"  CONFLICT: {page_id} ({remote_page.get('title', '')[:30]}) - fields: {conflicting_fields}")
+                    if not dry_run:
+                        save_conflict(conn, page_id, local_page, remote_page, conflicting_fields)
+                        log_sync(conn, page_id, 'pull', 'conflict', {'conflicting_fields': conflicting_fields})
+                    stats.conflicts += 1
+                    continue
 
-            if force_remote:
-                print(f"  Force overwrite: {page_id}")
-                if not dry_run:
-                    resolve_conflict(conn, page_id, 'remote')
+                if force_remote:
+                    print(f"  Force overwrite: {page_id}")
+                    if not dry_run:
+                        resolve_conflict(conn, page_id, 'remote')
 
         # Update local DB
         title = remote_page.get('title', '')
@@ -535,7 +546,11 @@ def pull_changes(conn, stats: SyncStats, force_remote: bool = False, dry_run: bo
                     local_modified_fields = NULL
             """, [page_id, title, parent_id, space_id, labels, body, version, web_url, Json(remote_page), created_at])
 
-            log_sync(conn, page_id, 'pull', 'success', {'version': version})
+            log_sync(conn, page_id, 'pull', 'success', {
+                'version': version,
+                'write_mode': write_mode,
+                'cleared_local_modifications': bool(local_row and local_row[5] and not is_legacy_write_mode(write_mode))
+            })
 
         stats.pulled += 1
         time.sleep(0.2)  # Rate limiting
@@ -545,12 +560,19 @@ def pull_changes(conn, stats: SyncStats, force_remote: bool = False, dry_run: bo
 
 
 # --- Push Phase ---
-def push_changes(conn, stats: SyncStats, force_local: bool = False, dry_run: bool = False):
+def push_changes(conn, stats: SyncStats, write_mode: str, force_local: bool = False, dry_run: bool = False):
     """Push local changes to Confluence."""
     print("\n[PUSH] Pushing local changes to Confluence...")
 
     modified_pages = get_locally_modified_pages(conn)
     print(f"  Found {len(modified_pages)} locally modified pages")
+
+    if not is_legacy_write_mode(write_mode):
+        if modified_pages:
+            print(f"  Push disabled in direct mode. Leaving {len(modified_pages)} locally modified rows untouched.")
+            print("  Use JAVIS_CONFLUENCE_WRITE_MODE=legacy or --write-mode legacy to re-enable DB -> Confluence push.")
+            stats.skipped += len(modified_pages)
+        return
 
     for page in modified_pages:
         page_id = page['id']
@@ -674,7 +696,7 @@ def show_conflicts(conn):
             print(f"    Remote: {remote_val}")
 
 
-def resolve_all_conflicts(conn, resolution: str, dry_run: bool = False):
+def resolve_all_conflicts(conn, resolution: str, dry_run: bool = False, write_mode: str = DEFAULT_WRITE_MODE):
     """Resolve all conflicts with given resolution."""
     conflicts = get_unresolved_conflicts(conn)
 
@@ -692,6 +714,9 @@ def resolve_all_conflicts(conn, resolution: str, dry_run: bool = False):
             continue
 
         if resolution == 'local':
+            if not is_legacy_write_mode(write_mode):
+                print(f"  Skipping {page_id}: local conflict resolution is disabled in direct write mode")
+                continue
             # Re-push local changes
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT * FROM confluence_v2_content WHERE id = %s", [page_id])
@@ -826,6 +851,8 @@ def main():
     parser.add_argument('--init-db', action='store_true', help='Initialize database schema and exit')
     parser.add_argument('--sync-labels', action='store_true',
                         help='Re-fetch labels for ALL pages (label changes bypass page versioning)')
+    parser.add_argument('--write-mode', choices=['direct', 'legacy'], default=DEFAULT_WRITE_MODE,
+                        help='Write-back mode for DB -> Confluence updates (default: env JAVIS_CONFLUENCE_WRITE_MODE or direct)')
     args = parser.parse_args()
 
     if not args.force and not is_business_hours():
@@ -840,6 +867,14 @@ def main():
 
     if args.force_local and args.force_remote:
         print("Error: Cannot use both --force-local and --force-remote")
+        sys.exit(1)
+
+    if args.force_local and not is_legacy_write_mode(args.write_mode):
+        print("Error: --force-local requires --write-mode legacy because DB -> Confluence push is disabled in direct mode")
+        sys.exit(1)
+
+    if args.push_only and not is_legacy_write_mode(args.write_mode):
+        print("Error: --push-only requires --write-mode legacy because direct mode disables DB -> Confluence push")
         sys.exit(1)
 
     conn = get_db_connection()
@@ -863,6 +898,7 @@ def main():
         print("=" * 60)
         print(f"Space ID: {SPACE_ID}")
         print(f"Mode: {'DRY-RUN' if args.dry_run else 'LIVE'}")
+        print(f"Write mode: {args.write_mode.upper()}")
         if args.force_local:
             print("Conflict resolution: FORCE LOCAL")
         elif args.force_remote:
@@ -876,17 +912,17 @@ def main():
 
         # Pull phase
         if not args.push_only:
-            pull_changes(conn, stats, args.force_remote, args.dry_run)
+            pull_changes(conn, stats, args.write_mode, args.force_remote, args.dry_run)
 
         # Push phase
         if not args.pull_only:
-            push_changes(conn, stats, args.force_local, args.dry_run)
+            push_changes(conn, stats, args.write_mode, args.force_local, args.dry_run)
 
         # Resolve conflicts if force flag is set
         if args.force_local:
-            resolve_all_conflicts(conn, 'local', args.dry_run)
+            resolve_all_conflicts(conn, 'local', args.dry_run, args.write_mode)
         elif args.force_remote:
-            resolve_all_conflicts(conn, 'remote', args.dry_run)
+            resolve_all_conflicts(conn, 'remote', args.dry_run, args.write_mode)
 
         print("\n" + "=" * 60)
         print("SYNC COMPLETE")

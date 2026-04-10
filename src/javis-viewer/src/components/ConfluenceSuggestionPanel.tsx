@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles,
   GitMerge,
@@ -17,12 +17,11 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useAtlassianConnection } from '@/hooks/useAtlassianConnection';
 import type {
   AISuggestionWithPages,
   SuggestionType,
   SuggestionStatus,
-  SUGGESTION_TYPE_LABELS,
-  SUGGESTION_TYPE_COLORS,
 } from '@/types/confluence';
 
 interface Props {
@@ -71,14 +70,16 @@ interface SuggestionCounts {
 }
 
 export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
+  const { writeEnabled, loading: accessLoading } = useAtlassianConnection('confluence');
   const [suggestions, setSuggestions] = useState<AISuggestionWithPages[]>([]);
   const [counts, setCounts] = useState<SuggestionCounts | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processingSuggestionId, setProcessingSuggestionId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [expanded, setExpanded] = useState(true);
 
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -101,10 +102,15 @@ export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [compact, filterStatus, filterType]);
 
-  const updateSuggestionStatus = async (id: string, action: 'approve' | 'reject') => {
+  const updateSuggestionStatus = async (id: string, action: 'approve' | 'reject' | 'apply') => {
+    if (!writeEnabled) {
+      return;
+    }
+
     try {
+      setProcessingSuggestionId(id);
       const res = await fetch(`/api/confluence/suggestions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -112,16 +118,18 @@ export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
       });
 
       if (res.ok) {
-        fetchSuggestions();
+        await fetchSuggestions();
       }
     } catch (error) {
       console.error('Error updating suggestion:', error);
+    } finally {
+      setProcessingSuggestionId((currentId) => (currentId === id ? null : currentId));
     }
   };
 
   useEffect(() => {
     fetchSuggestions();
-  }, [filterType, filterStatus]);
+  }, [fetchSuggestions]);
 
   const pendingCount = counts?.by_status?.pending || 0;
 
@@ -173,8 +181,11 @@ export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
                   <SuggestionItem
                     key={suggestion.id}
                     suggestion={suggestion}
+                    canWrite={writeEnabled}
+                    isProcessing={processingSuggestionId === suggestion.id}
                     onApprove={() => updateSuggestionStatus(suggestion.id, 'approve')}
                     onReject={() => updateSuggestionStatus(suggestion.id, 'reject')}
+                    onApply={() => updateSuggestionStatus(suggestion.id, 'apply')}
                   />
                 ))}
               </div>
@@ -190,6 +201,12 @@ export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Filter Bar */}
       <div className="p-3 border-b border-gray-200 bg-white space-y-2">
+        {!accessLoading && !writeEnabled && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Confluence write는 연결된 Atlassian 계정이 있을 때만 가능합니다. 미연결 사용자는 readonly입니다.
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <select
             value={filterType}
@@ -255,8 +272,11 @@ export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
               <SuggestionItem
                 key={suggestion.id}
                 suggestion={suggestion}
+                canWrite={writeEnabled}
+                isProcessing={processingSuggestionId === suggestion.id}
                 onApprove={() => updateSuggestionStatus(suggestion.id, 'approve')}
                 onReject={() => updateSuggestionStatus(suggestion.id, 'reject')}
+                onApply={() => updateSuggestionStatus(suggestion.id, 'apply')}
               />
             ))}
           </div>
@@ -268,14 +288,35 @@ export default function ConfluenceSuggestionPanel({ compact = false }: Props) {
 
 interface SuggestionItemProps {
   suggestion: AISuggestionWithPages;
+  canWrite: boolean;
+  isProcessing: boolean;
   onApprove: () => void;
   onReject: () => void;
+  onApply: () => void;
 }
 
-function SuggestionItem({ suggestion, onApprove, onReject }: SuggestionItemProps) {
+function SuggestionItem({
+  suggestion,
+  canWrite,
+  isProcessing,
+  onApprove,
+  onReject,
+  onApply,
+}: SuggestionItemProps) {
   const [showDetails, setShowDetails] = useState(false);
   const typeConfig = suggestionTypeColors[suggestion.suggestion_type];
   const status = statusConfig[suggestion.status];
+  const canApply =
+    ['label', 'restructure', 'archive', 'merge'].includes(suggestion.suggestion_type) &&
+    (suggestion.status === 'pending' || suggestion.status === 'approved');
+  const applyLabel =
+    suggestion.suggestion_type === 'merge'
+      ? '작업 생성'
+      : suggestion.suggestion_type === 'archive'
+      ? '아카이브'
+      : suggestion.suggestion_type === 'restructure'
+        ? '이동 적용'
+        : '적용';
 
   return (
     <div
@@ -332,26 +373,44 @@ function SuggestionItem({ suggestion, onApprove, onReject }: SuggestionItemProps
           )}
 
           {/* Actions */}
-          {suggestion.status === 'pending' && (
+          {(suggestion.status === 'pending' || canApply) && (
             <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApprove();
-                }}
-                className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
-              >
-                승인
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReject();
-                }}
-                className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
-              >
-                거절
-              </button>
+              {suggestion.status === 'pending' && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApprove();
+                    }}
+                    disabled={!canWrite || isProcessing}
+                    className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    승인
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReject();
+                    }}
+                    disabled={!canWrite || isProcessing}
+                    className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    거절
+                  </button>
+                </>
+              )}
+              {canApply && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApply();
+                  }}
+                  disabled={!canWrite || isProcessing}
+                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isProcessing ? '적용 중...' : applyLabel}
+                </button>
+              )}
             </div>
           )}
 
