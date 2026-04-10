@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   FileText,
@@ -16,6 +15,7 @@ import clsx from 'clsx';
 import { ConfluenceRenderer } from '@/components/ConfluenceRenderer';
 import ConfluenceTree from '@/components/ConfluenceTree';
 import ConfluenceSuggestionPanel from '@/components/ConfluenceSuggestionPanel';
+import { AtlassianConnectionBanner } from '@/components/AtlassianConnectionBanner';
 import type { ConfluencePage, ConfluenceBreadcrumb, ConfluenceViewMode } from '@/types/confluence';
 
 function ConfluencePageContent() {
@@ -29,7 +29,7 @@ function ConfluencePageContent() {
   const [loading, setLoading] = useState(false);
 
   // Fetch page content
-  const fetchPageContent = async (id: string) => {
+  const fetchPageContent = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/confluence/page/${id}`);
@@ -43,7 +43,7 @@ function ConfluencePageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Handle page selection
   const handleSelectPage = (id: string) => {
@@ -66,7 +66,7 @@ function ConfluencePageContent() {
       setActivePage(null);
       setBreadcrumbs([]);
     }
-  }, [pageId]);
+  }, [fetchPageContent, pageId]);
 
   return (
     <div className="flex h-screen bg-white font-sans overflow-hidden">
@@ -91,6 +91,10 @@ function ConfluencePageContent() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="border-b border-gray-200 bg-white p-4">
+          <AtlassianConnectionBanner product="confluence" compact />
+        </div>
+
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-gray-400">
             <RefreshCw className="w-6 h-6 animate-spin" />
@@ -205,7 +209,7 @@ function SuggestionsFullView() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending');
 
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -222,11 +226,11 @@ function SuggestionsFullView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     fetchSuggestions();
-  }, [filter]);
+  }, [fetchSuggestions]);
 
   if (loading) {
     return (

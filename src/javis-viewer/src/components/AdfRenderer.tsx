@@ -403,6 +403,32 @@ function MediaNode({ node, attachments }: { node: AdfNode; attachments: Attachme
           />
         </div>
       );
+    } else if (attachment.mimeType?.startsWith('video/')) {
+      return (
+        <div className="mb-3 rounded border border-gray-200 overflow-hidden bg-black" style={{ maxWidth: '100%' }}>
+          <video
+            controls
+            preload="metadata"
+            className="w-full block"
+            style={{ maxWidth: '100%', maxHeight: '480px' }}
+          >
+            <source src={imageUrl} type={attachment.mimeType} />
+            Your browser does not support video playback.
+          </video>
+          <div className="bg-gray-100 px-3 py-1.5 flex items-center justify-between text-sm text-gray-600">
+            <span className="truncate">{attachment.filename}</span>
+            <a
+              href={imageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline inline-flex items-center gap-1 shrink-0 ml-2"
+            >
+              Download
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      );
     } else {
       return (
         <div className="mb-3 p-4 bg-gray-100 rounded border border-gray-200">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import pool from "@/lib/db";
 import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones, Users, Package } from "lucide-react";
 import { getServiceDeskStats } from "@/lib/service-desk";
+import { resolveServerAccessContext } from "@/lib/access";
 
 export const dynamic = 'force-dynamic';
 
@@ -113,7 +114,8 @@ async function getStats() {
 
 export default async function Home() {
   const stats = await getStats();
-  const isReadOnly = process.env.NEXT_PUBLIC_READ_ONLY?.toLowerCase() === 'true';
+  const access = await resolveServerAccessContext();
+  const isReadOnly = access.isReadOnly;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans">

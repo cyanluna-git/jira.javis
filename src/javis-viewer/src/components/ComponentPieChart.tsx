@@ -89,7 +89,7 @@ export default function ComponentPieChart({ issues, selectedComponents, onCompon
               dataKey="value"
               label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
               labelLine={{ stroke: '#9ca3af', strokeWidth: 1 }}
-              onClick={(data) => onComponentClick?.(data.name)}
+              onClick={(data) => onComponentClick?.(data.name as string)}
               style={{ cursor: onComponentClick ? 'pointer' : 'default' }}
             >
               {chartData.map((entry, index) => {

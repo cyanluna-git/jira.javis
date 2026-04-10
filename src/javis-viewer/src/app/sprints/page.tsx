@@ -35,9 +35,10 @@ async function getBoards(): Promise<Board[]> {
   const client = await pool.connect();
   try {
     const res = await client.query(`
-      SELECT id, name, type, project_key
-      FROM jira_boards
-      ORDER BY name
+      SELECT DISTINCT b.id, b.name, b.type, b.project_key
+      FROM jira_boards b
+      JOIN jira_sprints s ON s.board_id = b.id AND s.state = 'active'
+      ORDER BY b.name
     `);
     return res.rows;
   } finally {

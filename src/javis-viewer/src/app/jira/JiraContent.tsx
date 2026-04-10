@@ -3,6 +3,15 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import IssueRow from './IssueRow';
+import { AtlassianConnectionBanner } from '@/components/AtlassianConnectionBanner';
+
+interface IssueComponent {
+  name?: string | null;
+}
+
+interface IssueFields {
+  components?: IssueComponent[];
+}
 
 interface Issue {
   key: string;
@@ -10,7 +19,9 @@ interface Issue {
   status: string;
   project: string;
   created_at: string;
-  raw_data: any;
+  raw_data: {
+    fields?: IssueFields;
+  } | null;
 }
 
 export default function JiraContent({ issues }: { issues: Issue[] }) {
@@ -28,7 +39,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
       projectSet.add(issue.project);
 
       const comps = issue.raw_data?.fields?.components || [];
-      comps.forEach((comp: any) => {
+      comps.forEach((comp) => {
         if (comp.name) componentSet.add(comp.name);
       });
     });
@@ -59,7 +70,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
 
       // Filter by component
       if (selectedComponents.length > 0) {
-        const issueComponents = (issue.raw_data?.fields?.components || []).map((c: any) => c.name);
+        const issueComponents = (issue.raw_data?.fields?.components || []).map((c) => c.name);
         const hasMatchingComponent = selectedComponents.some(comp => issueComponents.includes(comp));
         if (!hasMatchingComponent) return false;
       }
@@ -94,6 +105,10 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
 
   return (
     <>
+      <div className="mb-6">
+        <AtlassianConnectionBanner product="jira" />
+      </div>
+
       {/* Search and Filter Bar */}
       <div className="mb-6 space-y-4">
         <div className="flex gap-3">
@@ -180,7 +195,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
                   {components.length > 0 ? (
                     components.map(component => {
                       const count = issues.filter(i =>
-                        (i.raw_data?.fields?.components || []).some((c: any) => c.name === component)
+                        (i.raw_data?.fields?.components || []).some((c) => c.name === component)
                       ).length;
                       return (
                         <label

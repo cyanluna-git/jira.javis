@@ -1,6 +1,6 @@
 'use client';
 
-import { Bug, CheckSquare, Bookmark, Zap, HelpCircle, User, ExternalLink } from 'lucide-react';
+import { Bug, CheckSquare, Bookmark, Zap, HelpCircle, User, ExternalLink, Video } from 'lucide-react';
 import type { SprintIssue } from '@/types/sprint';
 
 interface Props {
@@ -41,6 +41,8 @@ export default function SprintIssueRow({ issue, onSelect }: Props) {
   const assigneeAvatar = fields.assignee?.avatarUrls?.['24x24'] || fields.assignee?.avatarUrls?.['32x32'] || null;
   const components = fields.components || [];
   const fixVersions = fields.fixVersions || [];
+  const attachments = fields.attachment || [];
+  const hasVideo = attachments.some((att: { mimeType?: string }) => att.mimeType?.startsWith('video/'));
 
   const icon = issueTypeIcons[issueType] || <HelpCircle className="w-4 h-4 text-gray-400" />;
 
@@ -126,6 +128,13 @@ export default function SprintIssueRow({ issue, onSelect }: Props) {
                 {c.name}
               </span>
             ))}
+            {/* Video indicator */}
+            {hasVideo && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded text-xs font-medium">
+                <Video className="w-3 h-3" />
+                video
+              </span>
+            )}
           </div>
         </div>
       </td>

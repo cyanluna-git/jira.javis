@@ -89,8 +89,11 @@ export default function IssueEditModal({ issue, onClose, onSaved }: Props) {
       if (onSaved && result.issue) {
         const updatedIssue: SprintIssue = {
           ...issue,
+          project: result.issue.project || issue.project,
           summary: result.issue.summary || issue.summary,
           status: result.issue.status || issue.status,
+          raw_data: result.issue.raw_data || issue.raw_data,
+          last_synced_at: result.issue.last_synced_at || issue.last_synced_at,
           local_modified_at: result.issue.local_modified_at,
           local_modified_fields: result.issue.local_modified_fields,
         };
