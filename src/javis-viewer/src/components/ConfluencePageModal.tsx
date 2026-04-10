@@ -72,6 +72,13 @@ export default function ConfluencePageModal({ page, breadcrumbs = [], onClose }:
                   Confluence에서 열기
                 </a>
               )}
+              <button
+                onClick={() => window.open(`/confluence/pages/${page.id}`, '_blank')}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                새탭에서 열기
+              </button>
             </div>
             {/* Labels */}
             {labels.length > 0 && (
