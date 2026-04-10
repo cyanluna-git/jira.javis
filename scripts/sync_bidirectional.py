@@ -5,9 +5,11 @@ Bidirectional Sync: Jira <-> PostgreSQL
 Usage:
   python scripts/sync_bidirectional.py                    # Full bidirectional sync
   python scripts/sync_bidirectional.py --pull-only        # Jira -> DB only
-  python scripts/sync_bidirectional.py --push-only        # DB -> Jira only
+  python scripts/sync_bidirectional.py --push-only --write-mode legacy
+                                                      # DB -> Jira only (legacy write-back)
   python scripts/sync_bidirectional.py --force            # Force full re-sync (ignore timestamps)
-  python scripts/sync_bidirectional.py --force-local      # Resolve conflicts with local data
+  python scripts/sync_bidirectional.py --force-local --write-mode legacy
+                                                      # Resolve conflicts with local data
   python scripts/sync_bidirectional.py --force-remote     # Resolve conflicts with remote data
   python scripts/sync_bidirectional.py --project ASP      # Sync specific project
   python scripts/sync_bidirectional.py --dry-run          # Show what would happen
@@ -50,6 +52,7 @@ config = load_env()
 JIRA_URL = config.get("JIRA_URL")
 JIRA_EMAIL = config.get("JIRA_EMAIL")
 JIRA_TOKEN = config.get("JIRA_TOKEN")
+DEFAULT_WRITE_MODE = (config.get("JAVIS_JIRA_WRITE_MODE", "direct") or "direct").strip().lower()
 
 DB_HOST = config.get("DB_HOST", "localhost")
 DB_PORT = config.get("DB_PORT", "5432")
@@ -167,7 +170,7 @@ def resolve_conflict(conn, issue_key: str, resolution: str):
 def fetch_remote_issue(issue_key: str) -> Optional[Dict]:
     """Fetch single issue from Jira."""
     response = api_request('GET', f'/rest/api/3/issue/{issue_key}', params={
-        'fields': 'summary,status,description,priority,assignee,creator,reporter,issuetype,components,versions,fixVersions,labels,updated,attachment,comment'
+        'fields': 'summary,status,description,priority,assignee,creator,reporter,issuetype,components,versions,fixVersions,labels,updated,attachment,comment,customfield_10016,customfield_10033'
     })
 
     if response and response.ok:
@@ -196,7 +199,8 @@ def fetch_updated_issues(project: str, since: Optional[datetime]) -> List[Dict]:
                 "key", "summary", "status", "created", "updated",
                 "description", "project", "priority", "assignee",
                 "creator", "reporter", "issuetype", "components",
-                "versions", "fixVersions", "labels", "attachment", "comment"
+                "versions", "fixVersions", "labels", "attachment", "comment",
+                "customfield_10016", "customfield_10033"
             ]
         }
 
@@ -319,8 +323,21 @@ def build_update_payload(issue: Dict) -> Dict:
     return {'fields': update_fields} if update_fields else None
 
 
+def is_legacy_write_mode(write_mode: str) -> bool:
+    """Return True when DB -> Jira write-back is allowed."""
+    return write_mode == 'legacy'
+
+
 # --- Pull Phase ---
-def pull_changes(conn, project: str, stats: SyncStats, force_remote: bool = False, dry_run: bool = False, force_full: bool = False):
+def pull_changes(
+    conn,
+    project: str,
+    stats: SyncStats,
+    write_mode: str,
+    force_remote: bool = False,
+    dry_run: bool = False,
+    force_full: bool = False
+):
     """Pull changes from Jira to local DB."""
     print(f"\n[PULL] Fetching updates from Jira for {project}...")
 
@@ -364,23 +381,26 @@ def pull_changes(conn, project: str, stats: SyncStats, force_remote: bool = Fals
                 'last_synced_at': local_issue[6]
             }
 
-            has_conflict, conflicting_fields = detect_conflict(local_data, remote_issue)
+            if not is_legacy_write_mode(write_mode):
+                print(f"  Direct mode: ignoring stale local write markers for {key}")
+            else:
+                has_conflict, conflicting_fields = detect_conflict(local_data, remote_issue)
 
-            if has_conflict and not force_remote:
-                # Save conflict for later resolution
-                print(f"  CONFLICT: {key} - fields: {conflicting_fields}")
-                if not dry_run:
-                    save_conflict(conn, key, local_data['raw_data'], remote_issue, conflicting_fields)
-                    log_sync(conn, key, 'pull', 'conflict', {
-                        'conflicting_fields': conflicting_fields
-                    })
-                stats.conflicts += 1
-                continue
+                if has_conflict and not force_remote:
+                    # Save conflict for later resolution
+                    print(f"  CONFLICT: {key} - fields: {conflicting_fields}")
+                    if not dry_run:
+                        save_conflict(conn, key, local_data['raw_data'], remote_issue, conflicting_fields)
+                        log_sync(conn, key, 'pull', 'conflict', {
+                            'conflicting_fields': conflicting_fields
+                        })
+                    stats.conflicts += 1
+                    continue
 
-            if force_remote:
-                print(f"  Force overwrite: {key}")
-                if not dry_run:
-                    resolve_conflict(conn, key, 'remote')
+                if force_remote:
+                    print(f"  Force overwrite: {key}")
+                    if not dry_run:
+                        resolve_conflict(conn, key, 'remote')
 
         # Update local DB
         fields = remote_issue.get('fields', {})
@@ -405,7 +425,11 @@ def pull_changes(conn, project: str, stats: SyncStats, force_remote: bool = Fals
                     local_modified_fields = NULL
             """, [key, project, summary, status, created, updated, Json(remote_issue)])
 
-            log_sync(conn, key, 'pull', 'success', {'updated_at': updated})
+            log_sync(conn, key, 'pull', 'success', {
+                'updated_at': updated,
+                'write_mode': write_mode,
+                'cleared_local_modifications': bool(local_issue and local_issue[4] and not is_legacy_write_mode(write_mode))
+            })
 
         stats.pulled += 1
 
@@ -414,12 +438,19 @@ def pull_changes(conn, project: str, stats: SyncStats, force_remote: bool = Fals
 
 
 # --- Push Phase ---
-def push_changes(conn, project: str, stats: SyncStats, force_local: bool = False, dry_run: bool = False):
+def push_changes(conn, project: str, stats: SyncStats, write_mode: str, force_local: bool = False, dry_run: bool = False):
     """Push local changes to Jira."""
     print(f"\n[PUSH] Pushing local changes to Jira for {project}...")
 
     modified_issues = get_locally_modified_issues(conn, project)
     print(f"  Found {len(modified_issues)} locally modified issues")
+
+    if not is_legacy_write_mode(write_mode):
+        if modified_issues:
+            print(f"  Push disabled in direct mode. Leaving {len(modified_issues)} locally modified rows untouched.")
+            print("  Use JAVIS_JIRA_WRITE_MODE=legacy or --write-mode legacy to re-enable DB -> Jira push.")
+            stats.skipped += len(modified_issues)
+        return
 
     for issue in modified_issues:
         key = issue['key']
@@ -524,7 +555,7 @@ def show_conflicts(conn, project: str = None):
             print(f"    Remote: {remote_val}")
 
 
-def resolve_all_conflicts(conn, resolution: str, project: str = None, dry_run: bool = False):
+def resolve_all_conflicts(conn, resolution: str, project: str = None, dry_run: bool = False, write_mode: str = DEFAULT_WRITE_MODE):
     """Resolve all conflicts with given resolution."""
     conflicts = get_unresolved_conflicts(conn, project)
 
@@ -542,6 +573,9 @@ def resolve_all_conflicts(conn, resolution: str, project: str = None, dry_run: b
             continue
 
         if resolution == 'local':
+            if not is_legacy_write_mode(write_mode):
+                print(f"  Skipping {key}: local conflict resolution is disabled in direct write mode")
+                continue
             # Re-push local changes
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("""
@@ -607,6 +641,8 @@ def main():
     parser.add_argument('--project', type=str, help='Sync specific project only')
     parser.add_argument('--dry-run', action='store_true', help='Show what would happen without making changes')
     parser.add_argument('--show-conflicts', action='store_true', help='Show unresolved conflicts and exit')
+    parser.add_argument('--write-mode', choices=['direct', 'legacy'], default=DEFAULT_WRITE_MODE,
+                        help='Write-back mode for DB -> Jira updates (default: env JAVIS_JIRA_WRITE_MODE or direct)')
     args = parser.parse_args()
 
     if not args.force and not is_business_hours():
@@ -621,6 +657,14 @@ def main():
 
     if args.force_local and args.force_remote:
         print("Error: Cannot use both --force-local and --force-remote")
+        sys.exit(1)
+
+    if args.force_local and not is_legacy_write_mode(args.write_mode):
+        print("Error: --force-local requires --write-mode legacy because DB -> Jira push is disabled in direct mode")
+        sys.exit(1)
+
+    if args.push_only and not is_legacy_write_mode(args.write_mode):
+        print("Error: --push-only requires --write-mode legacy because direct mode disables DB -> Jira push")
         sys.exit(1)
 
     conn = get_db_connection()
@@ -638,6 +682,7 @@ def main():
         print("=" * 60)
         print(f"Projects: {', '.join(projects)}")
         print(f"Mode: {'DRY-RUN' if args.dry_run else 'LIVE'}")
+        print(f"Write mode: {args.write_mode.upper()}")
         if args.force:
             print("Force: FULL RE-SYNC (ignoring timestamps)")
         if args.force_local:
@@ -648,17 +693,17 @@ def main():
         for project in projects:
             # Pull phase
             if not args.push_only:
-                pull_changes(conn, project, stats, args.force_remote, args.dry_run, args.force)
+                pull_changes(conn, project, stats, args.write_mode, args.force_remote, args.dry_run, args.force)
 
             # Push phase
             if not args.pull_only:
-                push_changes(conn, project, stats, args.force_local, args.dry_run)
+                push_changes(conn, project, stats, args.write_mode, args.force_local, args.dry_run)
 
         # Resolve conflicts if force flag is set
         if args.force_local:
-            resolve_all_conflicts(conn, 'local', args.project, args.dry_run)
+            resolve_all_conflicts(conn, 'local', args.project, args.dry_run, args.write_mode)
         elif args.force_remote:
-            resolve_all_conflicts(conn, 'remote', args.project, args.dry_run)
+            resolve_all_conflicts(conn, 'remote', args.project, args.dry_run, args.write_mode)
 
         print("\n" + "=" * 60)
         print("SYNC COMPLETE")

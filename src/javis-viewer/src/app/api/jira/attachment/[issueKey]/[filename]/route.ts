@@ -75,6 +75,7 @@ export async function GET(
     }
 
     // Fetch the actual attachment content
+    const rangeHeader = request.headers.get('range');
     const attachmentResponse = await fetch(attachmentUrl, {
       headers: {
         'Authorization': `Basic ${authHeader}`,
@@ -89,14 +90,40 @@ export async function GET(
       );
     }
 
-    const buffer = await attachmentResponse.arrayBuffer();
+    const fullBuffer = await attachmentResponse.arrayBuffer();
     const contentType = attachmentResponse.headers.get('content-type') || mimeType;
+    const totalSize = fullBuffer.byteLength;
 
-    return new NextResponse(buffer, {
+    // Handle Range requests for video seeking
+    if (rangeHeader) {
+      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        const start = parseInt(match[1], 10);
+        const end = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+        const chunkSize = end - start + 1;
+        const sliced = fullBuffer.slice(start, end + 1);
+
+        return new NextResponse(sliced, {
+          status: 206,
+          headers: {
+            'Content-Type': contentType,
+            'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+            'Content-Length': String(chunkSize),
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'public, max-age=86400',
+            'Content-Disposition': `inline; filename="${decodedFilename}"`,
+          },
+        });
+      }
+    }
+
+    return new NextResponse(fullBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400', // Cache for 1 day
+        'Accept-Ranges': 'bytes',
+        'Content-Length': String(totalSize),
+        'Cache-Control': 'public, max-age=86400',
         'Content-Disposition': `inline; filename="${decodedFilename}"`,
       },
     });
