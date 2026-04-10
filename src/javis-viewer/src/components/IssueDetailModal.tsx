@@ -65,6 +65,13 @@ export default function IssueDetailModal({ issue, onClose }: Props) {
                   JIRA에서 열기
                 </a>
               )}
+              <button
+                onClick={() => window.open(`/issues/${issue.key}`, '_blank')}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                새탭에서 열기
+              </button>
             </div>
             <h2 className="text-xl font-bold text-gray-900 truncate">{issue.summary}</h2>
           </div>
