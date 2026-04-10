@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/roadmap/local-epics/[id] - Update a local epic
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
 
@@ -89,7 +90,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/roadmap/local-epics/[id] - Delete a local epic
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
 

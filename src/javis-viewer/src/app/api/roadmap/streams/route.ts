@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 import type { Stream, CreateStreamInput } from '@/types/roadmap';
 
 // POST /api/roadmap/streams - Create a new stream
 export async function POST(request: NextRequest) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const client = await pool.connect();
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 import type { Milestone, MilestoneWithStreams, CreateMilestoneInput, QuarterlyMilestones } from '@/types/roadmap';
 
 // GET /api/roadmap/milestones - List milestones with optional filters
@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/roadmap/milestones - Create a new milestone
 export async function POST(request: NextRequest) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const client = await pool.connect();
 

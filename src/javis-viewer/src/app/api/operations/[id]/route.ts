@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -75,7 +75,8 @@ export async function POST(
   request: NextRequest,
   context: RouteContext
 ) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await context.params;
 
@@ -230,7 +231,8 @@ export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await context.params;
 
@@ -341,7 +343,8 @@ export async function DELETE(
   request: NextRequest,
   context: RouteContext
 ) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await context.params;
 

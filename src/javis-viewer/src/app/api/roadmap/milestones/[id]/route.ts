@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
-import type { Milestone, MilestoneWithStreams, UpdateMilestoneInput, CreateStreamInput } from '@/types/roadmap';
+import { enforceWriteAccess } from '@/lib/readonly';
+import type { Milestone, MilestoneWithStreams, UpdateMilestoneInput } from '@/types/roadmap';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -70,7 +70,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/roadmap/milestones/[id] - Update milestone
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
   const client = await pool.connect();
@@ -159,7 +160,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/roadmap/milestones/[id] - Delete milestone
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
   const client = await pool.connect();

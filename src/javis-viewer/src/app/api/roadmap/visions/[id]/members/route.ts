@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 import type { VisionMember, CreateVisionMemberInput, UpdateVisionMemberInput } from '@/types/roadmap';
 
 interface RouteParams {
@@ -81,7 +81,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST /api/roadmap/visions/[id]/members - Add a member to the vision
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id: visionId } = await params;
   const client = await pool.connect();
@@ -153,7 +154,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/roadmap/visions/[id]/members - Update a member (uses member_account_id from body)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id: visionId } = await params;
   const searchParams = request.nextUrl.searchParams;
@@ -227,7 +229,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/roadmap/visions/[id]/members - Remove a member
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id: visionId } = await params;
   const searchParams = request.nextUrl.searchParams;

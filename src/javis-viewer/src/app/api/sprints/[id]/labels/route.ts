@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 import type { Sprint } from '@/types/sprint';
 
 interface RouteParams {
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/sprints/:id/labels - Update sprint confluence_labels
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
   const client = await pool.connect();

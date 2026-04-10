@@ -13,7 +13,9 @@ import { NextRequest, NextResponse } from "next/server";
  */
 
 const COOKIE_NAME = "javis_eob_refresh";
+const CLAIMS_COOKIE_NAME = "javis_eob_user";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
+const encoder = new TextEncoder();
 
 function getEobApiUrl(): string {
   return (
@@ -40,6 +42,7 @@ export async function middleware(request: NextRequest) {
       });
 
       if (res.ok) {
+        const claims = extractUserClaims(await safeJson(res));
         // Build clean URL (strip token & refresh params)
         // Use external URL so redirect goes to public domain, not internal 0.0.0.0
         const proto =
@@ -65,6 +68,16 @@ export async function middleware(request: NextRequest) {
           sameSite: "lax",
           secure: request.nextUrl.protocol === "https:",
         });
+        const signedClaims = await signClaims(claims);
+        if (signedClaims) {
+          response.cookies.set(CLAIMS_COOKIE_NAME, signedClaims, {
+            maxAge: COOKIE_MAX_AGE,
+            path: "/",
+            httpOnly: true,
+            sameSite: "lax",
+            secure: request.nextUrl.protocol === "https:",
+          });
+        }
         return response;
       }
     } catch {
@@ -84,6 +97,82 @@ export async function middleware(request: NextRequest) {
   // --- Case C: No cookie, no token — redirect to EOB login ---
   const loginUrl = buildLoginRedirect(request);
   return NextResponse.redirect(loginUrl);
+}
+
+function extractUserClaims(payload: unknown) {
+  const candidate = pickObject(
+    isObject(payload) && isObject((payload as Record<string, unknown>).user)
+      ? (payload as Record<string, unknown>).user
+      : payload
+  );
+
+  if (!candidate) {
+    return null;
+  }
+
+  const claims = {
+    id: readString(candidate, ["id", "userId", "sub", "oid", "uid"]),
+    email: readString(candidate, ["email", "upn", "preferred_username"]),
+    name: readString(candidate, ["name", "displayName", "fullName"]),
+    username: readString(candidate, ["username", "preferred_username", "login"]),
+  };
+
+  return claims.id || claims.email || claims.name || claims.username ? claims : null;
+}
+
+async function signClaims(claims: ReturnType<typeof extractUserClaims>) {
+  const secret = process.env.JAVIS_SESSION_SECRET;
+  if (!secret || !claims) {
+    return null;
+  }
+
+  const encodedPayload = toBase64Url(JSON.stringify(claims));
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(encodedPayload));
+  const encodedSignature = toBase64Url(signatureBuffer);
+  return `${encodedPayload}.${encodedSignature}`;
+}
+
+async function safeJson(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function pickObject(value: unknown): Record<string, unknown> | null {
+  return isObject(value) ? value : null;
+}
+
+function readString(source: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function toBase64Url(value: string | ArrayBuffer) {
+  const bytes =
+    typeof value === "string" ? encoder.encode(value) : new Uint8Array(value);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /**

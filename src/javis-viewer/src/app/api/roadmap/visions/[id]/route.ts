@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 import type { Vision, VisionWithMilestones, UpdateVisionInput } from '@/types/roadmap';
 
 interface RouteParams {
@@ -92,7 +92,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/roadmap/visions/[id] - Update vision
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
   const client = await pool.connect();
@@ -186,7 +187,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/roadmap/visions/[id] - Archive vision (soft delete)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   const { id } = await params;
   const client = await pool.connect();

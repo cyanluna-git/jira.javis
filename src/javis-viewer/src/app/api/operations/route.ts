@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { isReadOnlyMode, readOnlyResponse } from '@/lib/readonly';
+import { enforceWriteAccess } from '@/lib/readonly';
 
 // Valid operation types
 const VALID_OPERATION_TYPES = [
@@ -94,7 +94,8 @@ export async function GET(request: NextRequest) {
  * Create a new operation
  */
 export async function POST(request: NextRequest) {
-  if (isReadOnlyMode()) return readOnlyResponse();
+  const accessDenied = await enforceWriteAccess(request);
+  if (accessDenied) return accessDenied;
 
   let body: {
     operation_type: string;
