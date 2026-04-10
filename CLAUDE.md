@@ -251,8 +251,8 @@ Review skills now live in `cyanluna.skills/` (Tier 1 public skills):
 /javis-sprint velocity          # Velocity trend
 
 # Code review
-/javis-review-pr <PR_URL>                 # Full review + post comment
-/javis-review-pr <PR_URL> --no-post       # Analysis only
+/review-pr <PR_URL>                 # Full review + post comment
+/review-pr <PR_URL> --no-post       # Analysis only
 
 # Deploy to server
 /javis-sync-deploy
