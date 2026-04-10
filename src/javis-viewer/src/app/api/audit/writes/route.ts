@@ -38,19 +38,26 @@ export async function GET(request: NextRequest) {
 
   const { product, entityTypes } = TARGET_TYPE_MAP[targetType];
 
-  const result = await pool.query(
-    `
-      SELECT id, created_at, app_user_key, app_user_name, app_user_email,
-             action, entity_id, entity_type, product, payload
-      FROM external_write_audit_log
-      WHERE product = $1
-        AND entity_id = $2
-        AND entity_type = ANY($3::text[])
-      ORDER BY created_at DESC
-      LIMIT $4
-    `,
-    [product, targetId, entityTypes, limit]
-  );
-
-  return NextResponse.json({ success: true, data: result.rows });
+  try {
+    const result = await pool.query(
+      `
+        SELECT id, created_at, app_user_key, app_user_name, app_user_email,
+               action, entity_id, entity_type, product, payload
+        FROM external_write_audit_log
+        WHERE product = $1
+          AND entity_id = $2
+          AND entity_type = ANY($3::text[])
+        ORDER BY created_at DESC
+        LIMIT $4
+      `,
+      [product, targetId, entityTypes, limit]
+    );
+    return NextResponse.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error('audit/writes query error:', err);
+    return NextResponse.json(
+      { error: { code: 'DB_ERROR', message: 'Failed to fetch audit log' } },
+      { status: 500 }
+    );
+  }
 }
