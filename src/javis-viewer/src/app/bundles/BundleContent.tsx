@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Package, CheckCircle2, Clock, PlayCircle, Search } from 'lucide-react';
+import { BookOpen, CheckCircle2, Clock, FileText, Package, PlayCircle, Search } from 'lucide-react';
 import BundleRow from '@/components/BundleRow';
 import BundleCharts from './BundleCharts';
 import type { Bundle, BundleResponse, BundleStats } from '@/types/bundle';
@@ -121,6 +121,62 @@ export default function BundleContent() {
       {stats && filteredBundles.length > 0 && (
         <BundleCharts bundles={filteredBundles} stats={stats} />
       )}
+
+      <details className="bg-blue-50 border border-blue-200 rounded-lg group">
+        <summary className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-blue-600" />
+            <div>
+              <div className="font-medium text-blue-900">How bundle collection works</div>
+              <div className="text-sm text-blue-700">
+                Rules for collecting bundle stories and Confluence pages
+              </div>
+            </div>
+          </div>
+          <span className="text-xs font-medium text-blue-600 group-open:hidden">Show rules</span>
+          <span className="text-xs font-medium text-blue-600 hidden group-open:inline">Hide rules</span>
+        </summary>
+
+        <div className="px-4 pb-4 grid gap-4 lg:grid-cols-2">
+          <div className="bg-white border border-blue-100 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="w-4 h-4 text-violet-600" />
+              <h3 className="font-medium text-gray-900">Bundle stories</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-gray-700 list-disc list-inside">
+              <li>Only EUV non-Epic issues are collected into a bundle.</li>
+              <li>
+                The bundle version is extracted from the Epic title like <code className="bg-gray-100 px-1 rounded">Bundle 3.10.0</code>.
+              </li>
+              <li>
+                A story appears only when its Jira <code className="bg-gray-100 px-1 rounded">fixVersions</code> includes the exact version name, such as <code className="bg-gray-100 px-1 rounded">3.10.0</code>.
+              </li>
+              <li>
+                Epic Link or parent relation alone does not make the story show up on this page.
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-white border border-blue-100 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-4 h-4 text-sky-600" />
+              <h3 className="font-medium text-gray-900">Confluence pages</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-gray-700 list-disc list-inside">
+              <li>Only Confluence pages are collected as related documents.</li>
+              <li>
+                A page is linked when it has the bundle label, such as <code className="bg-gray-100 px-1 rounded">bundle-3-10-0</code>.
+              </li>
+              <li>
+                It is also linked when the page title matches the bundle version, for example <code className="bg-gray-100 px-1 rounded">3.10.0</code>, <code className="bg-gray-100 px-1 rounded">B3.10.0</code>, or <code className="bg-gray-100 px-1 rounded">Bundle 3.10.0</code>.
+              </li>
+              <li>
+                Confluence page tree position is not used for bundle matching.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </details>
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4">

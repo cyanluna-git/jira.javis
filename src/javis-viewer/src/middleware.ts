@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * EOB Authentication Gate Middleware
+ * Optional token handoff middleware.
  *
  * Flow:
- * A. Query string ?token=<at>&refresh=<rt> present (first entry from portal):
+ * A. Query string ?token=<at>&refresh=<rt> present:
  *    - Verify token via EOB /api/auth/me
  *    - On success: set javis_eob_refresh cookie (7 days), redirect to clean URL
- *    - On failure: redirect to EOB login
- * B. Cookie "javis_eob_refresh" exists: pass through (no EOB call)
- * C. No cookie, no token query: redirect to EOB login
+ *    - On failure:
+ *      - redirect to configured login when auth gate is required
+ *      - otherwise continue without authenticated session
+ * B. Cookie "javis_eob_refresh" exists: pass through
+ * C. No cookie, no token query:
+ *    - redirect to login only when auth gate is explicitly required
+ *    - otherwise pass through
  */
 
 const COOKIE_NAME = "javis_eob_refresh";
@@ -27,6 +31,10 @@ function getEobLoginUrl(): string {
   return (
     process.env.NEXT_PUBLIC_EOB_LOGIN_URL || "http://localhost:3000/login"
   );
+}
+
+function isAuthGateRequired(): boolean {
+  return process.env.JAVIS_AUTH_GATE_MODE?.toLowerCase() === "required";
 }
 
 export async function middleware(request: NextRequest) {
@@ -84,9 +92,12 @@ export async function middleware(request: NextRequest) {
       // fetch failed — fall through to login redirect
     }
 
-    // Token verification failed — redirect to EOB login
-    const loginUrl = buildLoginRedirect(request);
-    return NextResponse.redirect(loginUrl);
+    if (isAuthGateRequired()) {
+      const loginUrl = buildLoginRedirect(request);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return NextResponse.next();
   }
 
   // --- Case B: Cookie exists — pass through ---
@@ -94,9 +105,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // --- Case C: No cookie, no token — redirect to EOB login ---
-  const loginUrl = buildLoginRedirect(request);
-  return NextResponse.redirect(loginUrl);
+  if (isAuthGateRequired()) {
+    const loginUrl = buildLoginRedirect(request);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
 }
 
 function extractUserClaims(payload: unknown) {

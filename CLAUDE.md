@@ -169,6 +169,7 @@ Project-specific Claude Code skills (`.claude/skills/`). See `docs/guides/skills
 |-------|-------|---------|---------|
 | `/javis-init` | **Global** | Initialize per-project Javis config | `/javis-init EUV` |
 | `/javis-story` | **Global** | Story lifecycle (context, list, create, add, refine, push to Jira) | `/javis-story context` |
+| `/javis-deploy` | Local | Safe viewer-only deploy to remote server with `sw-portal.atlascopco.group` as canonical host | `/javis-deploy` |
 | `/javis-dev` | Local | Developer dashboard (assigned issues, commits, PRs, team) | `/javis-dev` |
 | `/javis-report` | Local | Project reports (sprint, team, epic, weekly, velocity, vision) | `/javis-report sprint` |
 | `/javis-risk` | Local | Risk detection and management (auto-detect, analyze, resolve) | `/javis-risk detect` |
@@ -256,6 +257,7 @@ Review skills now live in `cyanluna.skills/` (Tier 1 public skills):
 
 # Deploy to server
 /javis-sync-deploy
+/javis-deploy
 
 # Slack integration
 python3 scripts/javis_cli.py slack test     # Send test message

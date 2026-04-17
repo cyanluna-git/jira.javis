@@ -8,6 +8,7 @@
 |-------|------|
 | `/javis-stories` | Story 관리 (생성, 정제, Jira push) + Bitbucket 개발 현황 |
 | `/javis-sprint` | 스프린트 관리 (현황, velocity, 계획, 멤버별 작업) |
+| `/javis-deploy` | Jarvis viewer 프론트엔드 안전 배포 (`sw-portal.atlascopco.group` canonical) |
 | `/javis-dev` | 개발자 대시보드 (내 작업, 커밋/PR, 팀 비교) |
 | `/javis-report` | 프로젝트 리포트 (스프린트, 팀, Epic, 주간, velocity) |
 | `/javis-risk` | 리스크 감지 및 관리 (자동 감지, 분석, 해결) |
@@ -241,10 +242,42 @@
 
 ---
 
+## `/javis-deploy` - Jarvis Viewer 배포
+
+### 명령어
+
+```bash
+/javis-deploy
+/javis-deploy deploy
+/javis-deploy verify
+```
+
+### 기본 규칙
+
+- `sw-portal.atlascopco.group`를 **Jarvis canonical host**로 취급
+- routine deploy에서는 **`javis-viewer` 컨테이너만** 재배포
+- `.env`, nginx 설정, `javis-db`는 **명시적으로 필요할 때만** 변경
+- `sw-portal` / `jarvis` host는 기본적으로 `eob`로 리다이렉트되면 안 됨
+
+### 실행 내용
+
+```bash
+bash .claude/skills/javis-deploy/scripts/deploy_viewer.sh deploy
+```
+
+### 검증
+
+```bash
+bash .claude/skills/javis-deploy/scripts/deploy_viewer.sh verify
+```
+
+---
+
 ## 파일 위치
 
 ```
 .claude/skills/
+├── javis-deploy/SKILL.md   # safe viewer deploy
 ├── stories/SKILL.md    # javis-stories
 ├── sprint/SKILL.md     # javis-sprint
 ├── dev/SKILL.md        # javis-dev
