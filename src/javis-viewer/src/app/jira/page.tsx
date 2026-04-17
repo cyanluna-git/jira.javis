@@ -8,7 +8,15 @@ async function getIssues() {
   const client = await pool.connect();
   try {
     const res = await client.query(`
-      SELECT key, summary, status, project, created_at, raw_data
+      SELECT
+        key,
+        summary,
+        status,
+        project,
+        created_at,
+        raw_data,
+        raw_data->'fields'->'assignee'->>'displayName' AS assignee,
+        raw_data->'fields'->'reporter'->>'displayName' AS reporter
       FROM jira_issues
       ORDER BY created_at DESC
     `);

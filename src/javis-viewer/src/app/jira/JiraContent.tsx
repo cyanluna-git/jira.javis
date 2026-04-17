@@ -19,34 +19,68 @@ interface Issue {
   status: string;
   project: string;
   created_at: string;
+  assignee: string | null;
+  reporter: string | null;
   raw_data: {
     fields?: IssueFields;
   } | null;
+}
+
+interface FilterOption {
+  label: string;
+  count: number;
+}
+
+const UNASSIGNED_ASSIGNEE = 'Unassigned';
+const UNKNOWN_REPORTER = 'Unknown reporter';
+
+function normalizeFilterValue(value: string | null | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
 }
 
 export default function JiraContent({ issues }: { issues: Issue[] }) {
   const [searchKey, setSearchKey] = useState('');
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [selectedReporters, setSelectedReporters] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Extract unique projects and components
-  const { projects, components } = useMemo(() => {
-    const projectSet = new Set<string>();
-    const componentSet = new Set<string>();
+  const { projects, components, assignees, reporters } = useMemo(() => {
+    const projectCounts = new Map<string, number>();
+    const componentCounts = new Map<string, number>();
+    const assigneeCounts = new Map<string, number>();
+    const reporterCounts = new Map<string, number>();
 
     issues.forEach(issue => {
-      projectSet.add(issue.project);
+      projectCounts.set(issue.project, (projectCounts.get(issue.project) || 0) + 1);
+
+      const assignee = normalizeFilterValue(issue.assignee, UNASSIGNED_ASSIGNEE);
+      assigneeCounts.set(assignee, (assigneeCounts.get(assignee) || 0) + 1);
+
+      const reporter = normalizeFilterValue(issue.reporter, UNKNOWN_REPORTER);
+      reporterCounts.set(reporter, (reporterCounts.get(reporter) || 0) + 1);
 
       const comps = issue.raw_data?.fields?.components || [];
       comps.forEach((comp) => {
-        if (comp.name) componentSet.add(comp.name);
+        if (comp.name) {
+          componentCounts.set(comp.name, (componentCounts.get(comp.name) || 0) + 1);
+        }
       });
     });
 
+    const toSortedOptions = (counts: Map<string, number>): FilterOption[] =>
+      Array.from(counts.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([label, count]) => ({ label, count }));
+
     return {
-      projects: Array.from(projectSet).sort(),
-      components: Array.from(componentSet).sort(),
+      projects: toSortedOptions(projectCounts),
+      components: toSortedOptions(componentCounts),
+      assignees: toSortedOptions(assigneeCounts),
+      reporters: toSortedOptions(reporterCounts),
     };
   }, [issues]);
 
@@ -75,9 +109,25 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
         if (!hasMatchingComponent) return false;
       }
 
+      // Filter by assignee
+      if (selectedAssignees.length > 0) {
+        const issueAssignee = normalizeFilterValue(issue.assignee, UNASSIGNED_ASSIGNEE);
+        if (!selectedAssignees.includes(issueAssignee)) {
+          return false;
+        }
+      }
+
+      // Filter by reporter
+      if (selectedReporters.length > 0) {
+        const issueReporter = normalizeFilterValue(issue.reporter, UNKNOWN_REPORTER);
+        if (!selectedReporters.includes(issueReporter)) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [issues, searchKey, selectedProjects, selectedComponents]);
+  }, [issues, searchKey, selectedProjects, selectedComponents, selectedAssignees, selectedReporters]);
 
   const toggleProject = (project: string) => {
     setSelectedProjects(prev =>
@@ -95,13 +145,36 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
     );
   };
 
+  const toggleAssignee = (assignee: string) => {
+    setSelectedAssignees(prev =>
+      prev.includes(assignee)
+        ? prev.filter(value => value !== assignee)
+        : [...prev, assignee]
+    );
+  };
+
+  const toggleReporter = (reporter: string) => {
+    setSelectedReporters(prev =>
+      prev.includes(reporter)
+        ? prev.filter(value => value !== reporter)
+        : [...prev, reporter]
+    );
+  };
+
   const clearFilters = () => {
     setSearchKey('');
     setSelectedProjects([]);
     setSelectedComponents([]);
+    setSelectedAssignees([]);
+    setSelectedReporters([]);
   };
 
-  const hasActiveFilters = searchKey || selectedProjects.length > 0 || selectedComponents.length > 0;
+  const filterSelectionCount =
+    selectedProjects.length +
+    selectedComponents.length +
+    selectedAssignees.length +
+    selectedReporters.length;
+  const hasActiveFilters = Boolean(searchKey) || filterSelectionCount > 0;
 
   return (
     <>
@@ -139,7 +212,7 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
             <span className="font-medium">Filters</span>
             {hasActiveFilters && (
               <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
-                {(selectedProjects.length + selectedComponents.length) || '•'}
+                {filterSelectionCount || '•'}
               </span>
             )}
           </button>
@@ -159,69 +232,51 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
         {/* Filter Panel */}
         {showFilters && (
           <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
               {/* Project Filter */}
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-blue-500 rounded"></span>
-                  Project
-                </h3>
-                <div className="space-y-2">
-                  {projects.map(project => (
-                    <label
-                      key={project}
-                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedProjects.includes(project)}
-                        onChange={() => toggleProject(project)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700">{project}</span>
-                      <span className="ml-auto text-sm text-gray-400">
-                        ({issues.filter(i => i.project === project).length})
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <FilterSection
+                title="Project"
+                accentClassName="bg-blue-500"
+                checkboxClassName="text-blue-600 focus:ring-blue-500"
+                options={projects}
+                selectedValues={selectedProjects}
+                onToggle={toggleProject}
+                emptyMessage="No projects found"
+              />
 
               {/* Component Filter */}
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-purple-500 rounded"></span>
-                  Component
-                </h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {components.length > 0 ? (
-                    components.map(component => {
-                      const count = issues.filter(i =>
-                        (i.raw_data?.fields?.components || []).some((c) => c.name === component)
-                      ).length;
-                      return (
-                        <label
-                          key={component}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedComponents.includes(component)}
-                            onChange={() => toggleComponent(component)}
-                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                          />
-                          <span className="text-gray-700">{component}</span>
-                          <span className="ml-auto text-sm text-gray-400">
-                            ({count})
-                          </span>
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <p className="text-gray-400 text-sm italic">No components found</p>
-                  )}
-                </div>
-              </div>
+              <FilterSection
+                title="Component"
+                accentClassName="bg-purple-500"
+                checkboxClassName="text-purple-600 focus:ring-purple-500"
+                options={components}
+                selectedValues={selectedComponents}
+                onToggle={toggleComponent}
+                emptyMessage="No components found"
+                scrollable
+              />
+
+              <FilterSection
+                title="Assigned"
+                accentClassName="bg-emerald-500"
+                checkboxClassName="text-emerald-600 focus:ring-emerald-500"
+                options={assignees}
+                selectedValues={selectedAssignees}
+                onToggle={toggleAssignee}
+                emptyMessage="No assignees found"
+                scrollable
+              />
+
+              <FilterSection
+                title="Reporter"
+                accentClassName="bg-amber-500"
+                checkboxClassName="text-amber-600 focus:ring-amber-500"
+                options={reporters}
+                selectedValues={selectedReporters}
+                onToggle={toggleReporter}
+                emptyMessage="No reporters found"
+                scrollable
+              />
             </div>
           </div>
         )}
@@ -247,6 +302,16 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
               {selectedComponents.map(comp => (
                 <span key={comp} className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
                   {comp}
+                </span>
+              ))}
+              {selectedAssignees.map(assignee => (
+                <span key={assignee} className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs">
+                  Assigned: {assignee}
+                </span>
+              ))}
+              {selectedReporters.map(reporter => (
+                <span key={reporter} className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs">
+                  Reporter: {reporter}
                 </span>
               ))}
             </div>
@@ -282,5 +347,55 @@ export default function JiraContent({ issues }: { issues: Issue[] }) {
         </table>
       </div>
     </>
+  );
+}
+
+function FilterSection({
+  title,
+  accentClassName,
+  checkboxClassName,
+  options,
+  selectedValues,
+  onToggle,
+  emptyMessage,
+  scrollable = false,
+}: {
+  title: string;
+  accentClassName: string;
+  checkboxClassName: string;
+  options: FilterOption[];
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+  emptyMessage: string;
+  scrollable?: boolean;
+}) {
+  return (
+    <div>
+      <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+        <span className={`w-1 h-4 rounded ${accentClassName}`}></span>
+        {title}
+      </h3>
+      <div className={`space-y-2 ${scrollable ? 'max-h-48 overflow-y-auto' : ''}`}>
+        {options.length > 0 ? (
+          options.map((option) => (
+            <label
+              key={option.label}
+              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(option.label)}
+                onChange={() => onToggle(option.label)}
+                className={`w-4 h-4 border-gray-300 rounded ${checkboxClassName}`}
+              />
+              <span className="text-gray-700">{option.label}</span>
+              <span className="ml-auto text-sm text-gray-400">({option.count})</span>
+            </label>
+          ))
+        ) : (
+          <p className="text-gray-400 text-sm italic">{emptyMessage}</p>
+        )}
+      </div>
+    </div>
   );
 }
