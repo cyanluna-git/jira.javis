@@ -14,7 +14,7 @@ async function getIssues() {
         status,
         project,
         created_at,
-        raw_data,
+        COALESCE(raw_data->'fields'->'components', '[]'::jsonb) AS components,
         raw_data->'fields'->'assignee'->>'displayName' AS assignee,
         raw_data->'fields'->'reporter'->>'displayName' AS reporter
       FROM jira_issues
