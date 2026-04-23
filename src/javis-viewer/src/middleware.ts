@@ -22,8 +22,12 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 const encoder = new TextEncoder();
 
 function getEobApiUrl(): string {
+  // EOB_INTERNAL_API_URL takes precedence for server-side calls inside Docker
+  // (NEXT_PUBLIC_EOB_API_URL resolves to 127.0.0.1 inside the container)
   return (
-    process.env.NEXT_PUBLIC_EOB_API_URL || "http://localhost:3000"
+    process.env.EOB_INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_EOB_API_URL ||
+    "http://localhost:8004"
   );
 }
 
