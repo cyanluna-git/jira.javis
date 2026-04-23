@@ -6,7 +6,14 @@ import { resolveServerAccessContext, type AuthUser } from "@/lib/access";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ServiceDeskPage() {
+export default async function ServiceDeskPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const initialTab = tab === 'submit' ? 'submit' : undefined;
+
   let initialData;
   let error: string | null = null;
   let currentUser: AuthUser | null = null;
@@ -82,7 +89,7 @@ export default async function ServiceDeskPage() {
         )}
 
         {/* Content */}
-        <ServiceDeskContent initialData={initialData} currentUser={currentUser} />
+        <ServiceDeskContent initialData={initialData} currentUser={currentUser} initialTab={initialTab} />
       </div>
     </div>
   );

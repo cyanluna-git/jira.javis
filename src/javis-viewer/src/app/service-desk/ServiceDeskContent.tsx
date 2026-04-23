@@ -39,6 +39,7 @@ interface Props {
     tabCounts?: Record<BusinessUnit, number>;
   };
   currentUser: AuthUser | null;
+  initialTab?: ServiceDeskView;
 }
 
 // Custom hook for debounced value
@@ -53,8 +54,8 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function ServiceDeskContent({ initialData, currentUser }: Props) {
-  const [activeTab, setActiveTab] = useState<ServiceDeskView>('integrated-systems');
+export default function ServiceDeskContent({ initialData, currentUser, initialTab }: Props) {
+  const [activeTab, setActiveTab] = useState<ServiceDeskView>(initialTab ?? 'integrated-systems');
   const [submitSuccess, setSubmitSuccess] = useState<ServiceDeskRequestResponse | null>(null);
   const [data, setData] = useState<ServiceDeskResponse>(initialData);
   const [loading, setLoading] = useState(false);
