@@ -86,7 +86,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       body: JSON.stringify({
         fields: {
           project: { key: 'PSSM' },
-          issuetype: { name: 'Story' },
+          issuetype: { name: 'Support' },
           summary,
           description: fullDescription,
           components: [{ name: component }],
