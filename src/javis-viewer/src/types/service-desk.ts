@@ -1,6 +1,7 @@
 // Service Desk Types - PSSM Ticket Queue
 
 export type BusinessUnit = 'all' | 'integrated-systems' | 'abatement';
+export type ServiceDeskView = BusinessUnit | 'submit';
 
 // Business Unit Component Mapping
 export const BUSINESS_UNIT_COMPONENTS: Record<Exclude<BusinessUnit, 'all'>, string[]> = {
@@ -26,6 +27,17 @@ export const BUSINESS_UNIT_LABELS: Record<BusinessUnit, string> = {
   'integrated-systems': 'Integrated Systems',
   'abatement': 'Abatement',
 };
+
+// Component groups available in the submit request form
+export const SUBMIT_FORM_GROUPS: Record<string, string[]> = {
+  IntegratedSystem: ['Proteus', 'HRS', 'Havasu Etch', 'EUVHalo Mk1', 'EUVGen4 Tumalo', 'EUV Gen3/Gen3+', 'EUV Gen2/Gen2+'],
+  Abatement: ['Abatement-Plasma', 'Abatement-Dry', 'Abatement-Burn'],
+};
+
+export interface ServiceDeskRequestResponse {
+  issueKey: string;
+  webUrl: string;
+}
 
 // Comment interface
 export interface ServiceDeskComment {

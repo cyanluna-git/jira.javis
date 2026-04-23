@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Search, X, RotateCw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, X, RotateCw, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, Send } from 'lucide-react';
 import ServiceDeskTicketRow from '@/components/ServiceDeskTicketRow';
+import ServiceDeskSubmitForm from '@/components/ServiceDeskSubmitForm';
 import {
   type BusinessUnit,
+  type ServiceDeskView,
   type ServiceDeskResponse,
   type ServiceDeskTicket,
   type ServiceDeskPagination,
+  type ServiceDeskRequestResponse,
   BUSINESS_UNIT_LABELS,
 } from '@/types/service-desk';
 
@@ -49,7 +52,8 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 export default function ServiceDeskContent({ initialData }: Props) {
-  const [activeTab, setActiveTab] = useState<BusinessUnit>('all');
+  const [activeTab, setActiveTab] = useState<ServiceDeskView>('all');
+  const [submitSuccess, setSubmitSuccess] = useState<ServiceDeskRequestResponse | null>(null);
   const [data, setData] = useState<ServiceDeskResponse>(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +111,8 @@ export default function ServiceDeskContent({ initialData }: Props) {
 
   // Fetch data
   const fetchData = useCallback(async (resetPage = false) => {
+    if (activeTab === 'submit') return;
+
     setLoading(true);
     setError(null);
 
@@ -115,7 +121,7 @@ export default function ServiceDeskContent({ initialData }: Props) {
 
     try {
       const params = new URLSearchParams();
-      params.set('businessUnit', activeTab);
+      params.set('businessUnit', activeTab as BusinessUnit);
       params.set('page', currentPage.toString());
       params.set('pageSize', '50');
       params.set('period', selectedPeriod);
@@ -252,7 +258,67 @@ export default function ServiceDeskContent({ initialData }: Props) {
             )}
           </button>
         ))}
+        <button
+          onClick={() => { setActiveTab('submit'); setSubmitSuccess(null); }}
+          className={`px-4 py-3 font-medium text-sm transition-colors relative flex items-center gap-1.5 ${
+            activeTab === 'submit'
+              ? 'text-rose-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Send className="w-3.5 h-3.5" />
+          요청 제출
+          {activeTab === 'submit' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-600" />
+          )}
+        </button>
       </div>
+
+      {/* Submit Request Form */}
+      {activeTab === 'submit' && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">새 요청 접수</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            PSSM 티켓을 직접 접수합니다. Jira 계정이 없어도 제출할 수 있습니다.
+          </p>
+
+          {submitSuccess && (
+            <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 mb-6">
+              <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">요청이 제출되었습니다.</p>
+                <p className="text-sm mt-0.5">
+                  Jira 티켓:{' '}
+                  <a
+                    href={submitSuccess.webUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline hover:text-green-900"
+                  >
+                    {submitSuccess.issueKey}
+                  </a>
+                </p>
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className="mt-2 text-sm underline hover:text-green-900"
+                >
+                  티켓 현황 보기 →
+                </button>
+              </div>
+            </div>
+          )}
+
+          <ServiceDeskSubmitForm
+            onSuccess={(result) => {
+              setSubmitSuccess(result);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        </div>
+      )}
+
+      {/* Data view: stats, charts, filters, table — hidden on submit tab */}
+      {activeTab !== 'submit' && (<>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -718,6 +784,8 @@ export default function ServiceDeskContent({ initialData }: Props) {
           </div>
         </div>
       )}
+
+      </>)}
     </div>
   );
 }
