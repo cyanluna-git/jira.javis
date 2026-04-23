@@ -2,18 +2,31 @@ import { Headphones } from "lucide-react";
 import ServiceDeskContent from "./ServiceDeskContent";
 import { getServiceDeskData } from "@/lib/service-desk";
 import { NavigationButtons } from "@/components/NavigationButtons";
+import { resolveServerAccessContext, type AuthUser } from "@/lib/access";
 
 export const dynamic = 'force-dynamic';
 
 export default async function ServiceDeskPage() {
   let initialData;
   let error: string | null = null;
+  let currentUser: AuthUser | null = null;
 
   try {
-    initialData = await getServiceDeskData({ businessUnit: 'all' });
+    const [data, access] = await Promise.all([
+      getServiceDeskData({ businessUnit: 'all' }),
+      resolveServerAccessContext(),
+    ]);
+    initialData = data;
+    currentUser = access.user;
   } catch (e) {
     console.error('Error fetching initial data:', e);
     error = 'Failed to load service desk data';
+    try {
+      const access = await resolveServerAccessContext();
+      currentUser = access.user;
+    } catch {
+      // session read failed — proceed without user
+    }
     initialData = {
       tickets: [],
       stats: {
@@ -69,7 +82,7 @@ export default async function ServiceDeskPage() {
         )}
 
         {/* Content */}
-        <ServiceDeskContent initialData={initialData} />
+        <ServiceDeskContent initialData={initialData} currentUser={currentUser} />
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import {
   type ServiceDeskRequestResponse,
   BUSINESS_UNIT_LABELS,
 } from '@/types/service-desk';
+import type { AuthUser } from '@/lib/access';
 
 // Dynamic import for Recharts (reduces initial bundle size by ~200KB)
 const ServiceDeskCharts = dynamic(() => import('./ServiceDeskCharts'), {
@@ -37,6 +38,7 @@ interface Props {
     pagination?: ServiceDeskPagination;
     tabCounts?: Record<BusinessUnit, number>;
   };
+  currentUser: AuthUser | null;
 }
 
 // Custom hook for debounced value
@@ -51,7 +53,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function ServiceDeskContent({ initialData }: Props) {
+export default function ServiceDeskContent({ initialData, currentUser }: Props) {
   const [activeTab, setActiveTab] = useState<ServiceDeskView>('all');
   const [submitSuccess, setSubmitSuccess] = useState<ServiceDeskRequestResponse | null>(null);
   const [data, setData] = useState<ServiceDeskResponse>(initialData);
@@ -309,6 +311,7 @@ export default function ServiceDeskContent({ initialData }: Props) {
           )}
 
           <ServiceDeskSubmitForm
+            currentUser={currentUser}
             onSuccess={(result) => {
               setSubmitSuccess(result);
               window.scrollTo({ top: 0, behavior: 'smooth' });

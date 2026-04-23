@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SUBMIT_FORM_GROUPS } from '@/types/service-desk';
+import { resolveAccessContextFromRequest } from '@/lib/access';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
@@ -29,16 +30,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
-  const submitterName = (formData.get('submitterName') as string | null)?.trim() ?? '';
-  const submitterEmail = (formData.get('submitterEmail') as string | null)?.trim() ?? '';
   const group = (formData.get('group') as string | null)?.trim() ?? '';
   const component = (formData.get('component') as string | null)?.trim() ?? '';
   const summary = (formData.get('summary') as string | null)?.trim() ?? '';
   const description = (formData.get('description') as string | null)?.trim() ?? '';
 
-  if (!submitterName || !submitterEmail || !group || !component || !summary) {
+  if (!group || !component || !summary) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
+
+  const access = await resolveAccessContextFromRequest(request);
+  const submitterName = access.user?.name ?? access.user?.email ?? 'Unknown';
+  const submitterEmail = access.user?.email ?? '';
 
   if (summary.length > 255) {
     return NextResponse.json({ error: 'Summary exceeds 255 characters' }, { status: 400 });
