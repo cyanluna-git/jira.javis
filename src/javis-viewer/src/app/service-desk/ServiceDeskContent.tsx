@@ -54,7 +54,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 export default function ServiceDeskContent({ initialData, currentUser }: Props) {
-  const [activeTab, setActiveTab] = useState<ServiceDeskView>('all');
+  const [activeTab, setActiveTab] = useState<ServiceDeskView>('integrated-systems');
   const [submitSuccess, setSubmitSuccess] = useState<ServiceDeskRequestResponse | null>(null);
   const [data, setData] = useState<ServiceDeskResponse>(initialData);
   const [loading, setLoading] = useState(false);
@@ -244,7 +244,7 @@ export default function ServiceDeskContent({ initialData, currentUser }: Props) 
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
-        {(['all', 'integrated-systems', 'abatement'] as BusinessUnit[]).map(tab => (
+        {(['integrated-systems', 'abatement'] as BusinessUnit[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -269,7 +269,7 @@ export default function ServiceDeskContent({ initialData, currentUser }: Props) 
           }`}
         >
           <Send className="w-3.5 h-3.5" />
-          요청 제출
+          Submit
           {activeTab === 'submit' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-600" />
           )}
@@ -301,7 +301,7 @@ export default function ServiceDeskContent({ initialData, currentUser }: Props) 
                   </a>
                 </p>
                 <button
-                  onClick={() => setActiveTab('all')}
+                  onClick={() => setActiveTab('integrated-systems')}
                   className="mt-2 text-sm underline hover:text-green-900"
                 >
                   티켓 현황 보기 →

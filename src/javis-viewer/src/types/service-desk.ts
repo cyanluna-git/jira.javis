@@ -30,7 +30,7 @@ export const BUSINESS_UNIT_LABELS: Record<BusinessUnit, string> = {
 
 // Component groups available in the submit request form
 export const SUBMIT_FORM_GROUPS: Record<string, string[]> = {
-  IntegratedSystem: ['Proteus', 'HRS', 'Havasu Etch', 'EUVHalo Mk1', 'EUVGen4 Tumalo', 'EUV Gen3/Gen3+', 'EUV Gen2/Gen2+'],
+  IntegratedSystem: ['Proteus', 'HRS', 'Havasu Etch', 'EUVHalo Mk1', 'EUVGen4 Tumalo', 'EUV Gen3/Gen3+', 'EUV Gen2/Gen2+', 'H2D'],
   Abatement: ['Abatement-Plasma', 'Abatement-Dry', 'Abatement-Burn'],
 };
 
