@@ -63,10 +63,29 @@ export function normalizeJiraIssueQueryState(input: Partial<JiraIssueQueryState>
   };
 }
 
+// Labels and component names that belong to other portals — always excluded from this view.
+const EXCLUDED_SYSTEM_NAMES = ['eob', 'oqc'];
+
 function buildWhereClause(query: JiraIssueQueryState): WhereClauseResult {
   const conditions: string[] = [];
   const values: unknown[] = [];
   let paramIndex = 1;
+
+  // Permanent exclusion: hide EOB/OQC component tickets
+  conditions.push(`
+    NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(COALESCE(raw_data->'fields'->'components', '[]'::jsonb)) AS comp
+      WHERE LOWER(comp->>'name') = ANY($${paramIndex}::text[])
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements_text(COALESCE(raw_data->'fields'->'labels', '[]'::jsonb)) AS lbl
+      WHERE LOWER(lbl) = ANY($${paramIndex}::text[])
+    )
+  `);
+  values.push(EXCLUDED_SYSTEM_NAMES);
+  paramIndex += 1;
 
   if (query.search) {
     const searchPattern = `%${escapeIlike(query.search)}%`;
@@ -158,38 +177,68 @@ export async function getJiraIssuePage(input: Partial<JiraIssueQueryState>): Pro
 }
 
 export async function getJiraIssueFilterOptions(): Promise<JiraIssueFilterOptions> {
+  const excludedNames = EXCLUDED_SYSTEM_NAMES;
   const [projectsResult, componentsResult, assigneesResult, reportersResult] = await Promise.all([
     pool.query<{ label: string | null; count: string }>(`
       SELECT project AS label, COUNT(*)::int AS count
       FROM jira_issues
+      WHERE NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements(COALESCE(raw_data->'fields'->'components', '[]'::jsonb)) AS comp
+        WHERE LOWER(comp->>'name') = ANY($1::text[])
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(COALESCE(raw_data->'fields'->'labels', '[]'::jsonb)) AS lbl
+        WHERE LOWER(lbl) = ANY($1::text[])
+      )
       GROUP BY project
       ORDER BY project ASC
-    `),
+    `, [excludedNames]),
     pool.query<{ label: string | null; count: string }>(`
       SELECT component->>'name' AS label, COUNT(*)::int AS count
       FROM jira_issues,
            jsonb_array_elements(COALESCE(raw_data->'fields'->'components', '[]'::jsonb)) AS component
       WHERE component->>'name' IS NOT NULL
         AND component->>'name' != ''
+        AND LOWER(component->>'name') != ALL($1::text[])
+        AND NOT EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE(raw_data->'fields'->'labels', '[]'::jsonb)) AS lbl
+          WHERE LOWER(lbl) = ANY($1::text[])
+        )
       GROUP BY 1
       ORDER BY 1 ASC
-    `),
+    `, [excludedNames]),
     pool.query<{ label: string | null; count: string }>(`
       SELECT
         COALESCE(NULLIF(TRIM(raw_data->'fields'->'assignee'->>'displayName'), ''), 'Unassigned') AS label,
         COUNT(*)::int AS count
       FROM jira_issues
+      WHERE NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements(COALESCE(raw_data->'fields'->'components', '[]'::jsonb)) AS comp
+        WHERE LOWER(comp->>'name') = ANY($1::text[])
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(COALESCE(raw_data->'fields'->'labels', '[]'::jsonb)) AS lbl
+        WHERE LOWER(lbl) = ANY($1::text[])
+      )
       GROUP BY 1
       ORDER BY 1 ASC
-    `),
+    `, [excludedNames]),
     pool.query<{ label: string | null; count: string }>(`
       SELECT
         COALESCE(NULLIF(TRIM(raw_data->'fields'->'reporter'->>'displayName'), ''), 'Unknown reporter') AS label,
         COUNT(*)::int AS count
       FROM jira_issues
+      WHERE NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements(COALESCE(raw_data->'fields'->'components', '[]'::jsonb)) AS comp
+        WHERE LOWER(comp->>'name') = ANY($1::text[])
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(COALESCE(raw_data->'fields'->'labels', '[]'::jsonb)) AS lbl
+        WHERE LOWER(lbl) = ANY($1::text[])
+      )
       GROUP BY 1
       ORDER BY 1 ASC
-    `),
+    `, [excludedNames]),
   ]);
 
   return {
