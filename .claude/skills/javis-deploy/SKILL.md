@@ -11,7 +11,6 @@ Routine deploy skill for the Javis viewer frontend.
 ## Default Target
 
 - **Canonical host:** `sw-portal.atlascopco.group`
-- **Aliases:** `jarvis.10.182.252.32.sslip.io`, `javis.10.182.252.32.sslip.io`
 - **Server:** `atlasAdmin@10.182.252.32`
 
 ## Workflow
@@ -21,7 +20,7 @@ When triggered, this skill should:
 1. Build only the `javis-viewer` Docker image from `src/javis-viewer/`.
 2. Upload only the viewer image tarball to `/data/javis/` on the remote server.
 3. Reload only the remote `javis-viewer` container with `docker-compose up -d javis-viewer`.
-4. Verify the deployed app responds on both the canonical host and the jarvis alias host.
+4. Verify the deployed app responds on the canonical host.
 
 ## Deployment Rules
 

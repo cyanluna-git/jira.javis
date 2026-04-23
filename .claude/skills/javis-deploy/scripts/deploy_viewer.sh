@@ -5,7 +5,6 @@ MODE="${1:-deploy}"
 SERVER_IP="${SERVER_IP:-10.182.252.32}"
 USERNAME="${USERNAME:-atlasAdmin}"
 CANONICAL_HOST="${CANONICAL_HOST:-sw-portal.atlascopco.group}"
-ALIAS_HOST="${ALIAS_HOST:-jarvis.10.182.252.32.sslip.io}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
@@ -76,11 +75,9 @@ main() {
     deploy)
       deploy
       verify_host "$CANONICAL_HOST"
-      verify_host "$ALIAS_HOST"
       ;;
     verify)
       verify_host "$CANONICAL_HOST"
-      verify_host "$ALIAS_HOST"
       ;;
     *)
       echo "Usage: $0 [deploy|verify]" >&2

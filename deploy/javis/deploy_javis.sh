@@ -5,7 +5,7 @@ set -e
 
 SERVER_IP="${1:-10.182.252.32}"
 USERNAME="${2:-atlasAdmin}"
-DOMAIN="${3:-jarvis.10.182.252.32.sslip.io}"
+DOMAIN="${3:-sw-portal.atlascopco.group}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
