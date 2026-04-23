@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Paperclip, X, AlertCircle, User } from 'lucide-react';
+import { Paperclip, X, AlertCircle, User, LogIn } from 'lucide-react';
 import { SUBMIT_FORM_GROUPS, type ServiceDeskRequestResponse } from '@/types/service-desk';
 import type { AuthUser } from '@/lib/access';
 
@@ -10,6 +10,8 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 interface FormState {
+  name: string;
+  email: string;
   group: string;
   component: string;
   summary: string;
@@ -17,13 +19,17 @@ interface FormState {
   files: File[];
 }
 
-const EMPTY_FORM: FormState = {
-  group: '',
-  component: '',
-  summary: '',
-  description: '',
-  files: [],
-};
+function makeEmptyForm(user: AuthUser | null): FormState {
+  return {
+    name: user?.name ?? '',
+    email: user?.email ?? '',
+    group: '',
+    component: '',
+    summary: '',
+    description: '',
+    files: [],
+  };
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -37,7 +43,8 @@ interface Props {
 }
 
 export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props) {
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const hasSession = Boolean(currentUser?.name || currentUser?.email);
+  const [form, setForm] = useState<FormState>(() => makeEmptyForm(currentUser));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +105,10 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
     fd.append('group', form.group);
     fd.append('component', form.component);
     fd.append('summary', form.summary.trim());
+    if (!hasSession) {
+      fd.append('submitterName', form.name.trim());
+      fd.append('submitterEmail', form.email.trim());
+    }
     if (form.description.trim()) fd.append('description', form.description.trim());
     for (const file of form.files) fd.append('files', file);
 
@@ -110,7 +121,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
       const data = await res.json() as ServiceDeskRequestResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
 
-      setForm(EMPTY_FORM);
+      setForm(makeEmptyForm(currentUser));
       if (fileInputRef.current) fileInputRef.current.value = '';
       onSuccess(data);
     } catch (err) {
@@ -120,7 +131,11 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
     }
   };
 
-  const isValid = form.summary.trim() && form.group && form.component;
+  const isValid =
+    form.summary.trim() &&
+    form.group &&
+    form.component &&
+    (hasSession || (form.name.trim() && form.email.trim()));
 
   const inputClass =
     'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent';
@@ -134,23 +149,56 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
         </div>
       )}
 
-      {/* Submitter (read-only from session) */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-        <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        <div className="text-sm">
-          <span className="text-gray-500">제출자: </span>
-          {currentUser?.name || currentUser?.email ? (
-            <span className="text-gray-900 font-medium">
-              {currentUser.name}
-              {currentUser.email && (
-                <span className="text-gray-500 font-normal ml-1">({currentUser.email})</span>
-              )}
-            </span>
-          ) : (
-            <span className="text-gray-400 italic">세션 정보 없음</span>
-          )}
+      {/* Submitter — session badge or manual input */}
+      {hasSession ? (
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <div className="text-sm">
+            <span className="text-gray-500">제출자: </span>
+            <span className="text-gray-900 font-medium">{currentUser!.name}</span>
+            {currentUser!.email && (
+              <span className="text-gray-500 ml-1">({currentUser!.email})</span>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <LogIn className="w-3.5 h-3.5" />
+            <span>로그인하면 자동으로 채워집니다</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="submitterName" className="block text-sm font-medium text-gray-700">
+                이름 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="submitterName"
+                type="text"
+                value={form.name}
+                onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="이름을 입력하세요"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="submitterEmail" className="block text-sm font-medium text-gray-700">
+                이메일 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="submitterEmail"
+                type="email"
+                value={form.email}
+                onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="이메일을 입력하세요"
+                required
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Group + Component cascade */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
