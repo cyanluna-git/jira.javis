@@ -40,10 +40,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const access = await resolveAccessContextFromRequest(request);
-  const guestName = (formData.get('submitterName') as string | null)?.trim() ?? '';
-  const guestEmail = (formData.get('submitterEmail') as string | null)?.trim() ?? '';
-  const submitterName = access.user?.name ?? access.user?.email ?? guestName || 'Unknown';
-  const submitterEmail = access.user?.email ?? guestEmail;
+  const submitterName = access.user?.name ?? access.user?.email ?? 'Unknown';
+  const submitterEmail = access.user?.email ?? '';
 
   if (summary.length > 255) {
     return NextResponse.json({ error: 'Summary exceeds 255 characters' }, { status: 400 });

@@ -9,9 +9,9 @@ const MAX_SUMMARY_LEN = 255;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
+const EOB_LOGIN_URL = process.env.NEXT_PUBLIC_EOB_LOGIN_URL ?? '';
+
 interface FormState {
-  name: string;
-  email: string;
   group: string;
   component: string;
   summary: string;
@@ -19,17 +19,13 @@ interface FormState {
   files: File[];
 }
 
-function makeEmptyForm(user: AuthUser | null): FormState {
-  return {
-    name: user?.name ?? '',
-    email: user?.email ?? '',
-    group: '',
-    component: '',
-    summary: '',
-    description: '',
-    files: [],
-  };
-}
+const EMPTY_FORM: FormState = {
+  group: '',
+  component: '',
+  summary: '',
+  description: '',
+  files: [],
+};
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -44,7 +40,7 @@ interface Props {
 
 export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props) {
   const hasSession = Boolean(currentUser?.name || currentUser?.email);
-  const [form, setForm] = useState<FormState>(() => makeEmptyForm(currentUser));
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,8 +92,16 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
     setForm(prev => ({ ...prev, files: prev.files.filter((_, i) => i !== index) }));
   }, []);
 
+  const handleLogin = () => {
+    if (!EOB_LOGIN_URL) return;
+    const returnUrl = encodeURIComponent(window.location.href);
+    window.location.href = `${EOB_LOGIN_URL}?return=${returnUrl}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasSession) return;
+
     setSubmitting(true);
     setError(null);
 
@@ -105,10 +109,6 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
     fd.append('group', form.group);
     fd.append('component', form.component);
     fd.append('summary', form.summary.trim());
-    if (!hasSession) {
-      fd.append('submitterName', form.name.trim());
-      fd.append('submitterEmail', form.email.trim());
-    }
     if (form.description.trim()) fd.append('description', form.description.trim());
     for (const file of form.files) fd.append('files', file);
 
@@ -121,7 +121,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
       const data = await res.json() as ServiceDeskRequestResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
 
-      setForm(makeEmptyForm(currentUser));
+      setForm(EMPTY_FORM);
       if (fileInputRef.current) fileInputRef.current.value = '';
       onSuccess(data);
     } catch (err) {
@@ -131,14 +131,36 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
     }
   };
 
-  const isValid =
-    form.summary.trim() &&
-    form.group &&
-    form.component &&
-    (hasSession || (form.name.trim() && form.email.trim()));
+  const isValid = hasSession && form.summary.trim() && form.group && form.component;
 
   const inputClass =
     'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent';
+
+  if (!hasSession) {
+    return (
+      <div className="max-w-2xl flex flex-col items-center justify-center py-16 gap-6 text-center">
+        <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center">
+          <LogIn className="w-7 h-7 text-rose-500" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-gray-800">로그인이 필요합니다</p>
+          <p className="text-sm text-gray-500">
+            PSSM 티켓을 제출하려면 Edwards 계정으로 로그인하세요.
+          </p>
+        </div>
+        {EOB_LOGIN_URL && (
+          <button
+            type="button"
+            onClick={handleLogin}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors"
+          >
+            <LogIn className="w-4 h-4" />
+            Edwards 계정으로 로그인
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -149,56 +171,17 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
         </div>
       )}
 
-      {/* Submitter — session badge or manual input */}
-      {hasSession ? (
-        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <div className="text-sm">
-            <span className="text-gray-500">제출자: </span>
-            <span className="text-gray-900 font-medium">{currentUser!.name}</span>
-            {currentUser!.email && (
-              <span className="text-gray-500 ml-1">({currentUser!.email})</span>
-            )}
-          </div>
+      {/* Submitter — read-only from session */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <div className="text-sm">
+          <span className="text-gray-500">제출자: </span>
+          <span className="text-gray-900 font-medium">{currentUser!.name}</span>
+          {currentUser!.email && (
+            <span className="text-gray-500 ml-1">({currentUser!.email})</span>
+          )}
         </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <LogIn className="w-3.5 h-3.5" />
-            <span>로그인하면 자동으로 채워집니다</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="submitterName" className="block text-sm font-medium text-gray-700">
-                이름 <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="submitterName"
-                type="text"
-                value={form.name}
-                onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="이름을 입력하세요"
-                required
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="submitterEmail" className="block text-sm font-medium text-gray-700">
-                이메일 <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="submitterEmail"
-                type="email"
-                value={form.email}
-                onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="이메일을 입력하세요"
-                required
-                className={inputClass}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Group + Component cascade */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
