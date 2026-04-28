@@ -6,7 +6,9 @@
     "dev": "next dev -p 3009",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node node_modules/jest/bin/jest.js --config jest.config.js",
+    "test:coverage": "node node_modules/jest/bin/jest.js --config jest.config.js --coverage"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -19,15 +21,26 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-jest": "^30.3.0",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.5",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.9",
     "typescript": "^5"
   }
 }

@@ -2,14 +2,17 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Paperclip, X, AlertCircle, User, LogIn } from 'lucide-react';
+import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import { SUBMIT_FORM_GROUPS, type ServiceDeskRequestResponse } from '@/types/service-desk';
 import type { AuthUser } from '@/lib/access';
+import ServiceDeskAIAssist, { type AiState } from '@/components/ServiceDeskAIAssist';
 
 const MAX_SUMMARY_LEN = 255;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const EOB_LOGIN_URL = process.env.NEXT_PUBLIC_EOB_LOGIN_URL ?? '';
+const PCAS_ENABLED = process.env.NEXT_PUBLIC_PCAS_ENABLED === 'true';
 
 interface FormState {
   group: string;
@@ -39,11 +42,17 @@ interface Props {
 }
 
 export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props) {
+  const isReadOnly = useReadOnly();
   const hasSession = Boolean(currentUser?.name || currentUser?.email);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [aiState, setAiState] = useState<AiState>('idle');
+  const [aiOriginalDraft, setAiOriginalDraft] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const totalBytes = useMemo(() => form.files.reduce((sum, f) => sum + f.size, 0), [form.files]);
   const availableComponents = form.group ? (SUBMIT_FORM_GROUPS[form.group] ?? []) : [];
@@ -97,6 +106,53 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
     const returnUrl = encodeURIComponent(window.location.href);
     window.location.href = `${EOB_LOGIN_URL}?return=${returnUrl}`;
   };
+
+  const handleAiAssist = useCallback(async () => {
+    if (aiState === 'idle') {
+      setAiOriginalDraft(form.description);
+    }
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setAiState('loading');
+    setAiError(null);
+
+    try {
+      const res = await fetch('/api/service-desk/ai-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: form.group,
+          component: form.component,
+          summary: form.summary,
+          draft_description: form.description,
+        }),
+        signal: controller.signal,
+      });
+
+      const data = await res.json() as { enhanced_description?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      if (!data.enhanced_description) throw new Error('빈 응답이 반환되었습니다.');
+
+      setForm(prev => ({ ...prev, description: data.enhanced_description! }));
+      setAiState('done');
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setAiError(err instanceof Error ? err.message : 'AI 보조 기능에 오류가 발생했습니다. 다시 시도해주세요.');
+      setAiState('error');
+    }
+  }, [aiState, form.group, form.component, form.summary, form.description]);
+
+  const handleAiRestore = useCallback(() => {
+    if (aiOriginalDraft === null) return;
+    const draft = aiOriginalDraft;
+    setForm(prev => ({ ...prev, description: draft }));
+    setAiState('idle');
+    setAiOriginalDraft(null);
+    setAiError(null);
+  }, [aiOriginalDraft]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +313,17 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
           className={`${inputClass} resize-y min-h-[180px]`}
         />
         <p className="text-xs text-gray-400">이미지를 Ctrl+V로 붙여넣기 할 수 있습니다.</p>
+
+        {PCAS_ENABLED && !isReadOnly && (
+          <ServiceDeskAIAssist
+            aiState={aiState}
+            aiError={aiError}
+            canRestore={aiOriginalDraft !== null}
+            summaryEmpty={!form.summary.trim()}
+            onAssist={handleAiAssist}
+            onRestore={handleAiRestore}
+          />
+        )}
       </div>
 
       {/* Attachments */}
