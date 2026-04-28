@@ -20,7 +20,8 @@ export default function ServiceDeskAIAssist({ aiState, aiError, canRestore, summ
         type="button"
         onClick={onAssist}
         disabled={summaryEmpty || aiState === 'loading'}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title={summaryEmpty ? '제목을 먼저 입력하세요' : undefined}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {aiState === 'loading' ? (
           <>
