@@ -47,6 +47,11 @@ async function findSimilarIssues(summary: string, draftDescription: string, comp
   return result.rows;
 }
 
+function detectLanguage(text: string): 'ko' | 'en' {
+  const koreanChars = (text.match(/[가-힣]/g) ?? []).length;
+  return koreanChars / Math.max(text.length, 1) >= 0.1 ? 'ko' : 'en';
+}
+
 function buildPrompt(
   group: string,
   component: string,
@@ -54,42 +59,79 @@ function buildPrompt(
   draftDescription: string,
   similarIssues: SimilarIssue[]
 ): string {
+  const lang = detectLanguage(summary + ' ' + draftDescription);
+  const isKo = lang === 'ko';
+
   const examplesBlock =
     similarIssues.length > 0
-      ? `**유사 해결 사례**\n${similarIssues
+      ? (isKo ? '## 유사 해결 사례 (참고용)' : '## Similar resolved cases (for reference)') +
+        '\n' +
+        similarIssues
           .map((issue, i) => {
-            const desc = issue.description ? issue.description.slice(0, 300) : '(설명 없음)';
+            const desc = issue.description
+              ? issue.description.slice(0, 300)
+              : isKo ? '(설명 없음)' : '(no description)';
             return `${i + 1}. [${issue.key}] ${issue.summary}\n   ${desc}`;
           })
-          .join('\n\n')}\n`
+          .join('\n\n') +
+        '\n\n'
       : '';
 
-  const draftOrEmpty = draftDescription.trim() || '(초안 없음)';
+  const draftOrEmpty = draftDescription.trim() || (isKo ? '(초안 없음)' : '(no draft provided)');
 
-  return `당신은 소프트웨어 지원 요청서 작성 전문가입니다. 사용자의 거친 초안을 명확하고 구조화된 요청 설명으로 정리해 주세요.
+  if (isKo) {
+    return `당신은 소프트웨어 지원 요청서 작성 전문가입니다.
+아래 초안을 바탕으로 명확하고 구조화된 요청 설명을 작성해 주세요.
 
-**요청 정보**
-- 그룹: ${group}
-- 컴포넌트: ${component}
+## 요청 메타데이터
+- 그룹: ${group || '(미지정)'}
+- 컴포넌트: ${component || '(미지정)'}
 - 요청 제목: ${summary}
 
-${examplesBlock}
-**초안**
+${examplesBlock}## 사용자 초안
 ${draftOrEmpty}
 
-아래 구조로 한국어 400자 이내로 작성해 주세요:
-- 현재 상황:
-- 요청 사항:
-- 기대 효과:
-- 기타 참고: (해당하는 경우만)
+## 출력 지침
+- 구조: 아래 4개 항목 순서대로 작성
+- 분량: 800자 이내
+- 문체: 항목마다 단문(짧고 명확한 문장)으로 끝낼 것
+- 금지: 인사말, 서문, 부연 설명, 중복 표현 제거
+- 출력: 구조 레이블 포함한 본문만
 
-구조 레이블을 포함하여 본문만 작성해 주세요.`;
+- 현재 상황: (지금 어떤 문제 또는 상태인지)
+- 요청 사항: (구체적으로 무엇이 필요한지)
+- 기대 효과: (해결 시 어떤 이점이 생기는지)
+- 기타 참고: (관련 티켓·장비·일정 등, 해당 없으면 생략)`;
+  }
+
+  return `You are an expert at writing structured software support requests.
+Rewrite the draft below into a clear, structured request description.
+
+## Request Metadata
+- Group: ${group || '(unspecified)'}
+- Component: ${component || '(unspecified)'}
+- Title: ${summary}
+
+${examplesBlock}## User Draft
+${draftOrEmpty}
+
+## Output Guidelines
+- Structure: use the four sections below, in order
+- Length: within 800 characters
+- Style: end each section with short, direct sentences — no filler, no redundancy
+- Forbidden: greetings, preamble, commentary, repetition
+- Output: labeled body only
+
+- Current situation: (what the problem or current state is)
+- Request: (what specifically is needed)
+- Expected outcome: (what improves once resolved)
+- Additional notes: (ticket numbers, equipment, deadlines — omit if none)`;
 }
 
 async function callPcas(prompt: string, upn: string, signal: AbortSignal): Promise<string> {
   const pcasUrl = process.env.PCAS_API_URL;
   const pcasToken = process.env.PCAS_API_TOKEN;
-  const pcasModel = process.env.PCAS_LLM_MODEL ?? 'gpt-4o-mini';
+  const pcasModel = process.env.PCAS_LLM_MODEL ?? 'gpt-5.2';
 
   if (!pcasUrl || !pcasToken) {
     throw new Error('PCAS_NOT_CONFIGURED');
