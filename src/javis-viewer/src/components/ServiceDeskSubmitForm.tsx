@@ -12,7 +12,6 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const EOB_LOGIN_URL = process.env.NEXT_PUBLIC_EOB_LOGIN_URL ?? '';
-const PCAS_ENABLED = process.env.NEXT_PUBLIC_PCAS_ENABLED === 'true';
 
 interface FormState {
   group: string;
@@ -39,9 +38,10 @@ function formatBytes(bytes: number): string {
 interface Props {
   currentUser: AuthUser | null;
   onSuccess: (result: ServiceDeskRequestResponse) => void;
+  pcasEnabled?: boolean;
 }
 
-export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props) {
+export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnabled = false }: Props) {
   const isReadOnly = useReadOnly();
   const hasSession = Boolean(currentUser?.name || currentUser?.email);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -304,7 +304,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
           <label htmlFor="description" className="block text-sm font-medium text-gray-700">
             상세 내용
           </label>
-          {PCAS_ENABLED && !isReadOnly && (
+          {pcasEnabled && !isReadOnly && (
             <ServiceDeskAIAssist
               aiState={aiState}
               aiError={aiError}

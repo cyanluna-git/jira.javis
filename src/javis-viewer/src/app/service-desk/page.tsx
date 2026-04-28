@@ -89,7 +89,12 @@ export default async function ServiceDeskPage({
         )}
 
         {/* Content */}
-        <ServiceDeskContent initialData={initialData} currentUser={currentUser} initialTab={initialTab} />
+        <ServiceDeskContent
+          initialData={initialData}
+          currentUser={currentUser}
+          initialTab={initialTab}
+          pcasEnabled={process.env.PCAS_API_URL !== undefined && process.env.PCAS_API_TOKEN !== undefined}
+        />
       </div>
     </div>
   );

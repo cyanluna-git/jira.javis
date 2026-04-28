@@ -40,6 +40,7 @@ interface Props {
   };
   currentUser: AuthUser | null;
   initialTab?: ServiceDeskView;
+  pcasEnabled?: boolean;
 }
 
 // Custom hook for debounced value
@@ -54,7 +55,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function ServiceDeskContent({ initialData, currentUser, initialTab }: Props) {
+export default function ServiceDeskContent({ initialData, currentUser, initialTab, pcasEnabled = false }: Props) {
   const [activeTab, setActiveTab] = useState<ServiceDeskView>(initialTab ?? 'integrated-systems');
   const [submitSuccess, setSubmitSuccess] = useState<ServiceDeskRequestResponse | null>(null);
   const [data, setData] = useState<ServiceDeskResponse>(initialData);
@@ -313,6 +314,7 @@ export default function ServiceDeskContent({ initialData, currentUser, initialTa
 
           <ServiceDeskSubmitForm
             currentUser={currentUser}
+            pcasEnabled={pcasEnabled}
             onSuccess={(result) => {
               setSubmitSuccess(result);
               window.scrollTo({ top: 0, behavior: 'smooth' });
