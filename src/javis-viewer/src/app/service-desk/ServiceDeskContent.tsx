@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Search, X, RotateCw, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, Send } from 'lucide-react';
 import ServiceDeskTicketRow from '@/components/ServiceDeskTicketRow';
-import ServiceDeskSubmitForm from '@/components/ServiceDeskSubmitForm';
+import ServiceDeskSubmitForm, { type Lang } from '@/components/ServiceDeskSubmitForm';
 import {
   type BusinessUnit,
   type ServiceDeskView,
@@ -55,7 +55,28 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+const SUBMIT_T = {
+  ko: {
+    heading: '새 요청 접수',
+    subtitle: 'PSSM 티켓을 직접 접수합니다. Jira 계정이 없어도 제출할 수 있습니다.',
+    successTitle: '요청이 제출되었습니다.',
+    jiraTicket: 'Jira 티켓:',
+    viewTickets: '티켓 현황 보기 →',
+  },
+  en: {
+    heading: 'New Request',
+    subtitle: 'Submit a PSSM ticket directly. No Jira account required.',
+    successTitle: 'Request submitted.',
+    jiraTicket: 'Jira ticket:',
+    viewTickets: 'View ticket status →',
+  },
+} as const;
+
 export default function ServiceDeskContent({ initialData, currentUser, initialTab, pcasEnabled = false }: Props) {
+  const [lang, setLang] = useState<Lang>('ko');
+  useEffect(() => {
+    setLang(navigator.language?.startsWith('ko') ? 'ko' : 'en');
+  }, []);
   const [activeTab, setActiveTab] = useState<ServiceDeskView>(initialTab ?? 'integrated-systems');
   const [submitSuccess, setSubmitSuccess] = useState<ServiceDeskRequestResponse | null>(null);
   const [data, setData] = useState<ServiceDeskResponse>(initialData);
@@ -281,18 +302,16 @@ export default function ServiceDeskContent({ initialData, currentUser, initialTa
       {/* Submit Request Form */}
       {activeTab === 'submit' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">새 요청 접수</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            PSSM 티켓을 직접 접수합니다. Jira 계정이 없어도 제출할 수 있습니다.
-          </p>
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">{SUBMIT_T[lang].heading}</h2>
+          <p className="text-sm text-gray-500 mb-6">{SUBMIT_T[lang].subtitle}</p>
 
           {submitSuccess && (
             <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 mb-6">
               <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium">요청이 제출되었습니다.</p>
+                <p className="font-medium">{SUBMIT_T[lang].successTitle}</p>
                 <p className="text-sm mt-0.5">
-                  Jira 티켓:{' '}
+                  {SUBMIT_T[lang].jiraTicket}{' '}
                   <a
                     href={submitSuccess.webUrl}
                     target="_blank"
@@ -306,7 +325,7 @@ export default function ServiceDeskContent({ initialData, currentUser, initialTa
                   onClick={() => setActiveTab('integrated-systems')}
                   className="mt-2 text-sm underline hover:text-green-900"
                 >
-                  티켓 현황 보기 →
+                  {SUBMIT_T[lang].viewTickets}
                 </button>
               </div>
             </div>
@@ -315,6 +334,7 @@ export default function ServiceDeskContent({ initialData, currentUser, initialTa
           <ServiceDeskSubmitForm
             currentUser={currentUser}
             pcasEnabled={pcasEnabled}
+            lang={lang}
             onSuccess={(result) => {
               setSubmitSuccess(result);
               window.scrollTo({ top: 0, behavior: 'smooth' });

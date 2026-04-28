@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Paperclip, X, AlertCircle, User, LogIn } from 'lucide-react';
 import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import { SUBMIT_FORM_GROUPS, type ServiceDeskRequestResponse } from '@/types/service-desk';
@@ -13,20 +13,72 @@ const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const EOB_LOGIN_URL = process.env.NEXT_PUBLIC_EOB_LOGIN_URL ?? '';
 
-const DESCRIPTION_PLACEHOLDER = {
-  ko: `• 대상 모델명: (예: Gen3+ HRS #4, EXE:5000 D, ...)
+export type Lang = 'ko' | 'en';
+
+const T = {
+  ko: {
+    submitter: '제출자',
+    group: '그룹',
+    groupPlaceholder: '그룹 선택',
+    component: '컴포넌트',
+    componentPlaceholder: '컴포넌트 선택',
+    componentSelectGroupFirst: '그룹을 먼저 선택하세요',
+    title: '제목',
+    titlePlaceholder: '요청 제목을 입력하세요',
+    description: '상세 내용',
+    descriptionPlaceholder: `• 대상 모델명: (예: Gen3+ HRS #4, EXE:5000 D, ...)
 • SW Bundle 버전: (예: v3.2.1-rc2)
 • 문제 현상 또는 요청 사항:
   - 언제, 어떤 상황에서 발생하는지
   - 재현 조건 (있는 경우)
 • 기타 참고 사항: (관련 Jira 번호, 장비 S/N 등)`,
-  en: `• Target model: (e.g. Gen3+ HRS #4, EXE:5000 D, ...)
+    imageHint: '이미지를 Ctrl+V로 붙여넣기 할 수 있습니다.',
+    attachments: '첨부파일',
+    attachmentsHint: '(선택, 파일당 10MB · 합계 25MB)',
+    chooseFiles: '파일 선택',
+    submit: '요청 제출',
+    submitting: '제출 중...',
+    loginRequired: '로그인이 필요합니다',
+    loginHint: 'PSSM 티켓을 제출하려면 Edwards 계정으로 로그인하세요.',
+    loginButton: 'Edwards 계정으로 로그인',
+    fileTooLarge: (name: string) => `"${name}" 파일이 10MB 제한을 초과합니다.`,
+    totalTooLarge: '첨부파일 합계 크기가 25MB를 초과할 수 없습니다.',
+    submitFailed: '요청 제출에 실패했습니다. 다시 시도해주세요.',
+    emptyResponse: '빈 응답이 반환되었습니다.',
+    aiFailed: 'AI 보조 기능에 오류가 발생했습니다. 다시 시도해주세요.',
+  },
+  en: {
+    submitter: 'Submitter',
+    group: 'Group',
+    groupPlaceholder: 'Select group',
+    component: 'Component',
+    componentPlaceholder: 'Select component',
+    componentSelectGroupFirst: 'Select a group first',
+    title: 'Title',
+    titlePlaceholder: 'Enter request title',
+    description: 'Description',
+    descriptionPlaceholder: `• Target model: (e.g. Gen3+ HRS #4, EXE:5000 D, ...)
 • SW Bundle version: (e.g. v3.2.1-rc2)
 • Problem description or request:
   - When and under what conditions it occurs
   - Steps to reproduce (if applicable)
 • Additional notes: (related Jira ticket, equipment S/N, etc.)`,
-};
+    imageHint: 'You can paste images with Ctrl+V.',
+    attachments: 'Attachments',
+    attachmentsHint: '(Optional, 10MB per file · 25MB total)',
+    chooseFiles: 'Choose files',
+    submit: 'Submit Request',
+    submitting: 'Submitting...',
+    loginRequired: 'Login Required',
+    loginHint: 'Sign in with your Edwards account to submit a PSSM ticket.',
+    loginButton: 'Sign in with Edwards account',
+    fileTooLarge: (name: string) => `"${name}" exceeds the 10MB file limit.`,
+    totalTooLarge: 'Total attachment size cannot exceed 25MB.',
+    submitFailed: 'Failed to submit request. Please try again.',
+    emptyResponse: 'Empty response returned.',
+    aiFailed: 'AI assist encountered an error. Please try again.',
+  },
+} as const;
 
 interface FormState {
   group: string;
@@ -54,18 +106,14 @@ interface Props {
   currentUser: AuthUser | null;
   onSuccess: (result: ServiceDeskRequestResponse) => void;
   pcasEnabled?: boolean;
+  lang?: Lang;
 }
 
-export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnabled = false }: Props) {
+export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnabled = false, lang = 'ko' }: Props) {
+  const t = T[lang];
   const isReadOnly = useReadOnly();
   const hasSession = Boolean(currentUser?.name || currentUser?.email);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [descPlaceholder, setDescPlaceholder] = useState(DESCRIPTION_PLACEHOLDER.ko);
-
-  useEffect(() => {
-    const lang = navigator.language ?? '';
-    setDescPlaceholder(lang.startsWith('ko') ? DESCRIPTION_PLACEHOLDER.ko : DESCRIPTION_PLACEHOLDER.en);
-  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,11 +140,11 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
 
       for (const file of Array.from(incoming)) {
         if (file.size > MAX_FILE_BYTES) {
-          fileError = `"${file.name}" 파일이 10MB 제한을 초과합니다.`;
+          fileError = t.fileTooLarge(file.name);
           continue;
         }
         if (running + file.size > MAX_TOTAL_BYTES) {
-          fileError = '첨부파일 합계 크기가 25MB를 초과할 수 없습니다.';
+          fileError = t.totalTooLarge;
           break;
         }
         running += file.size;
@@ -108,7 +156,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
     });
 
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+  }, [t]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const imageFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
@@ -156,18 +204,18 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
 
       const data = await res.json() as { enhanced_description?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      if (!data.enhanced_description) throw new Error('빈 응답이 반환되었습니다.');
+      if (!data.enhanced_description) throw new Error(t.emptyResponse);
 
       setForm(prev => ({ ...prev, description: data.enhanced_description! }));
       setAiState('done');
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
-      setAiError(err instanceof Error ? err.message : 'AI 보조 기능에 오류가 발생했습니다. 다시 시도해주세요.');
+      setAiError(err instanceof Error ? err.message : t.aiFailed);
       setAiState('error');
     } finally {
       clearTimeout(clientTimeout);
     }
-  }, [aiState, form.group, form.component, form.summary, form.description]);
+  }, [aiState, form.group, form.component, form.summary, form.description, t]);
 
   const handleAiRestore = useCallback(() => {
     if (aiOriginalDraft === null) return;
@@ -205,7 +253,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
       if (fileInputRef.current) fileInputRef.current.value = '';
       onSuccess(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '요청 제출에 실패했습니다. 다시 시도해주세요.');
+      setError(err instanceof Error ? err.message : t.submitFailed);
     } finally {
       setSubmitting(false);
     }
@@ -223,10 +271,8 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
           <LogIn className="w-7 h-7 text-rose-500" />
         </div>
         <div className="space-y-1">
-          <p className="text-base font-semibold text-gray-800">로그인이 필요합니다</p>
-          <p className="text-sm text-gray-500">
-            PSSM 티켓을 제출하려면 Edwards 계정으로 로그인하세요.
-          </p>
+          <p className="text-base font-semibold text-gray-800">{t.loginRequired}</p>
+          <p className="text-sm text-gray-500">{t.loginHint}</p>
         </div>
         {EOB_LOGIN_URL && (
           <button
@@ -235,7 +281,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors"
           >
             <LogIn className="w-4 h-4" />
-            Edwards 계정으로 로그인
+            {t.loginButton}
           </button>
         )}
       </div>
@@ -251,11 +297,11 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
         </div>
       )}
 
-      {/* Submitter — read-only from session */}
+      {/* Submitter */}
       <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
         <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
         <div className="text-sm">
-          <span className="text-gray-500">제출자: </span>
+          <span className="text-gray-500">{t.submitter}: </span>
           <span className="text-gray-900 font-medium">{currentUser!.name}</span>
           {currentUser!.email && (
             <span className="text-gray-500 ml-1">({currentUser!.email})</span>
@@ -263,11 +309,11 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
         </div>
       </div>
 
-      {/* Group + Component cascade */}
+      {/* Group + Component */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label htmlFor="group" className="block text-sm font-medium text-gray-700">
-            그룹 <span className="text-red-500">*</span>
+            {t.group} <span className="text-red-500">*</span>
           </label>
           <select
             id="group"
@@ -276,7 +322,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
             required
             className={`${inputClass} bg-white`}
           >
-            <option value="">그룹 선택</option>
+            <option value="">{t.groupPlaceholder}</option>
             {Object.keys(SUBMIT_FORM_GROUPS).map(g => (
               <option key={g} value={g}>{g}</option>
             ))}
@@ -284,7 +330,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
         </div>
         <div className="space-y-1.5">
           <label htmlFor="component" className="block text-sm font-medium text-gray-700">
-            컴포넌트 <span className="text-red-500">*</span>
+            {t.component} <span className="text-red-500">*</span>
           </label>
           <select
             id="component"
@@ -295,7 +341,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
             className={`${inputClass} bg-white disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed`}
           >
             <option value="">
-              {form.group ? '컴포넌트 선택' : '그룹을 먼저 선택하세요'}
+              {form.group ? t.componentPlaceholder : t.componentSelectGroupFirst}
             </option>
             {availableComponents.map(c => (
               <option key={c} value={c}>{c}</option>
@@ -304,17 +350,17 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Title */}
       <div className="space-y-1.5">
         <label htmlFor="summary" className="block text-sm font-medium text-gray-700">
-          제목 <span className="text-red-500">*</span>
+          {t.title} <span className="text-red-500">*</span>
         </label>
         <input
           id="summary"
           type="text"
           value={form.summary}
           onChange={e => setForm(prev => ({ ...prev, summary: e.target.value.slice(0, MAX_SUMMARY_LEN) }))}
-          placeholder="요청 제목을 입력하세요"
+          placeholder={t.titlePlaceholder}
           required
           maxLength={MAX_SUMMARY_LEN}
           className={inputClass}
@@ -326,7 +372,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-            상세 내용
+            {t.description}
           </label>
           {pcasEnabled && !isReadOnly && (
             <ServiceDeskAIAssist
@@ -336,6 +382,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
               summaryEmpty={!form.summary.trim()}
               onAssist={handleAiAssist}
               onRestore={handleAiRestore}
+              lang={lang}
             />
           )}
         </div>
@@ -344,19 +391,19 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
           value={form.description}
           onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
           onPaste={handlePaste}
-          placeholder={descPlaceholder}
+          placeholder={t.descriptionPlaceholder}
           rows={8}
           className={`${inputClass} resize-y min-h-[180px]`}
         />
-        <p className="text-xs text-gray-400">이미지를 Ctrl+V로 붙여넣기 할 수 있습니다.</p>
+        <p className="text-xs text-gray-400">{t.imageHint}</p>
       </div>
 
       {/* Attachments */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-gray-700">
-            첨부파일{' '}
-            <span className="font-normal text-gray-400">(선택, 파일당 10MB · 합계 25MB)</span>
+            {t.attachments}{' '}
+            <span className="font-normal text-gray-400">{t.attachmentsHint}</span>
           </label>
           {form.files.length > 0 && (
             <span className="text-xs text-gray-400">
@@ -381,7 +428,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Paperclip className="w-4 h-4" />
-            파일 선택
+            {t.chooseFiles}
           </button>
         </div>
         {form.files.length > 0 && (
@@ -428,7 +475,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
         disabled={submitting || !isValid}
         className="w-full py-2.5 px-4 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {submitting ? '제출 중...' : '요청 제출'}
+        {submitting ? t.submitting : t.submit}
       </button>
     </form>
   );
