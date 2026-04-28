@@ -300,9 +300,21 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
 
       {/* Description */}
       <div className="space-y-1.5">
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-          상세 내용
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            상세 내용
+          </label>
+          {PCAS_ENABLED && !isReadOnly && (
+            <ServiceDeskAIAssist
+              aiState={aiState}
+              aiError={aiError}
+              canRestore={aiOriginalDraft !== null}
+              summaryEmpty={!form.summary.trim()}
+              onAssist={handleAiAssist}
+              onRestore={handleAiRestore}
+            />
+          )}
+        </div>
         <textarea
           id="description"
           value={form.description}
@@ -313,17 +325,6 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess }: Props)
           className={`${inputClass} resize-y min-h-[180px]`}
         />
         <p className="text-xs text-gray-400">이미지를 Ctrl+V로 붙여넣기 할 수 있습니다.</p>
-
-        {PCAS_ENABLED && !isReadOnly && (
-          <ServiceDeskAIAssist
-            aiState={aiState}
-            aiError={aiError}
-            canRestore={aiOriginalDraft !== null}
-            summaryEmpty={!form.summary.trim()}
-            onAssist={handleAiAssist}
-            onRestore={handleAiRestore}
-          />
-        )}
       </div>
 
       {/* Attachments */}
