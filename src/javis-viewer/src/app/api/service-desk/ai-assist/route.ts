@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { resolveAccessContextFromRequest } from '@/lib/access';
 
-const PCAS_TIMEOUT_MS = 10_000;
+const PCAS_TIMEOUT_MS = 30_000;
 
 interface AiAssistRequestBody {
   group: string;
@@ -168,10 +168,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ enhanced_description: enhanced });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      return NextResponse.json({ error: 'AI assist timed out' }, { status: 504 });
+      return NextResponse.json({ error: 'AI 응답 시간이 초과되었습니다. 다시 시도해주세요.' }, { status: 504 });
     }
     console.error('[service-desk/ai-assist] error:', err);
-    return NextResponse.json({ error: 'AI assist failed' }, { status: 502 });
+    return NextResponse.json({ error: 'AI 보조 기능에 오류가 발생했습니다. 다시 시도해주세요.' }, { status: 502 });
   } finally {
     clearTimeout(timeoutId);
   }

@@ -115,6 +115,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    const clientTimeout = setTimeout(() => controller.abort(), 35_000);
 
     setAiState('loading');
     setAiError(null);
@@ -142,6 +143,8 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
       if (err instanceof Error && err.name === 'AbortError') return;
       setAiError(err instanceof Error ? err.message : 'AI 보조 기능에 오류가 발생했습니다. 다시 시도해주세요.');
       setAiState('error');
+    } finally {
+      clearTimeout(clientTimeout);
     }
   }, [aiState, form.group, form.component, form.summary, form.description]);
 
