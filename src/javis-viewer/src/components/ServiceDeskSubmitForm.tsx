@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Paperclip, X, AlertCircle, User, LogIn } from 'lucide-react';
 import { useReadOnly } from '@/contexts/ReadOnlyContext';
 import { SUBMIT_FORM_GROUPS, type ServiceDeskRequestResponse } from '@/types/service-desk';
@@ -12,6 +12,21 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const EOB_LOGIN_URL = process.env.NEXT_PUBLIC_EOB_LOGIN_URL ?? '';
+
+const DESCRIPTION_PLACEHOLDER = {
+  ko: `• 대상 모델명: (예: Gen3+ HRS #4, EXE:5000 D, ...)
+• SW Bundle 버전: (예: v3.2.1-rc2)
+• 문제 현상 또는 요청 사항:
+  - 언제, 어떤 상황에서 발생하는지
+  - 재현 조건 (있는 경우)
+• 기타 참고 사항: (관련 Jira 번호, 장비 S/N 등)`,
+  en: `• Target model: (e.g. Gen3+ HRS #4, EXE:5000 D, ...)
+• SW Bundle version: (e.g. v3.2.1-rc2)
+• Problem description or request:
+  - When and under what conditions it occurs
+  - Steps to reproduce (if applicable)
+• Additional notes: (related Jira ticket, equipment S/N, etc.)`,
+};
 
 interface FormState {
   group: string;
@@ -45,6 +60,12 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
   const isReadOnly = useReadOnly();
   const hasSession = Boolean(currentUser?.name || currentUser?.email);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [descPlaceholder, setDescPlaceholder] = useState(DESCRIPTION_PLACEHOLDER.ko);
+
+  useEffect(() => {
+    const lang = navigator.language ?? '';
+    setDescPlaceholder(lang.startsWith('ko') ? DESCRIPTION_PLACEHOLDER.ko : DESCRIPTION_PLACEHOLDER.en);
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -323,7 +344,7 @@ export default function ServiceDeskSubmitForm({ currentUser, onSuccess, pcasEnab
           value={form.description}
           onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
           onPaste={handlePaste}
-          placeholder="요청 내용을 상세히 입력하세요 (선택)"
+          placeholder={descPlaceholder}
           rows={8}
           className={`${inputClass} resize-y min-h-[180px]`}
         />
