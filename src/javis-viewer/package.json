@@ -11,13 +11,19 @@
     "test:coverage": "node node_modules/jest/bin/jest.js --config jest.config.js --coverage"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@uiw/react-md-editor": "^4.1.0",
     "clsx": "^2.1.1",
+    "lightningcss-linux-x64-gnu": "^1.30.2",
     "lucide-react": "^0.563.0",
+    "mermaid": "^11.14.0",
     "next": "16.1.5",
     "pg": "^8.17.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones, Users, Package } from "lucide-react";
+import { BookOpen, Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones, Users, Package } from "lucide-react";
 import { getServiceDeskStats } from "@/lib/service-desk";
 import { resolveServerAccessContext } from "@/lib/access";
 
@@ -316,6 +316,25 @@ export default async function Home() {
             <div className="text-gray-400 text-sm font-medium">
               {stats.activeBundleCount > 0 ? `${stats.activeBundleCount} active` : 'Bundles'}
             </div>
+          </div>
+        </Link>
+
+        {/* Knowledge Database Card */}
+        <Link href="/guides" className="group block">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-slate-100 p-3 rounded-xl">
+                <BookOpen className="w-8 h-8 text-slate-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 group-hover:text-slate-600 transition-colors">Knowledge DB</h2>
+                <p className="text-gray-500 text-sm">Technical Documents</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-gray-900 mb-2">
+              Guides
+            </div>
+            <div className="text-gray-400 text-sm font-medium">Analysis & Reports</div>
           </div>
         </Link>
       </div>
