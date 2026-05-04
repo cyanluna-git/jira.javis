@@ -47,3 +47,6 @@ config/.env.vm
 
 # Sync Logs
 logs/
+
+# Phase 5 generated DOCX artifacts (rebuild via `make all` in docs/standard/)
+docs/standard/dist/*.docx

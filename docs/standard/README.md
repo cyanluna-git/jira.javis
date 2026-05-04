@@ -76,7 +76,57 @@ each document (`pcas-sdp.md` §6).
 | ---------- | --------------- | --------------------------------------------------- | -------------------------------------------- |
 | 2026-05-04 | Builder (Phase 1) | README.md, pcas-sdp.md, pcas-scm.md, section-mapping.md | Initial scaffolding — headings + TBD stubs only. |
 
-## How to Regenerate from DOCX
+## How to Regenerate DOCX from Markdown
+
+The PCAS SDP and SCM are authored in Markdown (`pcas-sdp.md`, `pcas-scm.md`). The
+distributable Word documents are built on demand via `pandoc` and are **not**
+committed to the repository (see `.gitignore`).
+
+### One-time setup — install pandoc
+
+| OS      | Command                                                            |
+| ------- | ------------------------------------------------------------------ |
+| Linux   | `sudo apt-get install -y pandoc`                                   |
+| macOS   | `brew install pandoc`                                              |
+| Windows | `choco install pandoc` (or download from https://pandoc.org/installing.html) |
+
+Verify with `pandoc --version` — version `>= 2.19` is required (for the `gfm`
+reader and `--reference-doc` style preservation).
+
+### Build the DOCX files
+
+From `docs/standard/`:
+
+```bash
+make check          # confirm pandoc is on PATH
+make all            # build both pcas-sdp.docx and pcas-scm.docx into dist/
+make pcas-sdp.docx  # build only the SDP
+make pcas-scm.docx  # build only the SCM
+make clean          # remove dist/*.docx
+```
+
+Outputs land in `docs/standard/dist/`:
+
+```
+docs/standard/dist/
+├── .gitkeep        ← keeps the directory tracked
+├── pcas-sdp.docx   ← gitignored, regenerate on demand
+└── pcas-scm.docx   ← gitignored, regenerate on demand
+```
+
+The Makefile applies two pre-processing passes before invoking pandoc:
+
+1. Strips inline `<!-- Maps to Eastbourne ... -->` traceability comments so they
+   do not appear in the printed DOCX (the audit trail lives in
+   `section-mapping.md`).
+2. Drops the hand-written `## Table of Contents` block from the Markdown so
+   pandoc's `--toc` flag generates a single, refreshable Word ToC field instead.
+
+Each DOCX inherits its visual style (fonts, heading colours, page margins) from
+the matching Eastbourne reference DOCX in `eastbourne.refer/` via pandoc's
+`--reference-doc` flag.
+
+## How to Regenerate Markdown from DOCX
 
 The DOCX originals are the legal sources of truth. If they are revised, regenerate
 the Markdown skeletons as follows:
