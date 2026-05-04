@@ -6,6 +6,7 @@
 #   make pcas-scm.docx    Build only the SCM DOCX
 #   make clean            Remove generated DOCX files
 #   make check            Verify pandoc is installed
+#   make test             Run the Phase 6 E2E test suite (T1–T10 + E1–E4)
 #
 # Output is written to dist/ which is gitignored — DOCX is a derived
 # binary artifact and must be rebuilt on demand from the MD sources.
@@ -25,7 +26,7 @@ PANDOC_FLAGS := --toc --toc-depth=4 --number-sections --standalone -f gfm -t doc
 # is escaped as `\#\#` in the awk pattern below.
 PREPROCESS = sed -E 's/<!--[^>]*-->//g' $< | awk 'BEGIN{skip=0} /^\#\# Table of Contents$$/{skip=1;next} skip && /^\#\# /{skip=0} skip{next} {print}'
 
-.PHONY: all clean check pcas-sdp.docx pcas-scm.docx
+.PHONY: all clean check test pcas-sdp.docx pcas-scm.docx
 
 all: check $(DIST)/pcas-sdp.docx $(DIST)/pcas-scm.docx
 
@@ -57,3 +58,8 @@ $(DIST):
 clean:
 	rm -f $(DIST)/*.docx
 	@echo "Cleaned $(DIST)/"
+
+# Phase 6 E2E test suite — runs T1–T10 + E1–E4. Locates the script via
+# the Makefile's directory so `make -C docs/standard test` works from anywhere.
+test:
+	@bash $(dir $(realpath $(firstword $(MAKEFILE_LIST))))../../scripts/test-standard-docs.sh
