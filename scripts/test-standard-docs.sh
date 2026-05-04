@@ -375,15 +375,27 @@ header "E4: HTML comments stripped from DOCX"
 if [[ "$T6_RAN" -eq 0 ]]; then
   skip "E4 — depends on T6 (DOCX build) which did not run"
 else
-  if ! command -v unzip >/dev/null 2>&1; then
-    skip "E4 — unzip not installed"
-  else
-    LEAK=$(unzip -p "$DIST/pcas-sdp.docx" word/document.xml 2>/dev/null | grep -c 'Maps to Eastbourne' || true)
-    if [[ "$LEAK" -eq 0 ]]; then
-      pass "no 'Maps to Eastbourne' annotation leaks into dist/pcas-sdp.docx"
-    else
-      fail "E4 — $LEAK annotation leaks into dist/pcas-sdp.docx"
+  # Use unzip if available, else fall back to python3 zipfile (always present in PCAS env).
+  extract_docx_xml() {
+    if command -v unzip >/dev/null 2>&1; then
+      unzip -p "$1" word/document.xml 2>/dev/null
+    elif command -v python3 >/dev/null 2>&1; then
+      python3 -c "import sys, zipfile; sys.stdout.write(zipfile.ZipFile(sys.argv[1]).read('word/document.xml').decode('utf-8', errors='replace'))" "$1" 2>/dev/null
     fi
+  }
+  if ! command -v unzip >/dev/null 2>&1 && ! command -v python3 >/dev/null 2>&1; then
+    skip "E4 — neither unzip nor python3 available to inspect DOCX"
+  else
+    E4_FAIL=0
+    for DOCX in "$DIST/pcas-sdp.docx" "$DIST/pcas-scm.docx"; do
+      LEAK=$(extract_docx_xml "$DOCX" | grep -c 'Maps to Eastbourne' || true)
+      if [[ "$LEAK" -eq 0 ]]; then
+        pass "no 'Maps to Eastbourne' annotation leaks into $(basename "$DOCX")"
+      else
+        fail "E4 — $LEAK annotation leaks into $(basename "$DOCX")"
+        E4_FAIL=1
+      fi
+    done
   fi
 fi
 

@@ -25,12 +25,14 @@ will `SKIP` cleanly when their tools are absent.
 
 ## Most Recent Run
 
-- **Date:** 2026-05-04T10:33:48Z
-- **Result:** 11 PASS / 0 FAIL / 3 SKIP
+- **Date:** 2026-05-05T06:36:00Z
+- **Result:** 14 PASS / 0 FAIL / 1 SKIP
 - **Exit code:** 0
-- **Environment:** Linux WSL2; bash + curl + sha256sum + unzip available;
-  pandoc and markdownlint not installed (expected — Phase 6 environmental
-  skips are documented; reviewers run `make all` separately).
+- **Environment:** Linux WSL2; bash + curl + sha256sum + python3 + pandoc 3.1.13
+  available; markdownlint not installed (T7 SKIP only). DOCX produced at
+  `dist/pcas-sdp.docx` (4.77 MB) and `dist/pcas-scm.docx` (4.53 MB).
+- **DOCX HTML-comment leak check (E4):** 0 leaks in either file (Python
+  zipfile fallback when `unzip` is absent).
 
 ### Test-by-Test Results
 
@@ -90,11 +92,14 @@ PASS: all 6 Confluence IDs resolved (200/30x/401/403 — auth-walled is expected
 
 ```
 --- T6: DOCX builds via pandoc ---
-SKIP: T6 — pandoc not installed (install: 'sudo apt-get install -y pandoc' / 'brew install pandoc'). Reviewers run 'make -C docs/standard all' separately.
+PASS: dist/pcas-sdp.docx (4770277 bytes) + dist/pcas-scm.docx (4525194 bytes) built
 ```
 
-> **Remediation:** install pandoc (≥ 2.19) and re-run. The Makefile already
-> exposes `make check` to verify pandoc is on PATH.
+> **Note:** built with pandoc 3.1.13 against per-doc Eastbourne reference
+> templates (`Eastbourne Site Software Development Procedure (3).docx` for
+> SDP, `Software Configuration Management Working Practice (2).docx` for
+> SCM). Output files live under `dist/` and are gitignored — re-run
+> `make -C docs/standard all` to regenerate.
 
 #### T7 — Markdownlint
 
@@ -182,13 +187,15 @@ PASS: cross-doc links present (sdp->scm=11, scm->sdp=3); link targets resolve
 
 ```
 --- E4: HTML comments stripped from DOCX ---
-SKIP: E4 — depends on T6 (DOCX build) which did not run
+PASS: no 'Maps to Eastbourne' annotation leaks into pcas-sdp.docx
+PASS: no 'Maps to Eastbourne' annotation leaks into pcas-scm.docx
 ```
 
-> **Remediation:** install pandoc, re-run; E4 will then unzip
-> `dist/pcas-sdp.docx` and grep `word/document.xml` for residual
-> `Maps to Eastbourne` annotation cookies (expected count: 0; the Makefile's
-> `PREPROCESS` step strips them before pandoc).
+> Verified by reading `word/document.xml` from both DOCX archives via
+> Python `zipfile` (used as fallback when `unzip` is not on PATH). The
+> Makefile's `sed -E 's/<!--[^>]*-->//g'` PREPROCESS step strips all 81
+> `<!-- Maps to Eastbourne ... -->` annotation comments before pandoc
+> conversion.
 
 ## Eastbourne Reference Baseline
 
