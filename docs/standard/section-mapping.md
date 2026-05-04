@@ -31,33 +31,33 @@ The `Status` column uses one of the following four values only:
 
 | Eastbourne § | Eastbourne Title                                       | PCAS § (pcas-sdp.md) | PCAS Heading                                       | Status  | Notes                                          |
 | ------------ | ------------------------------------------------------ | -------------------- | -------------------------------------------------- | ------- | ---------------------------------------------- |
-| 1            | Objectives & Scope                                     | 1                    | Objectives & Scope                                 | planned |                                                |
-| 1.1          | Overview                                               | 1.1                  | Overview                                           | planned |                                                |
-| 1.1 (dup)    | Scope                                                  | 1.2                  | Scope                                              | planned | Renumbered from duplicate §1.1 in source.      |
-| 2            | Definitions                                            | 2                    | Definitions                                        | planned |                                                |
-| 3            | Responsibilities                                       | 3                    | Responsibilities                                   | planned |                                                |
-| 4            | Process                                                | 4                    | Process                                            | planned |                                                |
-| 4.1          | Process Description                                    | 4.1                  | Process Description                                | planned |                                                |
-| 4.1.1        | Software Definition                                    | 4.1.1                | Software Definition                                | planned |                                                |
-| 4.1.2        | Software Requirements Capture and Analysis             | 4.1.2                | Software Requirements Capture and Analysis         | planned |                                                |
-| 4.1.3        | Software Design                                        | 4.1.3                | Software Design                                    | planned |                                                |
-| 4.1.4        | Software Implementation                                | 4.1.4                | Software Implementation                            | planned |                                                |
-| 4.1.5        | Software Verification & Testing                        | 4.1.5                | Software Verification & Testing                    | planned |                                                |
-| 4.1.6        | Software Deployment                                    | 4.1.6                | Software Deployment                                | planned |                                                |
-| 4.1.7        | Software Evaluation                                    | 4.1.7                | Software Evaluation                                | planned |                                                |
-| 4.1.8        | Supporting and Related Processes                       | 4.1.8                | Supporting and Related Processes                   | planned |                                                |
-| 4.1.9        | Mapping to Edwards Product Commercialisation Process   | 4.1.9                | Mapping to Edwards Product Commercialisation Process | planned |                                              |
-| 4.1.10       | Project and Design Reviews                             | 4.1.10               | Project and Design Reviews                         | planned |                                                |
-| 4.1.11       | Measurement                                            | 4.1.11               | Measurement                                        | planned |                                                |
-| 4.1.12       | Review                                                 | 4.1.12               | Review                                             | planned |                                                |
-| 5            | Support Documentation                                  | 5                    | Support Documentation                              | planned |                                                |
-| 5 / Global   | Global Procedures                                      | 5.1                  | Global Procedures                                  | planned | Promoted to numbered sub-section in PCAS.      |
-| 5 / Local    | Local Eastbourne Procedures                            | 5.2                  | Local Eastbourne Procedures                        | planned | Promoted to numbered sub-section in PCAS.      |
-| 5 / Non-Edw  | Non-Edwards Documents                                  | 5.3                  | Non-Edwards Documents                              | planned | Promoted to numbered sub-section in PCAS.      |
-| 5 / Doc Tpl  | Document Templates                                     | 5.4                  | Document Templates                                 | planned | Promoted to numbered sub-section in PCAS.      |
-| 5 / Form Tpl | Form Templates                                         | 5.5                  | Form Templates                                     | planned | Promoted to numbered sub-section in PCAS.      |
-| 6            | Change \\ Review History                               | 6                    | Change \\ Review History                           | planned |                                                |
-| 7            | Record Retention                                       | 7                    | Record Retention                                   | planned |                                                |
+| 1            | Objectives & Scope                                     | 1                    | Objectives & Scope                                 | written  |                                                |
+| 1.1          | Overview                                               | 1.1                  | Overview                                           | written  |                                                |
+| 1.1 (dup)    | Scope                                                  | 1.2                  | Scope                                              | written  | Renumbered from duplicate §1.1 in source.      |
+| 2            | Definitions                                            | 2                    | Definitions                                        | written  | Extended with PCAS terms (Bundle, Sprint, InStaging, etc.). |
+| 3            | Responsibilities                                       | 3                    | Responsibilities                                   | written  | Extended with Scrum Master / Product Owner / Lead Engineer. |
+| 4            | Process                                                | 4                    | Process                                            | written  |                                                |
+| 4.1          | Process Description                                    | 4.1                  | Process Description                                | written  |                                                |
+| 4.1.1        | Software Definition                                    | 4.1.1                | Software Definition                                | written  |                                                |
+| 4.1.2        | Software Requirements Capture and Analysis             | 4.1.2                | Software Requirements Capture and Analysis         | written  |                                                |
+| 4.1.3        | Software Design                                        | 4.1.3                | Software Design                                    | written  |                                                |
+| 4.1.4        | Software Implementation                                | 4.1.4                | Software Implementation                            | replaced | Restructured into §4.1.4.A Scrum + §4.1.4.B Lean Kanban dual track. |
+| 4.1.5        | Software Verification & Testing                        | 4.1.5                | Software Verification & Testing                    | written  | Adds Ruff/ESLint lint gates (ISP 1039237122).  |
+| 4.1.6        | Software Deployment                                    | 4.1.6                | Software Deployment                                | replaced | Alpha/Beta/Production replaced with Bundle Gen2/Gen3 model + Confluence Release Note. |
+| 4.1.7        | Software Evaluation                                    | 4.1.7                | Software Evaluation                                | written  |                                                |
+| 4.1.8        | Supporting and Related Processes                       | 4.1.8                | Supporting and Related Processes                   | written  | Cross-refs CM to pcas-scm.md.                  |
+| 4.1.9        | Mapping to Edwards Product Commercialisation Process   | 4.1.9                | Mapping to Edwards Product Commercialisation Process | replaced | PCP mapping rewritten against Walking Skeleton M1–M4. |
+| 4.1.10       | Project and Design Reviews                             | 4.1.10               | Project and Design Reviews                         | written  | Split into §4.1.10.A Scrum reviews and §4.1.10.B Kanban ceremonies. |
+| 4.1.11       | Measurement                                            | 4.1.11               | Measurement                                        | written  | Metrics list delegated to pcas-scm.md §7.      |
+| 4.1.12       | Review                                                 | 4.1.12               | Review                                             | written  |                                                |
+| 5            | Support Documentation                                  | 5                    | Support Documentation                              | written  |                                                |
+| 5 / Global   | Global Procedures                                      | 5.1                  | Global Procedures                                  | written  | Promoted to numbered sub-section in PCAS; list preserved verbatim. |
+| 5 / Local    | Local Eastbourne Procedures                            | 5.2                  | Local PCAS Procedures                              | replaced | Renamed and replaced with PCAS Confluence references (NSST + ISP). |
+| 5 / Non-Edw  | Non-Edwards Documents                                  | 5.3                  | Non-Edwards Documents                              | written  | Promoted to numbered sub-section in PCAS; adds Scrum Guide + Lean Kanban refs. |
+| 5 / Doc Tpl  | Document Templates                                     | 5.4                  | Document Templates                                 | written  | Promoted to numbered sub-section in PCAS.      |
+| 5 / Form Tpl | Form Templates                                         | 5.5                  | Form Templates                                     | written  | Promoted to numbered sub-section in PCAS; adds Sprint Review Record + Bundle Release Note. |
+| 6            | Change \\ Review History                               | 6                    | Change \\ Review History                           | written  |                                                |
+| 7            | Record Retention                                       | 7                    | Record Retention                                   | written  | Atlassian backup + Bitbucket retention added.  |
 
 ## SCM Mapping
 
