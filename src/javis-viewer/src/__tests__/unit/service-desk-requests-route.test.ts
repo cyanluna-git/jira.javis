@@ -32,9 +32,6 @@ const BASE_ENV: Record<string, string> = {
   JIRA_URL: 'https://jira.example.com',
   JIRA_EMAIL: 'gerald.park@edwards.com',
   JIRA_TOKEN: 'fake-token',
-  JIRA_SERVICE_DESK_ID: '1',
-  JIRA_REQUEST_TYPE_ID_INTEGRATED_SYSTEM: '4',
-  JIRA_REQUEST_TYPE_ID_ABATEMENT: '117',
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -123,9 +120,6 @@ describe('POST /api/service-desk/requests', () => {
       'JIRA_URL',
       'JIRA_EMAIL',
       'JIRA_TOKEN',
-      'JIRA_SERVICE_DESK_ID',
-      'JIRA_REQUEST_TYPE_ID_INTEGRATED_SYSTEM',
-      'JIRA_REQUEST_TYPE_ID_ABATEMENT',
     ];
 
     for (const varName of envVarNames) {

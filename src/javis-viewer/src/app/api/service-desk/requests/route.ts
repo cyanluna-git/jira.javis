@@ -7,6 +7,12 @@ const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const ALL_ALLOWED_COMPONENTS = new Set(Object.values(SUBMIT_FORM_GROUPS).flat());
 
+const JSM_SERVICE_DESK_ID = '1';
+const JSM_REQUEST_TYPE_BY_GROUP: Record<string, string> = {
+  IntegratedSystem: '4',
+  Abatement: '117',
+};
+
 function buildAuthHeader(): string {
   const jiraEmail = process.env.JIRA_EMAIL;
   const jiraToken = process.env.JIRA_TOKEN;
@@ -18,34 +24,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const jiraUrl = process.env.JIRA_URL;
   const jiraEmail = process.env.JIRA_EMAIL;
   const jiraToken = process.env.JIRA_TOKEN;
-  const serviceDeskId = process.env.JIRA_SERVICE_DESK_ID;
-  const requestTypeIdIntegratedSystem = process.env.JIRA_REQUEST_TYPE_ID_INTEGRATED_SYSTEM;
-  const requestTypeIdAbatement = process.env.JIRA_REQUEST_TYPE_ID_ABATEMENT;
 
-  if (
-    !jiraUrl ||
-    !jiraEmail ||
-    !jiraToken ||
-    !serviceDeskId ||
-    !requestTypeIdIntegratedSystem ||
-    !requestTypeIdAbatement
-  ) {
+  if (!jiraUrl || !jiraEmail || !jiraToken) {
     const missing = {
       JIRA_URL: !jiraUrl,
       JIRA_EMAIL: !jiraEmail,
       JIRA_TOKEN: !jiraToken,
-      JIRA_SERVICE_DESK_ID: !serviceDeskId,
-      JIRA_REQUEST_TYPE_ID_INTEGRATED_SYSTEM: !requestTypeIdIntegratedSystem,
-      JIRA_REQUEST_TYPE_ID_ABATEMENT: !requestTypeIdAbatement,
     };
     console.error('[service-desk/requests] Jira is not configured; missing env vars:', missing);
     return NextResponse.json({ error: 'Jira is not configured' }, { status: 503 });
   }
-
-  const requestTypeIdByGroup: Record<string, string> = {
-    IntegratedSystem: requestTypeIdIntegratedSystem,
-    Abatement: requestTypeIdAbatement,
-  };
 
   let formData: FormData;
   try {
@@ -90,14 +78,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid component' }, { status: 400 });
   }
 
-  const requestTypeId = requestTypeIdByGroup[group];
-  if (!requestTypeId) {
-    console.error('[service-desk/requests] No requestTypeId configured for group:', group);
-    return NextResponse.json(
-      { error: `No requestTypeId configured for group ${group}` },
-      { status: 500 }
-    );
-  }
+  const requestTypeId = JSM_REQUEST_TYPE_BY_GROUP[group];
 
   const files = formData.getAll('files').filter((v): v is File => v instanceof File && v.size > 0);
   let totalBytes = 0;
@@ -126,7 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        serviceDeskId,
+        serviceDeskId: JSM_SERVICE_DESK_ID,
         requestTypeId,
         raiseOnBehalfOf: submitterEmail,
         requestFieldValues: {
@@ -196,7 +177,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       const tempRes = await fetch(
-        `${jiraUrl}/rest/servicedeskapi/servicedesk/${serviceDeskId}/attachTemporaryFile`,
+        `${jiraUrl}/rest/servicedeskapi/servicedesk/${JSM_SERVICE_DESK_ID}/attachTemporaryFile`,
         {
           method: 'POST',
           headers: {
