@@ -114,7 +114,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           summary,
           description: fullDescription,
           components: [{ name: component }],
-          labels: [group],
         },
       }),
     });
