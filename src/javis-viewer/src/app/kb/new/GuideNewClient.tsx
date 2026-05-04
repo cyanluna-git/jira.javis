@@ -93,7 +93,7 @@ export default function GuideNewClient({ authorName }: GuideNewClientProps) {
         format = "markdown";
       }
 
-      const response = await fetch("/api/guides", {
+      const response = await fetch("/api/kb", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -110,7 +110,7 @@ export default function GuideNewClient({ authorName }: GuideNewClientProps) {
         throw new Error(result.error || "Failed to publish guide.");
       }
 
-      router.push(`/guides/${result.id}`);
+      router.push(`/kb/${result.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error.");
       setSubmitting(false);
@@ -121,11 +121,11 @@ export default function GuideNewClient({ authorName }: GuideNewClientProps) {
     <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
       <div>
         <Link
-          href="/guides"
+          href="/kb"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
         >
           <ArrowLeft className="h-4 w-4" />
-          Knowledge Database
+          Knowledge Base
         </Link>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
           Upload Document
@@ -254,7 +254,7 @@ export default function GuideNewClient({ authorName }: GuideNewClientProps) {
             {submitting ? "Uploading..." : "Publish"}
           </button>
           <Link
-            href="/guides"
+            href="/kb"
             className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
             Cancel

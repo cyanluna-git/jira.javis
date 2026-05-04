@@ -1,6 +1,6 @@
 import Link from "next/link";
 import pool from "@/lib/db";
-import { BookOpen, Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Layers, Map, Headphones, Users, Package } from "lucide-react";
+import { BookOpen, Database, FileText, CheckSquare, LayoutGrid, BarChart3, Search, Headphones, Package } from "lucide-react";
 import { getServiceDeskStats } from "@/lib/service-desk";
 import { resolveServerAccessContext } from "@/lib/access";
 
@@ -64,6 +64,15 @@ async function getStats() {
       // Table doesn't exist yet
     }
 
+    // Get KB guide count
+    let kbCount = 0;
+    try {
+      const kbRes = await client.query('SELECT COUNT(*) FROM portal_guides');
+      kbCount = parseInt(kbRes.rows[0].count);
+    } catch {
+      // Table doesn't exist yet
+    }
+
     // Get bundle stats (EUV project Epics with "Bundle" in summary)
     let bundleCount = 0;
     let activeBundleCount = 0;
@@ -103,10 +112,11 @@ async function getStats() {
       activeMemberCount,
       bundleCount,
       activeBundleCount,
+      kbCount,
     };
   } catch (e) {
     console.error(e);
-    return { jiraCount: 0, confluenceCount: 0, sprintCount: 0, boardCount: 0, opsCount: 0, pendingOpsCount: 0, visionCount: 0, milestoneCount: 0, inProgressMilestones: 0, serviceDeskTotal: 0, serviceDeskOpen: 0, memberCount: 0, activeMemberCount: 0, bundleCount: 0, activeBundleCount: 0 };
+    return { jiraCount: 0, confluenceCount: 0, sprintCount: 0, boardCount: 0, opsCount: 0, pendingOpsCount: 0, visionCount: 0, milestoneCount: 0, inProgressMilestones: 0, serviceDeskTotal: 0, serviceDeskOpen: 0, memberCount: 0, activeMemberCount: 0, bundleCount: 0, activeBundleCount: 0, kbCount: 0 };
   } finally {
     client.release();
   }
@@ -210,49 +220,6 @@ export default async function Home() {
           </div>
         </Link>
 
-        {/* Operations Card - Hidden in read-only mode */}
-        {!isReadOnly && (
-          <Link href="/operations" className="group block">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="bg-indigo-100 p-3 rounded-xl">
-                  <Layers className="w-8 h-8 text-indigo-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">Operations</h2>
-                  <p className="text-gray-500 text-sm">AI Content Queue</p>
-                </div>
-              </div>
-              <div className="text-4xl font-black text-gray-900 mb-2">
-                {stats.opsCount}
-              </div>
-              <div className="text-gray-400 text-sm font-medium">
-                {stats.pendingOpsCount > 0 ? `${stats.pendingOpsCount} pending` : 'Operations'}
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* Roadmap Card */}
-        <Link href="/roadmap" className="group block">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-teal-100 p-3 rounded-xl">
-                <Map className="w-8 h-8 text-teal-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 group-hover:text-teal-600 transition-colors">Roadmap</h2>
-                <p className="text-gray-500 text-sm">Vision & Milestones</p>
-              </div>
-            </div>
-            <div className="text-4xl font-black text-gray-900 mb-2">
-              {stats.visionCount}
-            </div>
-            <div className="text-gray-400 text-sm font-medium">
-              {stats.inProgressMilestones > 0 ? `${stats.inProgressMilestones} in progress` : `${stats.milestoneCount} milestones`}
-            </div>
-          </div>
-        </Link>
 
         {/* Service Desk Card */}
         <Link href="/service-desk" className="group block">
@@ -275,28 +242,6 @@ export default async function Home() {
           </div>
         </Link>
 
-        {/* Members Card - Hidden in read-only mode */}
-        {!isReadOnly && (
-          <Link href="/members" className="group block">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="bg-cyan-100 p-3 rounded-xl">
-                  <Users className="w-8 h-8 text-cyan-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">Members</h2>
-                  <p className="text-gray-500 text-sm">Team Directory</p>
-                </div>
-              </div>
-              <div className="text-4xl font-black text-gray-900 mb-2">
-                {stats.memberCount}
-              </div>
-              <div className="text-gray-400 text-sm font-medium">
-                {stats.activeMemberCount > 0 ? `${stats.activeMemberCount} active` : 'Team Members'}
-              </div>
-            </div>
-          </Link>
-        )}
 
         {/* Bundle Board Card */}
         <Link href="/bundles" className="group block">
@@ -319,8 +264,8 @@ export default async function Home() {
           </div>
         </Link>
 
-        {/* Knowledge Database Card */}
-        <Link href="/guides" className="group block">
+        {/* Knowledge Base Card */}
+        <Link href="/kb" className="group block">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4 mb-4">
               <div className="bg-slate-100 p-3 rounded-xl">
@@ -332,9 +277,9 @@ export default async function Home() {
               </div>
             </div>
             <div className="text-4xl font-black text-gray-900 mb-2">
-              Guides
+              {stats.kbCount}
             </div>
-            <div className="text-gray-400 text-sm font-medium">Analysis & Reports</div>
+            <div className="text-gray-400 text-sm font-medium">Guides & Reports</div>
           </div>
         </Link>
       </div>

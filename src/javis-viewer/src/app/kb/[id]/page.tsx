@@ -35,7 +35,7 @@ export default async function GuideDetailPage({
         <ViewTracker id={id} />
         {canWrite && !guide.readonly && (
           <Link
-            href={`/guides/${id}/edit`}
+            href={`/kb/${id}/edit`}
             className="fixed right-4 top-4 z-50 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 shadow-md backdrop-blur-sm transition hover:border-blue-200 hover:text-blue-600"
           >
             <PencilLine className="h-4 w-4" />
@@ -57,16 +57,16 @@ export default async function GuideDetailPage({
       <ViewTracker id={id} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          href="/guides"
+          href="/kb"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-blue-600"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Guides
+          Back to KB
         </Link>
         <div className="flex items-center gap-2">
           {canWrite && !guide.readonly && (
             <Link
-              href={`/guides/${id}/edit`}
+              href={`/kb/${id}/edit`}
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
             >
               <PencilLine className="h-4 w-4" />
@@ -74,7 +74,7 @@ export default async function GuideDetailPage({
             </Link>
           )}
           <Link
-            href="/guides/admin"
+            href="/kb/admin"
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
           >
             <ShieldCheck className="h-4 w-4" />

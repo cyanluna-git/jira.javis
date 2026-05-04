@@ -74,7 +74,7 @@ export default function GuideEditClient({
         body.content = nextContent;
       }
 
-      const response = await fetch(`/api/guides/${id}`, {
+      const response = await fetch(`/api/kb/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -85,7 +85,7 @@ export default function GuideEditClient({
         throw new Error(result.error || "Failed to save guide.");
       }
 
-      router.push(`/guides/${id}`);
+      router.push(`/kb/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error.");
       setSubmitting(false);
@@ -96,7 +96,7 @@ export default function GuideEditClient({
     <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
       <div>
         <Link
-          href={`/guides/${id}`}
+          href={`/kb/${id}`}
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-blue-600"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -198,7 +198,7 @@ export default function GuideEditClient({
             {submitting ? "Saving..." : "Save Changes"}
           </button>
           <Link
-            href={`/guides/${id}`}
+            href={`/kb/${id}`}
             className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
             Cancel

@@ -7,7 +7,7 @@ export function ViewTracker({ id }: { id: string }) {
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
-    fetch(`/api/guides/${id}/view`, { method: "POST" }).catch(() => {});
+    fetch(`/api/kb/${id}/view`, { method: "POST" }).catch(() => {});
   }, [id]);
   return null;
 }

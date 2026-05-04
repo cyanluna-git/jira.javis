@@ -14,7 +14,7 @@ export default function GuideAdminPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   async function loadGuides() {
-    const res = await fetch("/api/guides");
+    const res = await fetch("/api/kb");
     const data = await res.json();
     setGuides(Array.isArray(data) ? data : []);
   }
@@ -44,7 +44,7 @@ export default function GuideAdminPage() {
     setDeleting(id);
     setMessage(null);
     try {
-      const res = await fetch(`/api/guides/${id}`, {
+      const res = await fetch(`/api/kb/${id}`, {
         method: "DELETE",
         headers: { "x-portal-admin-token": adminToken },
       });
@@ -69,11 +69,11 @@ export default function GuideAdminPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <Link
-            href="/guides"
+            href="/kb"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
           >
             <ArrowLeft className="h-4 w-4" />
-            Knowledge Database
+            Knowledge Base
           </Link>
           <div className="mt-4 flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900">
@@ -89,7 +89,7 @@ export default function GuideAdminPage() {
         </div>
 
         <Link
-          href="/guides/new"
+          href="/kb/new"
           className="mt-4 inline-flex shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
         >
           <Upload className="h-4 w-4" />
@@ -151,7 +151,7 @@ export default function GuideAdminPage() {
               >
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={`/guides/${guide.id}`}
+                    href={`/kb/${guide.id}`}
                     className="text-sm font-medium text-slate-900 transition hover:text-slate-600"
                   >
                     {guide.title}
@@ -178,7 +178,7 @@ export default function GuideAdminPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   {!guide.readonly && (
                     <Link
-                      href={`/guides/${guide.id}/edit`}
+                      href={`/kb/${guide.id}/edit`}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                     >
                       Edit

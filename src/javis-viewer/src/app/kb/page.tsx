@@ -12,7 +12,7 @@ export default function GuidesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/guides")
+    fetch("/api/kb")
       .then((r) => r.json())
       .then((data) => {
         setGuides(Array.isArray(data) ? data : []);
@@ -59,7 +59,7 @@ export default function GuidesPage() {
             </div>
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-slate-950">
-                Knowledge Database
+                Knowledge Base
               </h1>
               <p className="text-xs text-slate-400">{guides.length} documents</p>
             </div>
@@ -67,7 +67,7 @@ export default function GuidesPage() {
         </div>
 
         <Link
-          href="/guides/new"
+          href="/kb/new"
           className="mt-4 inline-flex shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
         >
           <Upload className="h-4 w-4" />
@@ -134,7 +134,7 @@ export default function GuidesPage() {
                     <td className="py-3.5 pl-5 pr-3 text-slate-400">{index + 1}</td>
                     <td className="py-3.5 pr-4">
                       <Link
-                        href={`/guides/${guide.id}`}
+                        href={`/kb/${guide.id}`}
                         className="font-medium text-slate-900 transition hover:text-slate-600"
                       >
                         {guide.title}
@@ -169,7 +169,7 @@ export default function GuidesPage() {
                     <td className="py-3.5 pr-5 text-right">
                       {!guide.readonly && (
                         <Link
-                          href={`/guides/${guide.id}/edit`}
+                          href={`/kb/${guide.id}/edit`}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 opacity-0 transition hover:bg-slate-50 hover:text-slate-800 group-hover:opacity-100"
                         >
                           <PencilLine className="h-3 w-3" />
@@ -187,7 +187,7 @@ export default function GuidesPage() {
 
       <div className="mt-6 text-right">
         <Link
-          href="/guides/admin"
+          href="/kb/admin"
           className="text-xs text-slate-400 transition hover:text-slate-600"
         >
           Admin →
