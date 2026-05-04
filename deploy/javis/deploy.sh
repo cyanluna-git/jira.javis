@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Jarvis Viewer — Linux/WSL Deployment Script
 # Bash equivalent of deploy_javis.ps1
+#
+# DB note: Postgres has been migrated to Azure (cloud). The local docker
+# javis-db service was removed; this script now deploys only javis-viewer.
 set -e
 
 SERVER_IP="${1:-10.182.252.32}"
@@ -34,7 +37,7 @@ echo "  ✓ SSH OK"
 # 1. Build
 if [ "$SKIP_BUILD" != "true" ]; then
     echo ""
-    echo "[1/5] Building Docker Images..."
+    echo "[1/4] Building javis-viewer image..."
 
     # Sanitize Docker config for WSL (remove credsStore)
     DOCKER_CONFIG_PATH="$HOME/.docker/config.json"
@@ -52,34 +55,25 @@ with open('$TEMP_DOCKER_DIR/config.json', 'w') as f:
         echo "  [INFO] Using sanitized Docker config (removed credsStore)"
     fi
 
-    # Build viewer image
-    echo "Building javis-viewer image..."
     pushd "$VIEWER_DIR" > /dev/null
     docker build -t javis-viewer:latest .
-    echo "Saving javis-viewer image..."
-    docker save javis-viewer:latest -o "$BUILD_DIR/javis-viewer.tar"
+    echo "Saving javis-viewer image (gzip)..."
+    docker save javis-viewer:latest | gzip > "$BUILD_DIR/javis-viewer.tar.gz"
     popd > /dev/null
 
-    # Keep the deployment image aligned with javis-stack.yml.
-    echo "Handling javis-db image (pgvector:pg17)..."
-    docker pull pgvector/pgvector:pg17
-    docker save pgvector/pgvector:pg17 -o "$BUILD_DIR/javis-db.tar"
-
-    # Restore DOCKER_CONFIG
     unset DOCKER_CONFIG
 fi
 
 # 2. Prepare Remote
 echo ""
-echo "[2/5] Preparing Remote Directory..."
+echo "[2/4] Preparing Remote Directory..."
 ssh -t "${USERNAME}@${SERVER_IP}" "sudo mkdir -p $REMOTE_PATH && sudo chown ${USERNAME}:${USERNAME} $REMOTE_PATH"
 
 # 3. Upload
 echo ""
-echo "[3/5] Uploading Files..."
+echo "[3/4] Uploading Files..."
 if [ "$SKIP_BUILD" != "true" ]; then
-    scp "$BUILD_DIR/javis-viewer.tar" "${USERNAME}@${SERVER_IP}:${REMOTE_PATH}/javis-viewer.tar"
-    scp "$BUILD_DIR/javis-db.tar"     "${USERNAME}@${SERVER_IP}:${REMOTE_PATH}/javis-db.tar"
+    scp "$BUILD_DIR/javis-viewer.tar.gz" "${USERNAME}@${SERVER_IP}:${REMOTE_PATH}/javis-viewer.tar.gz"
 fi
 scp "$SCRIPT_DIR/javis-stack.yml"  "${USERNAME}@${SERVER_IP}:${REMOTE_PATH}/docker-compose.yml"
 scp "$SCRIPT_DIR/javis_nginx.conf" "${USERNAME}@${SERVER_IP}:/tmp/javis_nginx.conf"
@@ -92,33 +86,46 @@ else
     echo "[WARNING] No .env file found at project root!"
 fi
 
-# 4. Deploy Containers
+# 4. Deploy javis-viewer (surgical: only this service is recreated)
 echo ""
-echo "[4/5] Deploying Containers..."
+echo "[4/4] Deploying javis-viewer (no-deps, force-recreate)..."
 ssh "${USERNAME}@${SERVER_IP}" bash << EOF
+set -e
 cd $REMOTE_PATH
+
+# Clean up legacy javis-db artifacts (DB now lives in Azure cloud)
+rm -f javis-db.tar javis-db.tar.gz
+
+if [ -f javis-viewer.tar.gz ]; then
+    gunzip -f javis-viewer.tar.gz
+fi
 if [ -f javis-viewer.tar ]; then
     docker load -i javis-viewer.tar
-    rm javis-viewer.tar
+    rm -f javis-viewer.tar
 fi
-if [ -f javis-db.tar ]; then
-    docker load -i javis-db.tar
-    rm javis-db.tar
-fi
-docker-compose down --remove-orphans 2>/dev/null || true
-docker-compose up -d
+
+# Stop and remove the old javis-db container if it still exists from a prior deploy
+docker rm -f javis-db 2>/dev/null || true
+
+docker-compose up -d --no-deps --force-recreate javis-viewer
 docker-compose ps
 EOF
 
 # 5. Configure Nginx
 echo ""
-echo "[5/5] Configuring Nginx..."
+echo "[Bonus] Configuring Nginx..."
 ssh -t "${USERNAME}@${SERVER_IP}" bash << 'EOF'
 sudo mv /tmp/javis_nginx.conf /etc/nginx/sites-available/javis.conf
 sudo ln -sf /etc/nginx/sites-available/javis.conf /etc/nginx/sites-enabled/javis.conf
 sudo nginx -t && sudo systemctl reload nginx
 echo "  ✓ Nginx configured"
 EOF
+
+# Health check
+echo ""
+echo "Checking javis-viewer health..."
+sleep 3
+ssh "${USERNAME}@${SERVER_IP}" "curl -sS -o /dev/null -w 'local 3009: HTTP %{http_code}\n' http://127.0.0.1:3009/" || echo "  [WARN] Health check failed"
 
 echo ""
 echo "===================================================="
