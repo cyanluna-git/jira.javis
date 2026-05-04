@@ -47,7 +47,7 @@ The `Status` column uses one of the following four values only:
 | 4.1.7        | Software Evaluation                                    | 4.1.7                | Software Evaluation                                | written  |                                                |
 | 4.1.8        | Supporting and Related Processes                       | 4.1.8                | Supporting and Related Processes                   | written  | Cross-refs CM to pcas-scm.md.                  |
 | 4.1.9        | Mapping to Edwards Product Commercialisation Process   | 4.1.9                | Mapping to Edwards Product Commercialisation Process | replaced | PCP mapping rewritten against Walking Skeleton M1–M4. |
-| 4.1.10       | Project and Design Reviews                             | 4.1.10               | Project and Design Reviews                         | written  | Split into §4.1.10.A Scrum reviews and §4.1.10.B Kanban ceremonies. |
+| 4.1.10       | Project and Design Reviews                             | 4.1.10               | Project and Design Reviews                         | replaced | Split into §4.1.10.A Scrum reviews and §4.1.10.B Kanban ceremonies (Phase 4 restructure). |
 | 4.1.11       | Measurement                                            | 4.1.11               | Measurement                                        | written  | Metrics list delegated to pcas-scm.md §7.      |
 | 4.1.12       | Review                                                 | 4.1.12               | Review                                             | written  |                                                |
 | 5            | Support Documentation                                  | 5                    | Support Documentation                              | written  |                                                |
@@ -94,7 +94,7 @@ The `Status` column uses one of the following four values only:
 | 5.2.1        | Problem Identification                                                          | 5.2.1                | Problem Identification                                                        | replaced | Service Portal intake (Lean Kanban) + Roadmap intake (Scrum); AI-assisted classification. |
 | 5.2.2        | Problem Investigation                                                           | 5.2.2                | Problem Investigation                                                         | written  | Severity, target Bundle, business-unit routing.                                     |
 | 5.2.3        | Problem Closure                                                                 | 5.2.3                | Problem Closure                                                               | written  | DoD checklist per NSST 603062275 워크플로우 체크리스트.                              |
-| 5.2.4        | Lifecycle of Change Requests                                                    | 5.2.4                | Lifecycle of Change Requests                                                  | replaced | Canonical dual-track lifecycle: Lean Kanban 5-column (NSST 603062275) + Scrum sprint states. SDP §4.1.4.B has divergent values; Phase 4 polish to reconcile. |
+| 5.2.4        | Lifecycle of Change Requests                                                    | 5.2.4                | Lifecycle of Change Requests                                                  | replaced | Canonical dual-track lifecycle: Lean Kanban 6-column (NSST 603062275) + Scrum sprint states. SDP §4.1.4.B reconciled to NSST 603062275 in Phase 4. |
 | 5.2.5        | Development of features in waterfall or agile methodology                       | 5.2.5                | Development of features in waterfall or agile methodology                     | replaced | Replaced by PCAS One SW principle (NSST 895680517); waterfall not permitted.        |
 | 6            | Configuration Management Tools                                                  | 6                    | Configuration Management Tools                                                | replaced | Atlassian-first pruning with explicit DEPRECATED / NOT USED / LEGACY CI banners.    |
 | 6.1          | BitBucket                                                                       | 6.1                  | BitBucket                                                                     | replaced | PRIMARY — branch naming + Conventional Commits (ISP 1085636609); PR mandatory; Pipeline gate (ISP 1039237122). |
@@ -117,3 +117,22 @@ The `Status` column uses one of the following four values only:
 | 8.1.7        | Release of Firmware and Test Software to Production                             | 8.2.2                | Release of Firmware and Test Software to Production                           | replaced | Renumbered from §8.1.7; release mechanics now in §4.3 + ISP 1039237122 + ISP 1085341713. |
 | 8.1.8        | 01A06-010, Security for Data and Applications                                   | 8.2.3                | 01A06-010, Security for Data and Applications                                 | replaced | Renumbered from §8.1.8; superseded by Edwards IT policy + read-only-mode safeguards.|
 | 8.1.9        | Technical References                                                            | 8.2.4                | Technical References                                                          | replaced | Renumbered from §8.1.9; references Conventional Commits + Scrum Guide + NSST 603062275. |
+
+## Glossary
+
+PCAS-specific vocabulary used across `pcas-sdp.md` and `pcas-scm.md`. Each
+entry points at the canonical body section so the definition is not
+duplicated; this table is the cross-doc index.
+
+| Term | Definition | Cross-references |
+|------|------------|------------------|
+| **Bundle** | Software release artifact identified by `Gen<N>-<X>.<Y>.<Z>`. The unit of release governance: scope, version, lifecycle state, and Confluence Release Note are all attributes of the Bundle, not of any one component. | `pcas-sdp.md` §4.1.6, `pcas-scm.md` §4.3.1.1 |
+| **Bundle Generation (Gen2/Gen3)** | Hardware platform family used as the leading version qualifier. **Gen2/Gen2+** uses 3.x bundle versions (legacy IS-Legacy stack); **Gen3/Gen3+** uses 4.x (current platform). | `pcas-sdp.md` §2 + §4.1.6, `pcas-scm.md` §4.3.1.1 |
+| **Sprint** | 2-week time-boxed iteration in the Scrum track. Sprint Planning Mon week 1; Sprint Review + Retrospective Fri week 2. | `pcas-sdp.md` §4.1.4.A |
+| **InStaging** | Lean Kanban column for work completed but awaiting test, integration, or sign-off. **5 working day** idle escalation cap before Lead Engineer review. | NSST 603062275, `pcas-sdp.md` §4.1.4.B, `pcas-scm.md` §5.2.4 |
+| **Service Portal** | Jira Service Desk (PSSM project) — primary intake for the Lean Kanban legacy track and for customer escalations. | `pcas-sdp.md` §4.1.2, `pcas-scm.md` §5.2.1 |
+| **Walking Skeleton** | End-to-end thin-slice methodology used in OQC milestone planning (M1–M4); the PCAS implementation pattern of the North Star Agile Roadmap. | `pcas-sdp.md` §4.1.9, ISP 985563137 |
+| **One SW** | PCAS standardisation principle: tools and procedures unified across teams (Bitbucket + Jira + Confluence as the single source-of-truth toolchain). | NSST 895680517, `pcas-sdp.md` §1.1 + §4.1.4 |
+| **Lead Engineer** | PCAS role responsible for grooming and refining the Lean Kanban backlog with the Tech Lead, owning InStaging triage signal. PCAS extension — no Eastbourne counterpart. | NSST 603062275, `pcas-sdp.md` §3, `pcas-scm.md` §3.4 |
+| **Pull Request (PR)** | Bitbucket merge request requiring at least one peer review. Triggers the Pipeline lint + test gate (Ruff / ESLint / unit tests). | `pcas-scm.md` §6.1, ISP 1039237122 |
+| **Lean Kanban** | PCAS legacy maintenance methodology with **WIP=2 per engineer**, **6-column board** (`Backlog (Hide) → Ready To Dev → In Progress ↔ InStaging → Ready to Signoff → Done`), twice-weekly **Sync** (15 min), once-weekly **Grooming** (30 min). | NSST 603062275, `pcas-sdp.md` §4.1.4.B, `pcas-scm.md` §5.2.4 |

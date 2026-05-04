@@ -42,6 +42,8 @@ The full enumeration table lives in [`section-mapping.md`](./section-mapping.md)
     - [4.2.6 Documentation Control](#426-documentation-control)
   - [4.3 Baseline Control Procedure](#43-baseline-control-procedure)
     - [4.3.1 Submission of Fixed Baselines](#431-submission-of-fixed-baselines)
+      - [4.3.1.1 Version Numbers](#4311-version-numbers)
+      - [4.3.1.2 Part Numbers](#4312-part-numbers)
     - [4.3.2 Approval of baselines](#432-approval-of-baselines)
     - [4.3.3 Management and Location of Forms](#433-management-and-location-of-forms)
 - [5. JIRA](#5-jira)
@@ -601,15 +603,8 @@ The transition to `Done` is the closure event of record.
 > ceremonies. Values below are sourced from
 > [NSST 603062275](https://ac-avi.atlassian.net/wiki/spaces/NSST/pages/603062275/IS+Legacy+Product+Lean+Kanban)
 > (Lean Kanban) and `pcas-sdp.md` §4.1.4.A (Scrum).
->
-> **Note on SDP divergence.** `pcas-sdp.md` §4.1.4.B currently specifies
-> different Lean Kanban values (45-min Grooming, a different column
-> sequence). Those SDP values diverge from the NSST 603062275 source and
-> are scheduled for correction in Phase 4 polish. Until then, **this
-> document (§5.2.4) is the canonical source for the Lean Kanban
-> lifecycle**.
 
-**Lean Kanban (5 columns, NSST 603062275).**
+**Lean Kanban (6 columns, NSST 603062275).**
 
 | # | Column            | Meaning |
 |---|-------------------|---------|

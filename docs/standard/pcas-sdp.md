@@ -32,12 +32,16 @@ comment that records the source-of-record.
     - [4.1.2 Software Requirements Capture and Analysis](#412-software-requirements-capture-and-analysis)
     - [4.1.3 Software Design](#413-software-design)
     - [4.1.4 Software Implementation](#414-software-implementation)
+      - [4.1.4.A Scrum Track](#414a-scrum-track)
+      - [4.1.4.B Lean Kanban Track](#414b-lean-kanban-track)
     - [4.1.5 Software Verification & Testing](#415-software-verification--testing)
     - [4.1.6 Software Deployment](#416-software-deployment)
     - [4.1.7 Software Evaluation](#417-software-evaluation)
     - [4.1.8 Supporting and Related Processes](#418-supporting-and-related-processes)
     - [4.1.9 Mapping to Edwards Product Commercialisation Process](#419-mapping-to-edwards-product-commercialisation-process)
     - [4.1.10 Project and Design Reviews](#4110-project-and-design-reviews)
+      - [4.1.10.A Scrum Track Reviews](#4110a-scrum-track-reviews)
+      - [4.1.10.B Lean Kanban Track Reviews](#4110b-lean-kanban-track-reviews)
     - [4.1.11 Measurement](#4111-measurement)
     - [4.1.12 Review](#4112-review)
 - [5. Support Documentation](#5-support-documentation)
@@ -106,9 +110,9 @@ are marked *(PCAS)*.
 
 | Term | Definition |
 |------|------------|
-| **NPI** *(global)* | New Product Introduction — Edwards process for a new product entering the market. |
-| **PCP** *(global)* | Product Commercialisation Process — Edwards stage-gate governance (Q71-101). |
-| **PRR** *(global)* | Production Readiness Review — gate confirming a product is ready for serial production. |
+| **NPI** *(global)* | New Product Introduction — Edwards process for a new product entering the market. *Retained from global Eastbourne SDP for compliance reference; PCAS development primarily uses PCP gates mapped to Walking Skeleton milestones (§4.1.9).* |
+| **PCP** *(global)* | Product Commercialisation Process — Edwards stage-gate governance (Q71-101). *Authoritative gating model for PCAS; mapped to Walking Skeleton M1–M4 in §4.1.9.* |
+| **PRR** *(global)* | Production Readiness Review — gate confirming a product is ready for serial production. *Retained from global Eastbourne SDP for compliance reference; not invoked locally in this document.* |
 | **Software** *(global)* | Any executable artifact (firmware, application, script) delivered to an External Customer. |
 | **External Customer** *(global)* | An end-user of an Edwards product, distinct from internal Edwards users. |
 | **External Agents** *(global)* | Third-party organisations contributing software under a contractual agreement. |
@@ -135,7 +139,7 @@ with two PCAS-specific roles introduced by the dual-track agile model.
 | **Software Engineer** | Designs, implements, tests, and documents software. Performs peer review on Bitbucket Pull Requests. Logs work in Jira. | global |
 | **Software Manager** | Owns line management of the engineering team, training, and InStaging escalation triage on the Lean Kanban board. | global |
 | **Scrum Master** | Facilitates Scrum-track ceremonies (Planning, Daily, Review, Retrospective, Refinement). Removes blockers; protects the Sprint Goal. Does not own delivery accountability — that remains with the Software Project Leader. | PCAS |
-| **Product Owner** | Owns and orders the backlog (Scrum) and the Lean Kanban `Backlog` column. Authorises work to enter `Selected`. Approves Bundle scope. | PCAS |
+| **Product Owner** | Owns and orders the backlog (Scrum) and the Lean Kanban `Backlog (Hide)` column. Approves Bundle scope and Confluence Release Notes. | PCAS |
 | **Lead Engineer** | Senior engineer paired with the Product Owner for weekly Grooming on the Lean Kanban track ([NSST 603062275](https://ac-avi.atlassian.net/wiki/spaces/NSST/pages/603062275/IS+Legacy+Product+Lean+Kanban)). Mentors the engineering team, reviews InStaging escalations, signs off on technical refinement. | PCAS |
 
 EOB Team setup, on-boarding, and toolchain provisioning are documented in
@@ -256,6 +260,12 @@ separate.
 >   may spawn maintenance Service Portal items). Cross-track linkage is via
 >   the Jira `is part of` link.
 
+**Commit conventions (both tracks).** Implementation commits in either track
+follow the Conventional Commits format per
+[ISP 1085636609](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609);
+the enumerated `type(scope)` values and the PR review policy are owned by
+[`pcas-scm.md`](./pcas-scm.md) §6.1 (BitBucket).
+
 ##### 4.1.4.A Scrum Track
 
 Source-of-record:
@@ -286,25 +296,31 @@ plus
 Source-of-record:
 [NSST 603062275](https://ac-avi.atlassian.net/wiki/spaces/NSST/pages/603062275/IS+Legacy+Product+Lean+Kanban).
 
-- **Board.** Five-column Lean Kanban: `Backlog → Selected → In Progress →
-  InStaging → Done`.
+- **Board.** Six-column Lean Kanban (per NSST 603062275):
+  `Backlog (Hide) → Ready To Dev → In Progress ↔ InStaging → Ready to Signoff
+  → Done`. The bidirectional notation (`↔`) between `In Progress` and
+  `InStaging` reflects that an item discovered to need code rework during
+  staging returns to `In Progress` rather than escalating. Full column
+  semantics live in [`pcas-scm.md`](./pcas-scm.md) §5.2.4.
 - **WIP limit.** **2 cards per engineer** in `In Progress`. The board is
   **pull-based**: only the engineer who finished a card may pull the next from
-  `Selected`.
-- **InStaging.** The escalation column. Items idle in `InStaging` for more than
-  5 working days trigger a Lead Engineer review and, if unresolved, a
+  `Ready To Dev`.
+- **InStaging.** The escalation column. Items idle in `InStaging` for more
+  than **5 working days** trigger a Lead Engineer review and, if unresolved, a
   Software Manager escalation.
 - **Ceremonies.**
-  - **Biweekly Sync** — 30 min, every other Tuesday, full team, alignment on
-    flow / blockers / Bundle scope.
-  - **Weekly Grooming** — 45 min, Thursday, Lead Engineer + Product Owner,
-    refinement of the top of `Backlog` into ready-to-pull cards.
+  - **Sync** — **twice a week, 15 min each** (Monday in Teams; Thursday in
+    Team Meeting). Full Lean Kanban team. Alignment on flow / blockers /
+    Bundle scope.
+  - **Grooming** — **once a week, 30 min** (Tech Lead + Lead Engineer per
+    [`pcas-scm.md`](./pcas-scm.md) §3.4). Refines top of `Backlog (Hide)` and
+    promotes cards to `Ready To Dev`.
 - **Estimation.** None. Throughput is measured in *cards per week*; metrics
-  are collected per [`pcas-scm.md`](./pcas-scm.md) §7 (to be authored in
-  Phase 3).
-- **Roles.** Lead Engineer is the Grooming partner (NSST 603062275 explicit);
-  Software Manager owns InStaging escalations; Product Owner owns `Backlog`
-  ordering.
+  are collected per [`pcas-scm.md`](./pcas-scm.md) §7.
+- **Roles.** Tech Lead + Lead Engineer own Grooming refinement of
+  `Backlog (Hide)` and promotion to `Ready To Dev` (NSST 603062275 explicit);
+  Software Manager owns InStaging escalations; Product Owner authorises
+  Bundle scope and approves Release Notes.
 
 #### 4.1.5 Software Verification & Testing
 <!-- Maps to Eastbourne SDP §4.1.5 -->
@@ -491,6 +507,11 @@ track) and continuous flow ceremonies (Lean Kanban track). The split mirrors
 The formal review set from the Eastbourne SDP is preserved for Scrum-track
 work, with explicit owners and exit criteria:
 
+> **Note.** Sprint Review and Sprint Retrospective are *sprint-level*
+> ceremonies; they do **not** substitute for the formal SRR / SDR / SVR
+> stage-gate reviews, which remain mandatory for Stream-level deliverables
+> and continue to be triggered at PCP gates per §4.1.9.
+
 | Review | Trigger | Output | Owner |
 |--------|---------|--------|-------|
 | **SRR** Software Requirements Review | SRS draft complete | Approved SRS, baselined in Confluence | Product Owner |
@@ -507,8 +528,8 @@ into the Scrum track:
 
 | Ceremony | Trigger | Output | Owner |
 |----------|---------|--------|-------|
-| **Weekly Grooming** | Every Thursday | Top of `Backlog` refined into ready-to-pull cards | Lead Engineer + Product Owner |
-| **Biweekly Sync** | Every other Tuesday | Flow / blockers / Bundle scope alignment notes | Lead Engineer |
+| **Grooming** | Once a week, 30 min | Top of `Backlog (Hide)` refined and promoted to `Ready To Dev` | Tech Lead + Lead Engineer |
+| **Sync** | Twice a week, 15 min (Mon Teams + Thu Team Meeting) | Flow / blockers / Bundle scope alignment notes | Lead Engineer |
 | **InStaging Escalation Review** | Item idle >5 working days | Resolution plan or Software Manager escalation | Software Manager |
 | **Bundle Release Review** | Bundle Active → Completed | Confluence Release Note approval | Software Project Leader + Software Manager |
 
