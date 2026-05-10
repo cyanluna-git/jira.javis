@@ -1,11 +1,5 @@
 # PCAS Software Development Procedure (SDP)
 
-> **Status:** Phase 2 body — Mirror-and-Modernize from Eastbourne SDP. Section
-> numbering, anchors, and the inline `<!-- Maps to Eastbourne SDP §X.Y -->`
-> annotations are inherited from the Phase 1 skeleton and must not change. The
-> mapping of every section to its Eastbourne source-of-record lives in
-> [`section-mapping.md`](./section-mapping.md).
-
 This document is the PCAS-equivalent of the *Eastbourne Site Software Development
 Procedure*. Each heading below is paired with a `<!-- Maps to Eastbourne SDP §X.Y -->`
 comment that records the source-of-record.
@@ -18,6 +12,16 @@ comment that records the source-of-record.
 - ISP 1039237122 — Bitbucket CI/CD — https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1039237122
 - ISP 985563137 — North Star Agile Roadmap — https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/985563137
 - ISP 1085636609 — EOB Team Guidance — https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Document Number | TBD |
+| Issue | v1.5 |
+| Effective Date | TBD |
+| Document Owner | Software Manager |
+| Next Review Date | TBD |
 
 ## Table of Contents
 
@@ -384,6 +388,22 @@ Release Note are all attributes of the Bundle, not of any one component.
 The leading `Gen<N>` makes the platform constraint visible at a glance; the
 SemVer suffix carries the usual breaking/feature/patch semantics.
 
+##### Bundle ↔ component version mapping
+
+A Bundle version `Gen<N>-<X>.<Y>.<Z>` is the *Bundle-level* identity. Each
+participating component repository (EUV, ASP, OQC) carries its own SemVer
+tag inside the Bundle: a single `Gen3-4.3.5` Bundle might combine
+`euv@1.4.2`, `asp@2.0.7`, and `oqc@0.9.1`. The mapping is recorded in the
+`releases/Gen<N>-<X>.<Y>.<Z>.yaml` artefact manifest
+([`pcas-scm.md`](./pcas-scm.md) §4.3.3), which lists each component's
+repository, branch, tag, and commit SHA. Consumers (V&T, EC, customer
+documentation) reference the Bundle version; engineers investigating a
+specific component drill down via the manifest. The Bundle Major (`<X>`) is
+bumped only when a participating component introduces an incompatible
+customer-visible API or behavioural change; a component-local Major bump
+that does not affect the Bundle's external contract advances the Bundle
+Minor (`<Y>`) only.
+
 ##### Bundle lifecycle
 
 `Planning → Active → Completed`
@@ -542,9 +562,8 @@ PCAS retains the Eastbourne measurement *goals*:
 2. Goal 2 — drive corrective action where measurements indicate drift.
 
 The concrete metrics list and the data-collection mechanics are owned by
-[`pcas-scm.md`](./pcas-scm.md) §7 *Software Process Metrics Measurement* (to
-be authored in Phase 3) so that there is a single source-of-truth across both
-the SDP and the SCM. PCAS-specific metrics expected to live there include
+[`pcas-scm.md`](./pcas-scm.md) §7 *Software Process Metrics Measurement* so
+that there is a single source-of-truth across both the SDP and the SCM. PCAS-specific metrics expected to live there include
 Lean Kanban throughput (cards/week), Scrum velocity, lint-gate pass-rate, and
 Bundle on-time-delivery.
 
@@ -633,6 +652,11 @@ into the Scrum track:
 - **SDS** — Software Design Specification.
 - **SVS** — Software Verification Specification.
 
+> **PCAS Confluence templates:** the SRS, IFS, SAS, SDS, and SVS templates
+> are consolidated in a single PCAS standard-documents Confluence page
+> (URL: TBD — page to be created in Confluence, parented under
+> "PCAS Software Procedures" in the project space).
+
 ### 5.5 Form Templates
 <!-- Maps to Eastbourne SDP §5 (Form Templates group) -->
 
@@ -647,12 +671,22 @@ for the agile cadence:
 - **Bundle Release Note** — PCAS, the Confluence Release Note template
   prescribed in §4.1.6.
 
+> **PCAS Confluence form templates:** the SIR, SRR, SDR, SVR, Sprint Review
+> Record, and Bundle Release Note forms are linked from a single PCAS
+> form-templates Confluence page (URL: TBD — page to be created in
+> Confluence, parented under "PCAS Software Procedures" in the project space).
+
 ## 6. Change \\ Review History
 <!-- Maps to Eastbourne SDP §6 -->
 
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
 | v1.0 | 2026-05-04 | PCAS Software Manager | Initial PCAS revision derived from Eastbourne *Site Software Development Procedure* (3) issue 9, 2025-03-26. Restructures §4.1.4 into Scrum / Lean Kanban dual track; replaces §4.1.6 Alpha/Beta/Production with the Bundle model; rewrites §4.1.9 PCP mapping against Walking Skeleton M1 – M4. |
+| v1.1 | 2026-05-04 | PCAS Software Manager | Phase 2 body authored — §1–§7 prose written against Eastbourne mirror; section anchors locked. |
+| v1.2 | 2026-05-04 | PCAS Software Manager | Phase 3 SCM body authored — pcas-scm.md §1–§8 written; dual-track lifecycle, Atlassian-first tool stack, Bundle versioning. |
+| v1.3 | 2026-05-04 | PCAS Software Manager | Phase 4 polish — cross-document drift reconciliation; Bundle lifecycle wording; EC table preserved verbatim. |
+| v1.4 | 2026-05-04 | PCAS Software Manager | Phase 5 — Makefile + DOCX build tooling; eastbourne.refer/ baseline checksums locked. |
+| v1.5 | 2026-05-10 | PCAS Software Manager | Review revision — CLAUDE.md citations replaced with ISP references; Phase status banners removed; Document Control header added; SCM §3 Scrum Master + Product Owner roles; SCM §5.2.4 InStaging column transitions explicit; SDP §4.1.6 Bundle/component mapping; §5.4/5.5 Confluence template placeholders; minor language fixes. |
 
 ## 7. Record Retention
 <!-- Maps to Eastbourne SDP §7 -->

@@ -1,10 +1,5 @@
 # PCAS Software Configuration Management Working Practice (SCM)
 
-> **Status:** Phase 3 — bodies authored. This document is the PCAS-equivalent of
-> the *Eastbourne Software Configuration Management Working Practice*; it is the
-> Configuration Management (CM) companion to [`pcas-sdp.md`](./pcas-sdp.md) and
-> is parented by `pcas-sdp.md` §4.1.8 (Supporting and Related Processes).
-
 This document is the PCAS-equivalent of the *Eastbourne Software Configuration
 Management Working Practice*. Each heading below is paired with a
 `<!-- Maps to Eastbourne SCM §X.Y -->` comment that records the source-of-record.
@@ -19,6 +14,16 @@ The full enumeration table lives in [`section-mapping.md`](./section-mapping.md)
 - ISP 1085341713 — EOB Deployment & Server Operations — https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085341713
 - ISP 1085636609 — EOB Team Guidance — https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609
 
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Document Number | TBD |
+| Issue | v1.5 |
+| Effective Date | TBD |
+| Document Owner | Software Manager |
+| Next Review Date | TBD |
+
 ## Table of Contents
 
 - [1. Objectives & Scope](#1-objectives--scope)
@@ -31,6 +36,8 @@ The full enumeration table lives in [`section-mapping.md`](./section-mapping.md)
   - [3.2 Software Engineer](#32-software-engineer)
   - [3.3 Software Manager](#33-software-manager)
   - [3.4 Lead Engineer](#34-lead-engineer)
+  - [3.5 Scrum Master](#35-scrum-master)
+  - [3.6 Product Owner](#36-product-owner)
 - [4. Change Control Process](#4-change-control-process)
   - [4.1 Purpose](#41-purpose)
   - [4.2 Configuration Control Procedure](#42-configuration-control-procedure)
@@ -247,6 +254,49 @@ Lean Kanban track. Specifically, the Lead Engineer:
   refinement during Grooming.
 - Reviews Bundle technical content (§4.3) and flags cross-track dependencies
   before the Bundle goes to EC submission.
+
+### 3.5 Scrum Master
+<!-- Maps to Eastbourne SCM §3 (PCAS extension — Scrum Master CM responsibilities) -->
+<!-- PCAS extension — no Eastbourne §3 counterpart -->
+
+> **PCAS extension.** The Scrum Master role is defined in `pcas-sdp.md` §3.
+> This sub-section adds CM-specific responsibilities required by §5.2.4
+> Scrum-track lifecycle.
+
+The Scrum Master facilitates Scrum-track ceremonies and protects the team
+from CM-process friction. Specifically, the Scrum Master:
+
+- Ensures every Story committed in Sprint Planning has a Jira `fixVersion`
+  (target Bundle) recorded before work begins (§5.2.1).
+- Enforces the §5.2.4 Scrum lifecycle — `Sprint Backlog → In Progress → In
+  Review → Done` — and flags lifecycle violations to the Software Project
+  Leader.
+- Surfaces CM-related blockers (PR review backlog, Pipeline failures) at
+  Daily Standup; escalates persistent blockers to the Lead Engineer (§3.4)
+  or Software Manager (§3.3).
+- Records Sprint Review Record (`pcas-sdp.md` §5.5) including the list of
+  merged PRs and the Bundle version targeted.
+
+### 3.6 Product Owner
+<!-- Maps to Eastbourne SCM §3 (PCAS extension — Product Owner CM responsibilities) -->
+<!-- PCAS extension — no Eastbourne §3 counterpart -->
+
+> **PCAS extension.** The Product Owner role is defined in `pcas-sdp.md` §3.
+> This sub-section adds CM-specific responsibilities required by §4.3
+> (Baseline Control) and §5.2.4 (lifecycle).
+
+The Product Owner orders the Scrum backlog and the Lean Kanban
+`Backlog (Hide)` column, and authorises Bundle scope. Specifically, the
+Product Owner:
+
+- Approves the Bundle scope (§4.3.1) — confirms the set of Stories/Cards
+  that constitute a Bundle before the Bitbucket tag is cut.
+- Approves the Confluence Release Note content (§4.3.3) for customer-facing
+  language and Risk / Known Issues entries.
+- Sets `fixVersion` (target Bundle) on every backlog item at intake
+  (§5.2.1) for both Service Portal and Roadmap channels.
+- Partners with the Lead Engineer (§3.4) during weekly Grooming on the Lean
+  Kanban track.
 
 ## 4. Change Control Process
 <!-- Maps to Eastbourne SCM §4 -->
@@ -549,8 +599,9 @@ Change Requests enter PCAS through one of two inbound channels:
 
 - **Jira Service Portal (PSSM project)** — the Lean Kanban inbound channel.
   Customers and internal users submit tickets through the Service Portal.
-  The existing AI-assisted classification pipeline (`scripts/javis_cli.py
-  suggest`) reads the ticket, suggests the business unit (Integrated Systems
+  The existing AI-assisted classification tool (per
+  [ISP 1085636609](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609))
+  reads the ticket, suggests the business unit (Integrated Systems
   / Abatement) and the target Bundle, and proposes a severity. The Lead
   Engineer accepts or overrides the classification during weekly Grooming
   (§3.4).
@@ -580,7 +631,7 @@ Lean Kanban, `Sprint Backlog` for Scrum).
 
 A ticket is closed once the **Definition of Done** checklist
 ([NSST 603062275](https://ac-avi.atlassian.net/wiki/spaces/NSST/pages/603062275/IS+Legacy+Product+Lean+Kanban)
-워크플로우 체크리스트) is satisfied:
+workflow checklist) is satisfied:
 
 1. Code merged to `develop` (or to the relevant Bundle integration branch).
 2. Bitbucket Pipeline green — Ruff + ESLint + unit tests pass
@@ -623,12 +674,14 @@ does not loop indefinitely — the **5-working-day idle cap in `InStaging`**
 forces resolution.
 
 **InStaging sub-states** (workflow checklist captured inline on the Jira
-ticket Description, per NSST 603062275):
+ticket Description, per NSST 603062275). Sub-state 3 transitions the card
+from column 4 (`InStaging`) to column 5 (`Ready to Signoff`); sub-state 4
+transitions it from column 5 to column 6 (`Done`):
 
-1. *Software Updated, Ready to Test*
-2. *Tested / Ready to write verification note*
-3. *Verification Note completed / Ready for sign-off*
-4. *Reviewed → Done*
+1. *Software Updated, Ready to Test* — card stays in column 4 (`InStaging`).
+2. *Tested / Ready to write verification note* — card stays in column 4.
+3. *Verification Note completed / Ready for sign-off* — **card moves: column 4 (`InStaging`) → column 5 (`Ready to Signoff`)**.
+4. *Reviewed → Done* — **card moves: column 5 (`Ready to Signoff`) → column 6 (`Done`)**.
 
 **Ceremonies (NSST 603062275 source-of-truth values).**
 
@@ -839,8 +892,8 @@ The Software Manager (§3.3) confirms the cron is running and that the
 > delegation target for `pcas-sdp.md` §4.1.11.
 
 PCAS preserves the four Eastbourne metrics and adds the PCAS-specific
-metrics required by `CLAUDE.md` *Required Patterns* and `pcas-sdp.md`
-§4.1.11. All metrics are collected from the **Javis viewer** (Postgres
+metrics required by [ISP 1085636609](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609)
+(EOB Team Guidance) and `pcas-sdp.md` §4.1.11. All metrics are collected from the **Javis viewer** (Postgres
 `javis_brain`, populated by `sync_bidirectional.py`) which is the
 source-of-truth; Confluence dashboards mirror the same numbers.
 
@@ -856,15 +909,16 @@ source-of-truth; Confluence dashboards mirror the same numbers.
 | **Lint-gate pass rate**         | both        | Bitbucket Pipelines API (ISP 1039237122) | viewer chart, weekly |
 | **Bundle on-time-delivery**     | both        | Jira Bundle Epic `due` vs `Released`  | viewer dashboard, per Bundle |
 | **InStaging aging**             | Lean Kanban | Jira ticket idle time in `InStaging`  | viewer alert at >5 working days (Lead Engineer trigger, NSST 603062275) |
-| **Risks tracked: delay**        | both        | `risks` table (`scripts/`)            | `python3 scripts/javis_cli.py` risk detection |
+| **Risks tracked: delay**        | both        | `risks` table (`scripts/`)            | AI-assisted risk detection tool ([ISP 1085636609](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609)) |
 | **Risks tracked: blocker**      | both        | `risks` table                         | risk detection |
 | **Risks tracked: velocity_drop**| Scrum       | `risks` table                         | risk detection |
 | **Risks tracked: dependency_block** | both    | `risks` table                         | risk detection |
 | **Risks tracked: resource_conflict** | both   | `risks` table                         | risk detection |
 
 The five risk types (`delay`, `blocker`, `velocity_drop`,
-`dependency_block`, `resource_conflict`) are exactly those required by
-`CLAUDE.md` *Required Patterns* and are owned by the Software Manager.
+`dependency_block`, `resource_conflict`) are the canonical PCAS risk
+taxonomy maintained per [ISP 1085636609](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609)
+(EOB Team Guidance); they are owned by the Software Manager.
 
 **Cross-references.** `pcas-sdp.md` §4.1.11 (delegation in), §6.1
 (Pipeline pass-rate source), §6.7 (backup retention for the metrics
@@ -963,8 +1017,9 @@ sync if either is updated.
 
 > **Replaced.** See the §8.2 PCAS local procedures table above; PCAS
 > security posture is governed by Edwards global IT policy plus the
-> read-only-mode safeguards defined in `CLAUDE.md` and
-> [ISP 1085341713](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085341713).
+> deployment and access safeguards defined in
+> [ISP 1085341713](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085341713)
+> (EOB Deployment & Server Operations).
 
 #### 8.2.4 Technical References
 <!-- Maps to Eastbourne SCM §8.1.9 -->

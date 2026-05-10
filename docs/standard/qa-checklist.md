@@ -231,10 +231,17 @@ If a test moves from PASS to FAIL on a future run, the most common causes:
 
 ## Reviewer Sign-Off
 
-- [ ] Reviewer name: ____________
-- [ ] Reviewer role: ____________
-- [ ] Date: ____________
-- [ ] Comments: ____________
+| Field | Value |
+|-------|-------|
+| Reviewer Name |  |
+| Reviewer Role |  |
+| Date (YYYY-MM-DD) |  |
+| Approval (✓ / ✗) |  |
+| Comments |  |
+
+> Reviewer fills in each cell directly in Confluence or the rendered Markdown.
+> Once all cells are populated and Approval is `✓`, the deliverable is
+> Sign-off complete.
 
 > Reviewer should run `make test` (and, if pandoc is installed, `make all`)
 > before signing off. Cross-check the SHA-256 baseline manually if any
