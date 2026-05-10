@@ -25,14 +25,17 @@ will `SKIP` cleanly when their tools are absent.
 
 ## Most Recent Run
 
-- **Date:** 2026-05-05T06:36:00Z
+- **Date:** 2026-05-10T09:28:00Z
 - **Result:** 14 PASS / 0 FAIL / 1 SKIP
 - **Exit code:** 0
-- **Environment:** Linux WSL2; bash + curl + sha256sum + python3 + pandoc 3.1.13
+- **Environment:** Linux WSL2; bash + curl + sha256sum + python3 + pandoc 3.1.3
   available; markdownlint not installed (T7 SKIP only). DOCX produced at
-  `dist/pcas-sdp.docx` (4.77 MB) and `dist/pcas-scm.docx` (4.53 MB).
+  `dist/pcas-sdp.docx` (80 KB) and `dist/pcas-scm.docx` (105 KB).
 - **DOCX HTML-comment leak check (E4):** 0 leaks in either file (Python
   zipfile fallback when `unzip` is absent).
+- **Note:** Post-review revision (v1.5) — CLAUDE.md citations removed, Document
+  Control metadata added, SCM §3.5/§3.6 roles added, annotation count SDP=27
+  SCM=56.
 
 ### Test-by-Test Results
 
@@ -51,15 +54,15 @@ PASS: section-mapping.md SDP=27, SCM=54, no planned rows
 ```
 --- T2: Annotation coverage ---
   pcas-sdp.md '<!-- Maps to' annotations: 27 (>= 27)
-  pcas-scm.md '<!-- Maps to' annotations: 54 (>= 51)
-PASS: annotation coverage SDP=27 SCM=54
+  pcas-scm.md '<!-- Maps to' annotations: 56 (>= 51)
+PASS: annotation coverage SDP=27 SCM=56
 ```
 
 #### T3 — Dual-track explicitness
 
 ```
 --- T3: Dual-track explicitness ---
-PASS: SDP §4.1.4.A=9 §4.1.4.B=10; SCM §5.2.4=15; both docs mention Scrum & Lean Kanban
+PASS: SDP §4.1.4.A=9 §4.1.4.B=10; SCM §5.2.4=18; both docs mention Scrum & Lean Kanban
 ```
 
 #### T4 — Bundle versioning
@@ -68,7 +71,7 @@ PASS: SDP §4.1.4.A=9 §4.1.4.B=10; SCM §5.2.4=15; both docs mention Scrum & Le
 --- T4: Bundle versioning ---
   pcas-scm.md historical 'AAAA/BB/XX.YY' count: 1 (<=1)
   pcas-sdp.md historical 'AAAA/BB/XX.YY' count: 0
-PASS: SDP Gen pattern=5 SCM Gen pattern=19; legacy SDP=0 SCM=1
+PASS: SDP Gen pattern=8 SCM Gen pattern=19; legacy SDP=0 SCM=1
 ```
 
 > Historical legacy version literal (`AAAA/BB/XX.YY[.ZZ][.AA]`) appears only
@@ -92,10 +95,10 @@ PASS: all 6 Confluence IDs resolved (200/30x/401/403 — auth-walled is expected
 
 ```
 --- T6: DOCX builds via pandoc ---
-PASS: dist/pcas-sdp.docx (4770277 bytes) + dist/pcas-scm.docx (4525194 bytes) built
+PASS: dist/pcas-sdp.docx (81256 bytes) + dist/pcas-scm.docx (106937 bytes) built
 ```
 
-> **Note:** built with pandoc 3.1.13 against per-doc Eastbourne reference
+> **Note:** built with pandoc 3.1.3 against per-doc Eastbourne reference
 > templates (`Eastbourne Site Software Development Procedure (3).docx` for
 > SDP, `Software Configuration Management Working Practice (2).docx` for
 > SCM). Output files live under `dist/` and are gitignored — re-run
@@ -174,9 +177,9 @@ PASS: §3.4 Lead Engineer present in pcas-scm.md and section-mapping.md
 
 ```
 --- E3: Cross-doc references ---
-  pcas-sdp.md -> pcas-scm.md links: 11
-  pcas-scm.md -> pcas-sdp.md links: 3
-PASS: cross-doc links present (sdp->scm=11, scm->sdp=3); link targets resolve
+  pcas-sdp.md -> pcas-scm.md links: 12
+  pcas-scm.md -> pcas-sdp.md links: 2
+PASS: cross-doc links present (sdp->scm=12, scm->sdp=2); link targets resolve
 ```
 
 > Cross-doc references in this revision are file-level (`./pcas-scm.md`)
@@ -193,9 +196,9 @@ PASS: no 'Maps to Eastbourne' annotation leaks into pcas-scm.docx
 
 > Verified by reading `word/document.xml` from both DOCX archives via
 > Python `zipfile` (used as fallback when `unzip` is not on PATH). The
-> Makefile's `sed -E 's/<!--[^>]*-->//g'` PREPROCESS step strips all 81
+> Makefile's `sed -E 's/<!--[^>]*-->//g'` PREPROCESS step strips all 83
 > `<!-- Maps to Eastbourne ... -->` annotation comments before pandoc
-> conversion.
+> conversion (SDP=27, SCM=56 as of v1.5).
 
 ## Eastbourne Reference Baseline
 
