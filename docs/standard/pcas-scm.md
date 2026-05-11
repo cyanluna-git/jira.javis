@@ -85,7 +85,7 @@ The full enumeration table lives in [`section-mapping.md`](./section-mapping.md)
 
 ---
 
-## 1. Objectives & Scope
+## Objectives & Scope
 <!-- Maps to Eastbourne SCM §1 -->
 
 This section is the PCAS-equivalent of Eastbourne SCM §1. It establishes the
@@ -95,7 +95,7 @@ defined here are the configuration management companion to the Software
 Development Procedure in [`pcas-sdp.md`](./pcas-sdp.md) and are parented by
 `pcas-sdp.md` §4.1.8 (Supporting and Related Processes).
 
-### 1.1 Objective
+### Objective
 <!-- Maps to Eastbourne SCM §1.1 -->
 
 The objective of this Working Practice is to define a uniform Configuration
@@ -107,7 +107,7 @@ chain from Vision → Milestone → Stream → Epic → Bundle → Bitbucket tag
 Confluence Release Note. The procedure is owned by the PCAS Software Manager
 and applies retroactively from the next Bundle.
 
-### 1.2 Scope
+### Scope
 <!-- Maps to Eastbourne SCM §1.2 -->
 
 This procedure applies to **all PCAS software** — EUV, ASP, OQC, and
@@ -120,7 +120,7 @@ here. Documents that pre-date this procedure remain valid in their original
 form until the next significant change forces a re-baseline; from that point
 forward the PCAS rules in §4 and §6 apply.
 
-### 1.3 Overview
+### Overview
 <!-- Maps to Eastbourne SCM §1.3 -->
 
 The remainder of this document is organised as follows.
@@ -141,7 +141,7 @@ TeamCity.
 catalogue (delegated from `pcas-sdp.md` §4.1.11).
 **§8 References** lists the global and local source documents.
 
-## 2. Definitions
+## Definitions
 <!-- Maps to Eastbourne SCM §2 -->
 
 The following terms have the meanings given. Definitions marked *(PCAS)* are
@@ -177,7 +177,7 @@ The MAPICS-as-CM-tool definition from Eastbourne is **not** carried over;
 MAPICS is retained only as the EC part-number registry, defined in-line in
 §4.3.1.2.
 
-## 3. Responsibilities
+## Responsibilities
 <!-- Maps to Eastbourne SCM §3 -->
 
 CM duties are distributed across four PCAS roles. The first three are
@@ -186,7 +186,7 @@ extension required by `pcas-sdp.md` §3 and §5.2.4 Lean Kanban Grooming. The
 sub-sections below add CM-specific responsibilities on top of the role
 definitions in `pcas-sdp.md` §3.
 
-### 3.1 Software Project Leader
+### Software Project Leader
 <!-- Maps to Eastbourne SCM §3.1 -->
 
 The Software Project Leader is accountable for the Bundle scope and the
@@ -200,7 +200,7 @@ baseline approvals for their project. Specifically, the Project Leader:
 - Ensures that every Story / Card under their stewardship is recorded in Jira
   with the correct `fixVersion` Bundle Epic.
 
-### 3.2 Software Engineer
+### Software Engineer
 <!-- Maps to Eastbourne SCM §3.2 -->
 
 Software Engineers are accountable for the CM hygiene of every change they
@@ -218,7 +218,7 @@ produce. Specifically, every PCAS engineer:
 - Updates the Confluence design page (§4.2.6) when an implementation deviates
   materially from the original design.
 
-### 3.3 Software Manager
+### Software Manager
 <!-- Maps to Eastbourne SCM §3.3 -->
 
 The Software Manager owns the team-wide CM posture and the platform on which
@@ -233,7 +233,7 @@ CM runs. Specifically, the Software Manager:
   branch-naming convention.
 - Co-signs the EC submission (§4.3.2) jointly with the Software Project Leader.
 
-### 3.4 Lead Engineer
+### Lead Engineer
 <!-- Maps to Eastbourne SCM §3.4 -->
 <!-- PCAS extension — no Eastbourne §3.4 counterpart -->
 
@@ -255,7 +255,7 @@ Lean Kanban track. Specifically, the Lead Engineer:
 - Reviews Bundle technical content (§4.3) and flags cross-track dependencies
   before the Bundle goes to EC submission.
 
-### 3.5 Scrum Master
+### Scrum Master
 <!-- Maps to Eastbourne SCM §3 (PCAS extension — Scrum Master CM responsibilities) -->
 <!-- PCAS extension — no Eastbourne §3 counterpart -->
 
@@ -277,7 +277,7 @@ from CM-process friction. Specifically, the Scrum Master:
 - Records Sprint Review Record (`pcas-sdp.md` §5.5) including the list of
   merged PRs and the Bundle version targeted.
 
-### 3.6 Product Owner
+### Product Owner
 <!-- Maps to Eastbourne SCM §3 (PCAS extension — Product Owner CM responsibilities) -->
 <!-- PCAS extension — no Eastbourne §3 counterpart -->
 
@@ -298,7 +298,7 @@ Product Owner:
 - Partners with the Lead Engineer (§3.4) during weekly Grooming on the Lean
   Kanban track.
 
-## 4. Change Control Process
+## Change Control Process
 <!-- Maps to Eastbourne SCM §4 -->
 
 The Change Control Process governs both *configuration-item-level* changes
@@ -308,7 +308,7 @@ the integration of a set of approved configuration changes (§4.2). The
 process applies under both execution tracks (Scrum, Lean Kanban) but the
 *intake* differs by track — see §5.2 and `pcas-sdp.md` §4.1.4.
 
-### 4.1 Purpose
+### Purpose
 <!-- Maps to Eastbourne SCM §4.1 -->
 
 The purpose of the Change Control Process is to ensure that every change to
@@ -321,7 +321,7 @@ preserved verbatim from Eastbourne SCM §4.1; only the mechanics of §4.2
 (Git/Bitbucket replacing file-level check-in) and §4.3 (Bundle versioning
 replacing the Eastbourne version literal) are PCAS-specific.
 
-### 4.2 Configuration Control Procedure
+### Configuration Control Procedure
 <!-- Maps to Eastbourne SCM §4.2 -->
 
 This sub-section specifies how individual configurable items move from a
@@ -330,7 +330,7 @@ Request flow throughout; the Eastbourne check-in/check-out/locking
 terminology is preserved as section headings (for traceability) but the
 mechanics are replaced.
 
-#### 4.2.1 When to Apply Configuration Control Procedure
+#### When to Apply Configuration Control Procedure
 <!-- Maps to Eastbourne SCM §4.2.1 -->
 
 The Configuration Control Procedure applies whenever a configurable item is
@@ -341,7 +341,7 @@ through §4.2.2–§4.2.5. The Bitbucket Pipeline lint + unit-test gate
 (ISP 1039237122) enforces the floor; the Pull Request peer review enforces
 the ceiling.
 
-#### 4.2.2 Checking in Configurable Items
+#### Checking in Configurable Items
 <!-- Maps to Eastbourne SCM §4.2.2 -->
 
 > **Replaced.** The Eastbourne file-level *check-in* is replaced with the
@@ -371,7 +371,7 @@ Checking in a configurable item follows these steps:
 The Pull Request is the PCAS-equivalent of the Eastbourne "checking in"
 event; the merge commit on `develop` is the controlled-revision boundary.
 
-#### 4.2.3 Changing a Current Revision of Configurable Item (Checking Out)
+#### Changing a Current Revision of Configurable Item (Checking Out)
 <!-- Maps to Eastbourne SCM §4.2.3 -->
 
 > **Replaced.** Eastbourne *check-out* is replaced with `git checkout` of a
@@ -385,7 +385,7 @@ If two engineers race on the same file, the second PR rebases on top of the
 first; conflicts are resolved by the engineer who rebased and re-reviewed by
 the original PR's reviewer.
 
-#### 4.2.4 Locking of Configurable Items
+#### Locking of Configurable Items
 <!-- Maps to Eastbourne SCM §4.2.4 -->
 
 > **Replaced — N/A for Git.** File-level locking is not a Git concept.
@@ -398,7 +398,7 @@ still under migration** (§6.3); for those, the existing Eastbourne lock
 semantics apply until the repo is migrated to Bitbucket. End-state target is
 zero SVN repositories — see §6.3 deprecation banner.
 
-#### 4.2.5 Changing Old Revisions of Configurable Items
+#### Changing Old Revisions of Configurable Items
 <!-- Maps to Eastbourne SCM §4.2.5 -->
 
 Old revisions are mutated through **Git tags** plus **hotfix branches**.
@@ -411,7 +411,7 @@ version increments at the patch level — for example a hotfix on top of
 `Gen3-4.3.5` becomes `Gen3-4.3.6`. Cross-references: §4.3 Baseline Control
 Procedure, §4.3.1.1 Version Numbers.
 
-#### 4.2.6 Documentation Control
+#### Documentation Control
 <!-- Maps to Eastbourne SCM §4.2.6 -->
 
 > **Replaced.** Confluence is the **primary** documentation platform.
@@ -435,7 +435,7 @@ Each Confluence page that documents a configurable item carries a "Linked
 Bundle" entry (Confluence label `bundle:Gen3-4.x.y`) so the documentation can
 be traced to the baseline it describes.
 
-### 4.3 Baseline Control Procedure
+### Baseline Control Procedure
 <!-- Maps to Eastbourne SCM §4.3 -->
 
 A **Bundle** is the PCAS baseline unit. One Bundle = one Bitbucket annotated
@@ -443,7 +443,7 @@ tag + one Jira `fixVersion` Bundle Epic + one Confluence Release Note page;
 all three carry the **identical** version string. This contract matches
 `pcas-sdp.md` §4.1.6 and is the spine of the rest of §4.3.
 
-#### 4.3.1 Submission of Fixed Baselines
+#### Submission of Fixed Baselines
 <!-- Maps to Eastbourne SCM §4.3.1 -->
 
 A fixed baseline is submitted by the Software Project Leader once the Bundle
@@ -453,7 +453,7 @@ Confluence Release Note is published. Sub-sections §4.3.1.1 (Version Numbers)
 and §4.3.1.2 (Part Numbers) define the two identifiers carried by every
 baseline.
 
-##### 4.3.1.1 Version Numbers
+##### Version Numbers
 <!-- Maps to Eastbourne SCM §4.3.1.1 -->
 
 > **Replaced.** Eastbourne version literal replaced by PCAS Bundle versioning
@@ -494,7 +494,7 @@ appear identically in:
 Drift between any of the three is treated as a CM defect and must be fixed
 before the Bundle is approved (§4.3.2).
 
-##### 4.3.1.2 Part Numbers
+##### Part Numbers
 <!-- Maps to Eastbourne SCM §4.3.1.2 -->
 
 > **Preserved verbatim.** MAPICS 9-digit + alpha part-number scheme is a
@@ -516,7 +516,7 @@ record(s) it advances and the EC raised under Q73-701. Part-number
 allocation, revision-letter advancement, and the EC raising procedure are
 **unchanged** from the Eastbourne procedure.
 
-#### 4.3.2 Approval of baselines
+#### Approval of baselines
 <!-- Maps to Eastbourne SCM §4.3.2 -->
 
 A baseline is approved through a two-stage workflow:
@@ -535,7 +535,7 @@ Both signatures plus the EC are required before the Bitbucket tag is treated
 as a *Released* baseline. The Software Manager has final authority to halt
 release if any approval is missing.
 
-#### 4.3.3 Management and Location of Forms
+#### Management and Location of Forms
 <!-- Maps to Eastbourne SCM §4.3.3 -->
 
 > **Replaced.** Eastbourne form-folder paths are noted as historical only.
@@ -555,7 +555,7 @@ PCAS baseline forms are managed in two locations:
 The Eastbourne form-folder paths from `\\eastbourne\…\soft_rel$\Released`
 are **historical only** — they are not authoritative for any PCAS baseline.
 
-## 5. JIRA
+## JIRA
 <!-- Maps to Eastbourne SCM §5 -->
 
 Jira is the system of record for every Change Request (CR) and every Story
@@ -565,7 +565,7 @@ roadmap projects). The dual-track lifecycle in §5.2.4 is the canonical
 specification for state transitions; `pcas-sdp.md` §4.1.4 cross-references
 *into* §5.2.4 for the lifecycle detail.
 
-### 5.1 Purpose
+### Purpose
 <!-- Maps to Eastbourne SCM §5.1 -->
 
 The purpose of the JIRA section is to define how Change Requests and Stories
@@ -581,7 +581,7 @@ Both project schemes share the same workflow contract specified in §5.2.4 so
 that cross-track dependencies (Jira link `is part of`) can be traced without
 schema friction.
 
-### 5.2 Procedure
+### Procedure
 <!-- Maps to Eastbourne SCM §5.2 -->
 
 The procedure has five phases — Identification (§5.2.1), Investigation
@@ -589,7 +589,7 @@ The procedure has five phases — Identification (§5.2.1), Investigation
 The Lifecycle sub-section (§5.2.4) is the canonical state machine; the
 preceding three sub-sections describe what happens *at* each transition.
 
-#### 5.2.1 Problem Identification
+#### Problem Identification
 <!-- Maps to Eastbourne SCM §5.2.1 -->
 
 > **Replaced.** Service Portal is the canonical inbound channel for Lean
@@ -613,7 +613,7 @@ Every Jira ticket — whether from Service Portal or Roadmap — receives a
 unique key, a `fixVersion` (target Bundle), and a target track (Scrum or
 Lean Kanban) at identification time.
 
-#### 5.2.2 Problem Investigation
+#### Problem Investigation
 <!-- Maps to Eastbourne SCM §5.2.2 -->
 
 After identification (§5.2.1) the assigned engineer investigates: reproduces
@@ -626,7 +626,7 @@ the next Grooming (Lean Kanban) or Sprint Planning (Scrum). Investigation
 ends with the ticket entering the executable column (`Ready To Dev` for
 Lean Kanban, `Sprint Backlog` for Scrum).
 
-#### 5.2.3 Problem Closure
+#### Problem Closure
 <!-- Maps to Eastbourne SCM §5.2.3 -->
 
 A ticket is closed once the **Definition of Done** checklist
@@ -645,7 +645,7 @@ workflow checklist) is satisfied:
 
 The transition to `Done` is the closure event of record.
 
-#### 5.2.4 Lifecycle of Change Requests
+#### Lifecycle of Change Requests
 <!-- Maps to Eastbourne SCM §5.2.4 -->
 
 > **Replaced — canonical dual-track lifecycle.** This is the single
@@ -721,7 +721,7 @@ section is self-contained:**
 - Cross-track linkage uses the Jira `is part of` and `relates to` link
   types.
 
-#### 5.2.5 Development of features in waterfall or agile methodology
+#### Development of features in waterfall or agile methodology
 <!-- Maps to Eastbourne SCM §5.2.5 -->
 
 > **Replaced.** PCAS One SW principle replaces the Eastbourne
@@ -735,7 +735,7 @@ used for new development on the EUV / ASP / OQC roadmap; Lean Kanban is
 used for IS-Legacy maintenance and Service Portal work. Waterfall is **not**
 a permitted PCAS execution mode.
 
-## 6. Configuration Management Tools
+## Configuration Management Tools
 <!-- Maps to Eastbourne SCM §6 -->
 
 PCAS uses an **Atlassian-first** tool stack: Bitbucket as the single
@@ -745,7 +745,7 @@ is preserved as headings (§6.1–§6.7) but each non-Atlassian tool carries an
 explicit status banner — DEPRECATED, LEGACY CI, or NOT USED at PCAS — so
 the migration intent is unambiguous.
 
-### 6.1 BitBucket
+### BitBucket
 <!-- Maps to Eastbourne SCM §6.1 -->
 
 > **PRIMARY — source-of-record. All PCAS code lives here.**
@@ -791,7 +791,7 @@ and is also called out in `pcas-sdp.md` §7 (Record Retention).
 §7 (record retention); this document §6.7 (backups) and §7 (metrics
 collection from Pipelines).
 
-### 6.2 Git (on Azure)
+### Git (on Azure)
 <!-- Maps to Eastbourne SCM §6.2 -->
 
 > **LEGACY MIGRATION TARGET — migrate to Bitbucket on next significant
@@ -802,7 +802,7 @@ next significant change (Bundle re-baseline). No new Git-on-Azure
 repositories may be created. The migration uses `git push --mirror` from
 the Azure remote to a fresh Bitbucket repo so history is preserved verbatim.
 
-### 6.3 SVN
+### SVN
 <!-- Maps to Eastbourne SCM §6.3 -->
 
 > **DEPRECATED — forbidden for new repos (NSST 895680517). Migrate one
@@ -821,7 +821,7 @@ End-state target: **zero** SVN repositories. Until migration completes, the
 file-level lock semantics from the Eastbourne SCM §4.2.4 continue to apply
 to the un-migrated SVN repos only.
 
-### 6.4 Azure DevOps
+### Azure DevOps
 <!-- Maps to Eastbourne SCM §6.4 -->
 
 > **NOT USED at PCAS — heading retained for global reference only.**
@@ -832,7 +832,7 @@ Edwards procedure can locate the PCAS-specific position; the substantive
 answer is "not in scope". For tool equivalents see Bitbucket (§6.1) and
 Bitbucket Pipelines (§6.5 / replacement) at PCAS.
 
-### 6.5 Jenkins
+### Jenkins
 <!-- Maps to Eastbourne SCM §6.5 -->
 
 > **LEGACY CI — replaced by Bitbucket Pipelines (ISP 1039237122).**
@@ -848,7 +848,7 @@ evolutions described in ISP 1039237122. Existing Jenkins jobs are
 decommissioned per repository as part of each repo's first PR after
 migration; no new Jenkins jobs may be created.
 
-### 6.6 TeamCity
+### TeamCity
 <!-- Maps to Eastbourne SCM §6.6 -->
 
 > **NOT USED at PCAS — heading retained for global reference only.**
@@ -857,7 +857,7 @@ TeamCity is not part of the PCAS tool stack. The heading is retained for
 global reference only; the substantive CI answer at PCAS is Bitbucket
 Pipelines (§6.5 replacement / ISP 1039237122).
 
-### 6.7 Backing up of Systems
+### Backing up of Systems
 <!-- Maps to Eastbourne SCM §6.7 -->
 
 > **PRIMARY — Edwards IM group + automated daily 02:00 cron, 7-day
@@ -885,7 +885,7 @@ The Software Manager (§3.3) confirms the cron is running and that the
 > heading — preserving the mirror-and-modernize rule that every PCAS sub-
 > heading must map to an Eastbourne sub-heading.
 
-## 7. Software Process Metrics Measurement
+## Software Process Metrics Measurement
 <!-- Maps to Eastbourne SCM §7 -->
 
 > **Replaced — canonical PCAS metrics catalogue.** This section is the
@@ -924,7 +924,7 @@ taxonomy maintained per [ISP 1085636609](https://ac-avi.atlassian.net/wiki/space
 (Pipeline pass-rate source), §6.7 (backup retention for the metrics
 database).
 
-## 8. References
+## References
 <!-- Maps to Eastbourne SCM §8 -->
 
 References are split into **§8.1 Global Procedures** (Edwards-wide
@@ -932,48 +932,48 @@ documents, preserved verbatim from Eastbourne) and **§8.2 Local PCAS
 Procedures** (PCAS-specific Confluence pages that replace the Eastbourne
 local references).
 
-### 8.1 References — Global Procedures
+### References — Global Procedures
 <!-- Maps to Eastbourne SCM §8.1 (Global Procedures group) -->
 
 The five global Edwards procedures below are preserved verbatim from
 Eastbourne SCM §8.1.1–§8.1.5 and are the same five rows that appear in
 `pcas-sdp.md` §5.1.
 
-#### 8.1.1 Software Quality Development Procedure (replaces 1A070-030)
+#### Software Quality Development Procedure (replaces 1A070-030)
 <!-- Maps to Eastbourne SCM §8.1.1 -->
 
 The Edwards global Software Quality Development Procedure (replaces
 legacy 1A070-030). Defines the quality-management framework that this
 SCM Working Practice operates under.
 
-#### 8.1.2 Software Quality Agile Process
+#### Software Quality Agile Process
 <!-- Maps to Eastbourne SCM §8.1.2 -->
 
 The Edwards global Software Quality Agile Process. Provides the Edwards-
 wide guard-rails for any agile execution at site level; PCAS implements
 agile via the Scrum track defined in `pcas-sdp.md` §4.1.4.A.
 
-#### 8.1.3 Q73-701, Engineering Change Process
+#### Q73-701, Engineering Change Process
 <!-- Maps to Eastbourne SCM §8.1.3 -->
 
 Q73-701 is the Edwards global Engineering Change Process. §5.1.7 defines
 the EC submission for software baselines and is invoked by §4.3.2 of this
 document.
 
-#### 8.1.4 016-005, Global Corrective Action Process - FRACAS
+#### 016-005, Global Corrective Action Process - FRACAS
 <!-- Maps to Eastbourne SCM §8.1.4 -->
 
 016-005 is the Edwards global Corrective Action Process (FRACAS). PCAS
 CARs (§2 Definitions) are raised under this procedure.
 
-#### 8.1.5 Q71-101, Product Commercialisation Process (PCP) Issue 5, Project Files & TCFs
+#### Q71-101, Product Commercialisation Process (PCP) Issue 5, Project Files & TCFs
 <!-- Maps to Eastbourne SCM §8.1.5 -->
 
 Q71-101 (PCP Issue 5) is the Edwards global Product Commercialisation
 Process. The PCAS Walking-Skeleton mapping to PCP gates is defined in
 `pcas-sdp.md` §4.1.9.
 
-### 8.2 References — Local Eastbourne Procedures
+### References — Local Eastbourne Procedures
 <!-- Maps to Eastbourne SCM §8.1 (Local Eastbourne Procedures group; renumbered to §8.2 in PCAS) -->
 
 > **Replaced.** Eastbourne local references are superseded by the PCAS
@@ -995,14 +995,14 @@ Process. The PCAS Walking-Skeleton mapping to PCP gates is defined in
 The same table is mirrored in `pcas-sdp.md` §5.2 — keep the two tables in
 sync if either is updated.
 
-#### 8.2.1 Eastbourne Site Software Development Procedure
+#### Eastbourne Site Software Development Procedure
 <!-- Maps to Eastbourne SCM §8.1.6 -->
 
 > **Replaced.** See the §8.2 PCAS local procedures table above; the legacy
 > Eastbourne *Site Software Development Procedure* is superseded by
 > [`pcas-sdp.md`](./pcas-sdp.md).
 
-#### 8.2.2 Release of Firmware and Test Software to Production
+#### Release of Firmware and Test Software to Production
 <!-- Maps to Eastbourne SCM §8.1.7 -->
 
 > **Replaced.** See the §8.2 PCAS local procedures table above; release
@@ -1012,7 +1012,7 @@ sync if either is updated.
 > [ISP 1085341713](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085341713)
 > (deployment + server operations).
 
-#### 8.2.3 01A06-010, Security for Data and Applications
+#### 01A06-010, Security for Data and Applications
 <!-- Maps to Eastbourne SCM §8.1.8 -->
 
 > **Replaced.** See the §8.2 PCAS local procedures table above; PCAS
@@ -1021,7 +1021,7 @@ sync if either is updated.
 > [ISP 1085341713](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085341713)
 > (EOB Deployment & Server Operations).
 
-#### 8.2.4 Technical References
+#### Technical References
 <!-- Maps to Eastbourne SCM §8.1.9 -->
 
 > **Replaced.** See the §8.2 PCAS local procedures table above. PCAS

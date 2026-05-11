@@ -12,8 +12,8 @@
 # binary artifact and must be rebuilt on demand from the MD sources.
 
 DIST       := dist
-SDP_REF    := eastbourne.refer/Eastbourne Site Software Development Procedure (3).docx
-SCM_REF    := eastbourne.refer/Software Configuration Management Working Practice (2).docx
+SDP_REF    := eastbourne.refer/pcas-sdp-reference.docx
+SCM_REF    := eastbourne.refer/pcas-scm-reference.docx
 PANDOC_FLAGS := --toc --toc-depth=4 --number-sections --standalone -f gfm -t docx
 
 # Pre-processing pipeline applied to each MD before pandoc:

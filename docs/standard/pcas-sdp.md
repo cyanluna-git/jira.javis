@@ -59,7 +59,7 @@ comment that records the source-of-record.
 
 ---
 
-## 1. Objectives & Scope
+## Objectives & Scope
 <!-- Maps to Eastbourne SDP §1 -->
 
 This procedure defines the software development process applied at the **Edwards
@@ -70,7 +70,7 @@ intent is realised inside the PCAS engineering organisation, including the dual
 agile tracks introduced by the One SW initiative
 ([NSST 895680517](https://ac-avi.atlassian.net/wiki/spaces/NSST/pages/895680517)).
 
-### 1.1 Overview
+### Overview
 <!-- Maps to Eastbourne SDP §1.1 -->
 
 PCAS develops and maintains software that is shipped to External Customers
@@ -90,7 +90,7 @@ Together these three documents form the authoritative chain: global EQE024 →
 global SDP → PCAS SDP (this document) →
 [`pcas-scm.md`](./pcas-scm.md) for configuration management mechanics.
 
-### 1.2 Scope
+### Scope
 <!-- Maps to Eastbourne SDP §1.2 (originally numbered §1.1 in Eastbourne — see section-mapping.md) -->
 
 This procedure applies to all software developed at PCAS that is delivered to an
@@ -105,7 +105,7 @@ Internal-only experiments, throwaway scripts, and personal tooling are out of
 scope unless promoted to a customer-facing deliverable, at which point this
 procedure applies retroactively from the next Bundle.
 
-## 2. Definitions
+## Definitions
 <!-- Maps to Eastbourne SDP §2 -->
 
 The following terms are used throughout this document. Terms inherited verbatim
@@ -131,7 +131,7 @@ are marked *(PCAS)*.
 | **Lean Kanban** *(PCAS)* | The Lean-Kanban-track execution mode (§4.1.4.B) — pull-based, WIP-limited, NSST 603062275. |
 | **Lead Engineer** *(PCAS)* | The senior engineer who partners with the Product Owner during weekly Grooming on the Lean Kanban track (NSST 603062275). |
 
-## 3. Responsibilities
+## Responsibilities
 <!-- Maps to Eastbourne SDP §3 -->
 
 Roles inherited from the global Eastbourne SDP are retained and supplemented
@@ -149,7 +149,7 @@ with two PCAS-specific roles introduced by the dual-track agile model.
 EOB Team setup, on-boarding, and toolchain provisioning are documented in
 [ISP 1085636609](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609).
 
-## 4. Process
+## Process
 <!-- Maps to Eastbourne SDP §4 -->
 
 PCAS executes one software development process under the **One SW** principle
@@ -159,7 +159,7 @@ roadmap-driven) and a **Lean Kanban track** (pull-based, demand-driven). The
 two tracks share the lifecycle stages defined in §4.1 — only the implementation
 cadence diverges (§4.1.4).
 
-### 4.1 Process Description
+### Process Description
 <!-- Maps to Eastbourne SDP §4.1 -->
 
 The lifecycle stages below apply to both tracks. The shape of the lifecycle
@@ -182,7 +182,7 @@ Per One SW, the process is not "Scrum or Kanban for the site"; it is "one
 process, two tracks, chosen per work-item". The decision rule is documented
 in §4.1.4.
 
-#### 4.1.1 Software Definition
+#### Software Definition
 <!-- Maps to Eastbourne SDP §4.1.1 -->
 
 Software Definition is the upstream activity that produces a Software Project
@@ -197,7 +197,7 @@ project file. For Lean-Kanban work the "definition" is implicit in the Service
 Portal ticket plus its grooming notes; a separate definition page is required
 only when the work is escalated to a Bundle scope item.
 
-#### 4.1.2 Software Requirements Capture and Analysis
+#### Software Requirements Capture and Analysis
 <!-- Maps to Eastbourne SDP §4.1.2 -->
 
 Requirements capture is **track-dependent**:
@@ -224,7 +224,7 @@ Cross-track linkage uses Jira `is part of` and `relates to` links so that a
 roadmap Epic can spawn Service Portal maintenance items without losing
 traceability.
 
-#### 4.1.3 Software Design
+#### Software Design
 <!-- Maps to Eastbourne SDP §4.1.3 -->
 
 The PCAS design repository is **Confluence**. Each Stream/Epic (Scrum) or
@@ -245,7 +245,7 @@ Specification (SAS) document templates remain available in §5.4 and continue
 to apply where a regulated context (e.g. customer audit) requires a formal
 deliverable.
 
-#### 4.1.4 Software Implementation
+#### Software Implementation
 <!-- Maps to Eastbourne SDP §4.1.4 -->
 
 Software Implementation is the only stage where the two tracks diverge in
@@ -326,7 +326,7 @@ Source-of-record:
   Software Manager owns InStaging escalations; Product Owner authorises
   Bundle scope and approves Release Notes.
 
-#### 4.1.5 Software Verification & Testing
+#### Software Verification & Testing
 <!-- Maps to Eastbourne SDP §4.1.5 -->
 
 Verification & Testing follows the Eastbourne intent — *independent* test
@@ -354,7 +354,7 @@ introduced under
 Configuration management of test artifacts (test data, golden files, fixtures)
 is governed by [`pcas-scm.md`](./pcas-scm.md) §6.1 (BitBucket).
 
-#### 4.1.6 Software Deployment
+#### Software Deployment
 <!-- Maps to Eastbourne SDP §4.1.6 -->
 
 PCAS deploys software using the **Bundle** model. The Eastbourne three-tier
@@ -456,7 +456,7 @@ Blue/Green pattern defined in
 [ISP 1039237122](https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1039237122).
 Operational details (cut-over windows, roll-back) are delegated to that page.
 
-#### 4.1.7 Software Evaluation
+#### Software Evaluation
 <!-- Maps to Eastbourne SDP §4.1.7 -->
 
 Software Evaluation is the post-launch loop. PCAS retains the Eastbourne
@@ -471,7 +471,7 @@ PCAS-local intake:
 - Trends from the Service Portal feed weekly Grooming and biweekly Sync
   (§4.1.4.B), informing Bundle scope decisions.
 
-#### 4.1.8 Supporting and Related Processes
+#### Supporting and Related Processes
 <!-- Maps to Eastbourne SDP §4.1.8 -->
 
 Supporting processes referenced from this SDP:
@@ -492,7 +492,7 @@ Supporting processes referenced from this SDP:
 - **Process descriptions.** SW process & deliverables per stage —
   [NSST 895746050](https://ac-avi.atlassian.net/wiki/spaces/NSST/pages/895746050).
 
-#### 4.1.9 Mapping to Edwards Product Commercialisation Process
+#### Mapping to Edwards Product Commercialisation Process
 <!-- Maps to Eastbourne SDP §4.1.9 -->
 
 PCP remains the governance backbone. PCAS uses the **Walking Skeleton** pattern
@@ -515,7 +515,7 @@ Edwards stage-gate governance: every Walking Skeleton milestone has a
 corresponding PCP gate review, and every Bundle lifecycle transition has a
 mapped milestone.
 
-#### 4.1.10 Project and Design Reviews
+#### Project and Design Reviews
 <!-- Maps to Eastbourne SDP §4.1.10 -->
 
 Reviews fall into two governance regimes — formal stage-gate reviews (Scrum
@@ -553,7 +553,7 @@ into the Scrum track:
 | **InStaging Escalation Review** | Item idle >5 working days | Resolution plan or Software Manager escalation | Software Manager |
 | **Bundle Release Review** | Bundle Active → Completed | Confluence Release Note approval | Software Project Leader + Software Manager |
 
-#### 4.1.11 Measurement
+#### Measurement
 <!-- Maps to Eastbourne SDP §4.1.11 -->
 
 PCAS retains the Eastbourne measurement *goals*:
@@ -567,7 +567,7 @@ that there is a single source-of-truth across both the SDP and the SCM. PCAS-spe
 Lean Kanban throughput (cards/week), Scrum velocity, lint-gate pass-rate, and
 Bundle on-time-delivery.
 
-#### 4.1.12 Review
+#### Review
 <!-- Maps to Eastbourne SDP §4.1.12 -->
 
 This procedure is reviewed:
@@ -579,14 +579,14 @@ This procedure is reviewed:
 - **Per-Bundle** — Bundle Release Review (§4.1.10.B) surfaces procedure issues
   from either track tied to release execution.
 
-## 5. Support Documentation
+## Support Documentation
 <!-- Maps to Eastbourne SDP §5 -->
 
 This section enumerates the documents this procedure relies on, grouped into
 global Edwards procedures (§5.1), local PCAS procedures (§5.2), non-Edwards
 references (§5.3), document templates (§5.4), and form templates (§5.5).
 
-### 5.1 Global Procedures
+### Global Procedures
 <!-- Maps to Eastbourne SDP §5 (Global Procedures group) -->
 
 The global Edwards procedure references inherited from the Eastbourne SDP are
@@ -610,7 +610,7 @@ EC, PCP, Coding Standards) that are unchanged at PCAS:
 | 5.1.13 | Edwards Risk Management |
 | 5.1.14 | Edwards Configuration Management Standard |
 
-### 5.2 Local PCAS Procedures
+### Local PCAS Procedures
 <!-- Maps to Eastbourne SDP §5 (Local Eastbourne Procedures group) -->
 
 Local PCAS procedures replace the Eastbourne local references. The core list
@@ -627,7 +627,7 @@ guidance:
 | 5.2.5 | North Star Agile Roadmap | https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/985563137 |
 | 5.2.6 | EOB Team Guidance | https://ac-avi.atlassian.net/wiki/spaces/ISP/pages/1085636609 |
 
-### 5.3 Non-Edwards Documents
+### Non-Edwards Documents
 <!-- Maps to Eastbourne SDP §5 (Non-Edwards Documents group) -->
 
 External references retained from Eastbourne and supplemented for the dual-track
@@ -639,7 +639,7 @@ model:
   and Reinertsen *The Principles of Product Development Flow* — referenced for
   the Lean Kanban track (§4.1.4.B).
 
-### 5.4 Document Templates
+### Document Templates
 <!-- Maps to Eastbourne SDP §5 (Document Templates group) -->
 
 The Eastbourne document templates are retained — they continue to apply to
@@ -657,7 +657,7 @@ into the Scrum track:
 > (URL: TBD — page to be created in Confluence, parented under
 > "PCAS Software Procedures" in the project space).
 
-### 5.5 Form Templates
+### Form Templates
 <!-- Maps to Eastbourne SDP §5 (Form Templates group) -->
 
 The Eastbourne formal review forms are retained, supplemented with PCAS forms
@@ -676,7 +676,7 @@ for the agile cadence:
 > form-templates Confluence page (URL: TBD — page to be created in
 > Confluence, parented under "PCAS Software Procedures" in the project space).
 
-## 6. Change \\ Review History
+## Change \\ Review History
 <!-- Maps to Eastbourne SDP §6 -->
 
 | Version | Date | Author | Notes |
@@ -688,7 +688,7 @@ for the agile cadence:
 | v1.4 | 2026-05-04 | PCAS Software Manager | Phase 5 — Makefile + DOCX build tooling; eastbourne.refer/ baseline checksums locked. |
 | v1.5 | 2026-05-10 | PCAS Software Manager | Review revision — CLAUDE.md citations replaced with ISP references; Phase status banners removed; Document Control header added; SCM §3 Scrum Master + Product Owner roles; SCM §5.2.4 InStaging column transitions explicit; SDP §4.1.6 Bundle/component mapping; §5.4/5.5 Confluence template placeholders; minor language fixes. |
 
-## 7. Record Retention
+## Record Retention
 <!-- Maps to Eastbourne SDP §7 -->
 
 Records produced under this procedure are retained for **10 years post end-of-
