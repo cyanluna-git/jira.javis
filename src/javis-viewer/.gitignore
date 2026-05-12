@@ -20,6 +20,9 @@
 # production
 /build
 
+# generated vendor assets (copied by postinstall from node_modules)
+/public/vendor/
+
 # misc
 .DS_Store
 *.pem
