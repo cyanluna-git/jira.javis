@@ -351,3 +351,14 @@ function timingSafeEqual(left: string, right: string): boolean {
 
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
+
+export function isDocumentOwner(
+  authorField: string | null | undefined,
+  user: AuthUser | null | undefined,
+): boolean {
+  if (!authorField?.trim() || !user) return false;
+  const a = authorField.trim().toLowerCase();
+  return [user.name, user.email, user.username]
+    .filter((v): v is string => Boolean(v))
+    .some((v) => v.trim().toLowerCase() === a);
+}

@@ -5,11 +5,18 @@ import Link from "next/link";
 import { ArrowLeft, Database, Eye, PencilLine, Search, Upload } from "lucide-react";
 import type { Guide } from "@/lib/guides-schema";
 
+type CurrentUser = {
+  name: string | null;
+  email: string | null;
+  username: string | null;
+} | null;
+
 export default function GuidesPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser>(null);
 
   useEffect(() => {
     fetch("/api/kb")
@@ -23,6 +30,21 @@ export default function GuidesPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data: { user: CurrentUser }) => setCurrentUser(data.user ?? null))
+      .catch(() => {});
+  }, []);
+
+  function canEditGuide(guide: Guide): boolean {
+    if (guide.readonly || !currentUser) return false;
+    const a = guide.author.trim().toLowerCase();
+    return [currentUser.name, currentUser.email, currentUser.username]
+      .filter((v): v is string => Boolean(v))
+      .some((v) => v.trim().toLowerCase() === a);
+  }
 
   const categories = useMemo(() => {
     const values = Array.from(new Set(guides.map((g) => g.category))).sort();
@@ -167,7 +189,7 @@ export default function GuidesPage() {
                       )}
                     </td>
                     <td className="py-3.5 pr-5 text-right">
-                      {!guide.readonly && (
+                      {canEditGuide(guide) && (
                         <Link
                           href={`/kb/${guide.id}/edit`}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 opacity-0 transition hover:bg-slate-50 hover:text-slate-800 group-hover:opacity-100"

@@ -3,7 +3,9 @@ import { deleteGuide, getGuide, updateGuide } from "@/lib/guides-store";
 import {
   resolveAccessContextFromRequest,
   hasWriteCapability,
+  isDocumentOwner,
 } from "@/lib/access";
+import type { AuthUser } from "@/lib/access";
 
 const HTML_MAX_BYTES = 1_048_576;
 
@@ -13,6 +15,17 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isValidFormat(value: unknown): value is "markdown" | "static-html" {
   return value === "markdown" || value === "static-html";
+}
+
+async function getOwnershipContext(
+  request: NextRequest,
+): Promise<{ isAdminToken: boolean; user: AuthUser | null }> {
+  const configuredToken = process.env.PORTAL_GUIDE_WRITE_TOKEN?.trim();
+  if (configuredToken && request.headers.get("x-portal-admin-token") === configuredToken) {
+    return { isAdminToken: true, user: null };
+  }
+  const access = await resolveAccessContextFromRequest(request);
+  return { isAdminToken: false, user: access.user };
 }
 
 async function checkWriteAccess(request: NextRequest): Promise<NextResponse | null> {
@@ -54,6 +67,14 @@ export async function PUT(
   if (guide.readonly) {
     return NextResponse.json(
       { error: "This guide is read-only." },
+      { status: 403 },
+    );
+  }
+
+  const { isAdminToken, user } = await getOwnershipContext(request);
+  if (!isAdminToken && !isDocumentOwner(guide.author, user)) {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Only the author can modify this document." } },
       { status: 403 },
     );
   }
@@ -123,6 +144,14 @@ export async function DELETE(
   if (guide.readonly) {
     return NextResponse.json(
       { error: "This guide is read-only." },
+      { status: 403 },
+    );
+  }
+
+  const { isAdminToken, user } = await getOwnershipContext(request);
+  if (!isAdminToken && !isDocumentOwner(guide.author, user)) {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Only the author can modify this document." } },
       { status: 403 },
     );
   }
