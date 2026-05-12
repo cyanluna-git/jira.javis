@@ -172,7 +172,7 @@ export default function GuidesPage() {
                         {guide.category}
                       </span>
                     </td>
-                    <td className="hidden py-3.5 pr-4 text-slate-500 md:table-cell">
+                    <td className="hidden py-3.5 pr-4 text-slate-500 md:table-cell whitespace-nowrap">
                       {guide.author}
                     </td>
                     <td className="hidden py-3.5 pr-4 text-right text-slate-400 lg:table-cell">
