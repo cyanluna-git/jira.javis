@@ -1,0 +1,57 @@
+image: atlassian/default-image:latest
+
+pipelines:
+  branches:
+    release/*:
+      - step:
+          name: Deploy to Production
+          runs-on:
+            - self.hosted
+            - linux.shell
+          clone:
+            enabled: true
+          script:
+            # Fix DOCKER_HOST (Bitbucket sets tcp://localhost:2375 by default)
+            - 'unset DOCKER_HOST'
+            - 'docker info --format "{{.ServerVersion}}" > /dev/null'
+            - 'echo "Docker: $(docker --version)"'
+            - 'if [ -z "$ENV_PROD_B64" ]; then echo "ERROR: ENV_PROD_B64 not set"; exit 1; fi'
+            - 'if [ -z "$PROD_SERVER_PASSWORD" ]; then echo "ERROR: PROD_SERVER_PASSWORD not set"; exit 1; fi'
+            - 'export PROD_SERVER="${DEPLOY_HOST_PROD:-10.182.252.32}"'
+            - 'export PROD_USER="${DEPLOY_USER:-atlasAdmin}"'
+            - 'export REMOTE_PATH="/data/javis"'
+            - 'export VIEWER_DIR="$BITBUCKET_CLONE_DIR/src/javis-viewer"'
+            - 'export DEPLOY_DIR="$BITBUCKET_CLONE_DIR/deploy/javis"'
+            - 'export BUILD_DIR="/tmp/bb-deploy"'
+            - 'mkdir -p "$BUILD_DIR"'
+            - 'echo "=== Javis CI/CD - Release Deploy ==="'
+            - 'echo "Branch: $BITBUCKET_BRANCH | Commit: $BITBUCKET_COMMIT"'
+            - 'echo "Target: $PROD_USER@$PROD_SERVER"'
+
+            # Decode .env
+            - 'echo "[1/4] Decoding production environment..."'
+            - 'echo "$ENV_PROD_B64" | base64 -d > "$BUILD_DIR/.env"'
+
+            # Build Docker image
+            - 'echo "[2/4] Building Docker image..."'
+            - 'cd "$VIEWER_DIR"'
+            - 'docker build -t javis-viewer:latest .'
+            - 'docker save javis-viewer:latest | gzip > "$BUILD_DIR/javis-viewer.tar.gz"'
+            - 'echo "Image: $(du -h "$BUILD_DIR/javis-viewer.tar.gz" | cut -f1)"'
+
+            # Upload to prod
+            - 'echo "[3/4] Uploading to production..."'
+            - 'sshpass -p "$PROD_SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no "$PROD_USER@$PROD_SERVER" "mkdir -p $REMOTE_PATH"'
+            - 'sshpass -p "$PROD_SERVER_PASSWORD" scp "$BUILD_DIR/javis-viewer.tar.gz" "$PROD_USER@$PROD_SERVER:$REMOTE_PATH/javis-viewer.tar.gz"'
+            - 'sshpass -p "$PROD_SERVER_PASSWORD" scp "$DEPLOY_DIR/javis-stack.yml" "$PROD_USER@$PROD_SERVER:$REMOTE_PATH/docker-compose.yml"'
+            - 'sshpass -p "$PROD_SERVER_PASSWORD" scp "$BUILD_DIR/.env" "$PROD_USER@$PROD_SERVER:$REMOTE_PATH/.env"'
+
+            # Deploy
+            - 'echo "[4/4] Deploying..."'
+            - 'sshpass -p "$PROD_SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no "$PROD_USER@$PROD_SERVER" "cd /data/javis && if [ -f javis-viewer.tar.gz ]; then gunzip -f javis-viewer.tar.gz; fi && if [ -f javis-viewer.tar ]; then docker load -i javis-viewer.tar && rm -f javis-viewer.tar; fi && if docker compose version >/dev/null 2>&1; then DC=\"docker compose\"; elif docker-compose version >/dev/null 2>&1; then DC=\"docker-compose\"; else echo \"ERROR: No docker compose found\"; exit 1; fi && \$DC up -d --no-deps --force-recreate javis-viewer && \$DC ps"'
+
+            # Health check
+            - 'sleep 5'
+            - 'sshpass -p "$PROD_SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no "$PROD_USER@$PROD_SERVER" "curl -sf -o /dev/null -w \"Health check: HTTP %{http_code}\\n\" http://127.0.0.1:3009/ || echo \"[WARN] Health check failed\""'
+
+            - 'echo "=== Deployed ==="'
