@@ -50,3 +50,7 @@ logs/
 
 # Phase 5 generated DOCX artifacts (rebuild via `make all` in docs/standard/)
 docs/standard/dist/*.docx
+.envb64
+thoughts
+*.dump
+.env.test
