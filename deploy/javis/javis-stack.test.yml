@@ -1,0 +1,18 @@
+services:
+  javis-viewer-test:
+    container_name: javis-viewer-test
+    image: javis-viewer-test:latest
+    restart: always
+    ports:
+      - "0.0.0.0:3010:3009"
+    env_file:
+      - .env
+    environment:
+      - PORT=3009
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    networks:
+      - javis_test_net
+
+networks:
+  javis_test_net:
+    driver: bridge
