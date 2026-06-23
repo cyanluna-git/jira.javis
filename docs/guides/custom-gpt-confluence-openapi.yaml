@@ -1,0 +1,186 @@
+openapi: 3.1.0
+info:
+  title: AC AVI Confluence (ISP)
+  description: >
+    Read + create/update Confluence pages, LOCKED to the ISP space
+    ("PCAS Project Knowledge Hub", spaceId 67043441). Other spaces cannot be
+    written, and reads should stay within ISP. Uses Confluence Cloud REST API
+    v2 (pages) and v1 (search/user).
+
+    IMPORTANT for the model:
+    - Page body uses Confluence "storage" format (XHTML-like HTML), NOT plain
+      text or markdown. Example: "<h2>Title</h2><p>Hello <strong>world</strong></p>".
+    - Only operate within the ISP space. Never read or write other spaces.
+    - To update a page: first getPage to read its current version.number, then
+      send updatePage with version.number + 1.
+  version: 1.0.0
+
+servers:
+  - url: https://ac-avi.atlassian.net/wiki
+
+components:
+  securitySchemes:
+    AtlassianAuth:
+      type: http
+      scheme: basic
+  schemas:
+    IspSpaceId:
+      type: string
+      description: The only writable space — ISP (PCAS Project Knowledge Hub).
+      enum: ["67043441"]
+    PageBody:
+      type: object
+      description: Confluence storage-format body (XHTML-like HTML).
+      required: [representation, value]
+      properties:
+        representation:
+          type: string
+          enum: [storage]
+          default: storage
+        value:
+          type: string
+          description: 'Storage HTML, e.g. "<h2>Section</h2><p>text</p>"'
+
+security:
+  - AtlassianAuth: []
+
+paths:
+  /rest/api/user/current:
+    get:
+      operationId: getConfluenceUser
+      summary: Get the current authenticated Confluence user (verification)
+      responses:
+        "200": { description: OK }
+
+  /api/v2/spaces/67043441/pages:
+    get:
+      operationId: listIspPages
+      summary: List pages in the ISP space
+      parameters:
+        - name: title
+          in: query
+          required: false
+          description: Filter by exact title
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 25 }
+        - name: cursor
+          in: query
+          required: false
+          description: Pagination cursor from a previous response
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /rest/api/search:
+    get:
+      operationId: searchPages
+      summary: Search ISP pages with CQL
+      description: >
+        CQL MUST be scoped to ISP, e.g. 'space = ISP AND type = page AND text ~
+        "keyword"'. Never search other spaces.
+      parameters:
+        - name: cql
+          in: query
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 15 }
+      responses:
+        "200": { description: OK }
+
+  /api/v2/pages/{id}:
+    get:
+      operationId: getPage
+      summary: Read a single ISP page (with body)
+      description: Only read pages that belong to the ISP space.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: body-format
+          in: query
+          required: false
+          schema: { type: string, enum: [storage, atlas_doc_format, view], default: storage }
+      responses:
+        "200": { description: OK }
+    put:
+      operationId: updatePage
+      summary: Update an existing ISP page
+      description: >
+        Edit a page in ISP only. First call getPage to read current
+        version.number, then send version.number + 1 here.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, status, title, body, version]
+              properties:
+                id: { type: string, description: Same as path id }
+                status: { type: string, enum: [current], default: current }
+                title: { type: string }
+                body:
+                  $ref: "#/components/schemas/PageBody"
+                version:
+                  type: object
+                  required: [number]
+                  properties:
+                    number: { type: integer, description: current version.number + 1 }
+                    message: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v2/pages/{id}/children:
+    get:
+      operationId: getChildPages
+      summary: List child pages of an ISP page (for navigation/organizing)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+
+  /api/v2/pages:
+    post:
+      operationId: createPage
+      summary: Create a new page in the ISP space
+      description: >
+        spaceId is locked to ISP. Provide title and a storage-format body.
+        Optionally set parentId to nest under an existing ISP page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [spaceId, title, body]
+              properties:
+                spaceId:
+                  $ref: "#/components/schemas/IspSpaceId"
+                status: { type: string, enum: [current, draft], default: current }
+                title: { type: string }
+                parentId:
+                  type: string
+                  description: Optional — id of an existing ISP page to nest under
+                body:
+                  $ref: "#/components/schemas/PageBody"
+      responses:
+        "200": { description: OK }

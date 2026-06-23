@@ -54,3 +54,8 @@ docs/standard/dist/*.docx
 thoughts
 *.dump
 .env.test
+
+# Custom GPT setup docs (contain credentials — NEVER commit)
+docs/guides/custom-gpt-jira-setup.md
+docs/guides/custom-gpt-bitbucket-setup.md
+docs/guides/custom-gpt-kanban-setup.md

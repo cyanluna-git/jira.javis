@@ -1,0 +1,623 @@
+openapi: 3.1.0
+info:
+  title: AC AVI Jira Manager
+  description: >
+    Jira Cloud management for AC AVI (ac-avi.atlassian.net), LOCKED to two
+    projects only: EUV and PSSM. Project params are enum-restricted and issue
+    keys are pattern-restricted to ^(EUV|PSSM)-N; other teams' projects cannot
+    be read or modified. Read + write: boards, sprints, issues, epics, stories,
+    transitions, comments, links. Jira REST API v3 + Agile 1.0.
+
+    IMPORTANT for the model:
+    - NEVER operate on any project other than EUV or PSSM. All JQL must be scoped
+      to those projects.
+    - Jira v3 rich-text fields (issue description, comment body) MUST be an
+      Atlassian Document Format (ADF) object, NOT a plain string. See AdfDocument.
+    - To create an Epic: createIssue with issuetype.name = "Epic". The Epic title
+      goes in "summary".
+    - To create a Story under an Epic: createIssue with issuetype.name = "Story"
+      and fields.parent.key = "<EPIC-KEY>".
+    - To change status (e.g. To Do -> In Progress): first call getIssueTransitions
+      to discover the valid transition id, then call transitionIssue.
+    - To put issues into a sprint: moveIssuesToSprint with the issue keys.
+  version: 2.0.0
+
+servers:
+  - url: https://ac-avi.atlassian.net/rest
+
+paths:
+  # ──────────────────────────────────────────────────────────────
+  # USER
+  # ──────────────────────────────────────────────────────────────
+  /api/3/myself:
+    get:
+      operationId: getCurrentUser
+      summary: Get the current authenticated Jira user
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # PROJECTS
+  # ──────────────────────────────────────────────────────────────
+  # NOTE: searchProjects removed — it lists ALL projects (other teams). Only the
+  # allowed projects EUV and PSSM are reachable, via getProject below.
+
+  /api/3/project/{projectIdOrKey}:
+    get:
+      operationId: getProject
+      summary: Get a single project by id or key
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProjectKey"
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            default: description,lead,issueTypes,url,projectKeys
+      responses:
+        "200": { description: OK }
+
+  /api/3/project/{projectIdOrKey}/components:
+    get:
+      operationId: getProjectComponents
+      summary: List a project's components
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProjectKey"
+      responses:
+        "200": { description: OK }
+
+  /api/3/project/{projectIdOrKey}/versions:
+    get:
+      operationId: getProjectVersions
+      summary: List a project's versions (fix versions)
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProjectKey"
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # ISSUE METADATA (issue types / fields needed to create issues)
+  # ──────────────────────────────────────────────────────────────
+  /api/3/issue/createmeta/{projectIdOrKey}/issuetypes:
+    get:
+      operationId: getCreateMetaIssueTypes
+      summary: List issue types creatable in a project (Epic, Story, Task, Bug...)
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProjectKey"
+        - name: maxResults
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+
+  /api/3/issue/createmeta/{projectIdOrKey}/issuetypes/{issueTypeId}:
+    get:
+      operationId: getCreateMetaFields
+      summary: List required/available fields for an issue type in a project
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProjectKey"
+        - name: issueTypeId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: maxResults
+          in: query
+          required: false
+          schema: { type: integer, default: 100 }
+      responses:
+        "200": { description: OK }
+
+  /api/3/priority/search:
+    get:
+      operationId: listPriorities
+      summary: List available issue priorities
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # ISSUE SEARCH (JQL) — v3 modern endpoint with token pagination
+  # ──────────────────────────────────────────────────────────────
+  /api/3/search/jql:
+    get:
+      operationId: searchIssues
+      summary: Search issues with JQL (e.g. project = EUV AND status = "In Progress")
+      description: >
+        Modern Jira Cloud search; returns { issues, nextPageToken, isLast }.
+        ALLOWED PROJECTS ONLY: every JQL MUST be scoped to EUV or PSSM, e.g.
+        "project in (EUV, PSSM) AND ...". Also use for board/sprint/backlog
+        issues (those list endpoints are deprecated): "project = EUV AND sprint = 123".
+      parameters:
+        - name: jql
+          in: query
+          required: true
+          schema: { type: string }
+        - name: fields
+          in: query
+          required: false
+          description: Comma-separated field list, e.g. "summary,status,assignee,priority,issuetype,parent"
+          schema:
+            type: string
+            default: summary,status,assignee,priority,issuetype,parent
+        - name: maxResults
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+        - name: nextPageToken
+          in: query
+          required: false
+          schema: { type: string }
+        - name: expand
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # ISSUE — read / create / update / transition / comment / link
+  # ──────────────────────────────────────────────────────────────
+  /api/3/issue:
+    post:
+      operationId: createIssue
+      summary: Create an issue (Epic, Story, Task, Bug, Sub-task)
+      description: >
+        Epic: issuetype.name="Epic", title in summary. Story under an Epic:
+        issuetype.name="Story" + parent.key="EPIC-KEY". Sub-task: parent.key=
+        parent issue. description must be an ADF object, not plain text.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueRequest"
+      responses:
+        "201": { description: Created }
+
+  /api/3/issue/{issueIdOrKey}:
+    get:
+      operationId: getIssue
+      summary: Get a single issue by id or key
+      parameters:
+        - name: issueIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/IssueKey"
+        - name: fields
+          in: query
+          required: false
+          schema: { type: string }
+        - name: expand
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    put:
+      operationId: updateIssue
+      summary: Update fields of an existing issue
+      description: >
+        Send only the fields to change inside "fields". Rich-text fields
+        (description) must be ADF objects.
+      parameters:
+        - name: issueIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/IssueKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fields:
+                  $ref: "#/components/schemas/IssueFields"
+      responses:
+        "204": { description: Updated (no content) }
+
+  /api/3/issue/{issueIdOrKey}/transitions:
+    get:
+      operationId: getIssueTransitions
+      summary: List valid status transitions for an issue (get the transition id here)
+      parameters:
+        - name: issueIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/IssueKey"
+      responses:
+        "200": { description: OK }
+    post:
+      operationId: transitionIssue
+      summary: Move an issue to a new status using a transition id
+      description: >
+        Call getIssueTransitions first to find the transition id that leads to
+        the desired status, then pass it here.
+      parameters:
+        - name: issueIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/IssueKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transition]
+              properties:
+                transition:
+                  type: object
+                  required: [id]
+                  properties:
+                    id: { type: string, description: Transition id from getIssueTransitions }
+      responses:
+        "204": { description: Transitioned (no content) }
+
+  /api/3/issue/{issueIdOrKey}/comment:
+    get:
+      operationId: getIssueComments
+      summary: List comments on an issue
+      parameters:
+        - name: issueIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/IssueKey"
+      responses:
+        "200": { description: OK }
+    post:
+      operationId: addComment
+      summary: Add a comment to an issue
+      description: The "body" must be an ADF object (see AdfDocument).
+      parameters:
+        - name: issueIdOrKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/IssueKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  $ref: "#/components/schemas/AdfDocument"
+      responses:
+        "201": { description: Created }
+
+  /api/3/issueLink:
+    post:
+      operationId: createIssueLink
+      summary: Link two issues (e.g. blocks, relates to, duplicates)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, inwardIssue, outwardIssue]
+              properties:
+                type:
+                  type: object
+                  properties:
+                    name: { type: string, description: 'Link type name, e.g. "Blocks", "Relates"' }
+                inwardIssue:
+                  type: object
+                  properties:
+                    key: { $ref: "#/components/schemas/IssueKey" }
+                outwardIssue:
+                  type: object
+                  properties:
+                    key: { $ref: "#/components/schemas/IssueKey" }
+      responses:
+        "201": { description: Created }
+
+  # ──────────────────────────────────────────────────────────────
+  # BOARDS (Agile)
+  # ──────────────────────────────────────────────────────────────
+  /agile/1.0/board:
+    get:
+      operationId: listBoards
+      summary: List Jira boards
+      parameters:
+        - name: projectKeyOrId
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ProjectKey"
+        - name: type
+          in: query
+          required: false
+          schema: { type: string, enum: [scrum, kanban] }
+        - name: name
+          in: query
+          required: false
+          schema: { type: string }
+        - name: startAt
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+        - name: maxResults
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+
+  /agile/1.0/board/{boardId}/configuration:
+    get:
+      operationId: getBoardConfiguration
+      summary: Get a board's configuration (columns, estimation, filter)
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  # NOTE: /board/{id}/issue and /board/{id}/backlog were removed (deprecated,
+  # CHANGE-3193, sunset 2026-11-01). Use searchIssues (JQL) instead:
+  #   board issues -> jql: "project = EUV"
+  #   backlog      -> jql: "project = EUV AND sprint IS EMPTY AND statusCategory != Done"
+
+  /agile/1.0/board/{boardId}/epic:
+    get:
+      operationId: getBoardEpics
+      summary: List epics visible on a board
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: done
+          in: query
+          required: false
+          schema: { type: string, enum: ["true", "false"] }
+        - name: maxResults
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+
+  /agile/1.0/board/{boardId}/sprint:
+    get:
+      operationId: listBoardSprints
+      summary: List sprints for a board
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: state
+          in: query
+          required: false
+          schema: { type: string, enum: [active, future, closed] }
+        - name: startAt
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+        - name: maxResults
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # SPRINTS (Agile) — read + create + update + move issues
+  # ──────────────────────────────────────────────────────────────
+  /agile/1.0/sprint:
+    post:
+      operationId: createSprint
+      summary: Create a sprint on a board
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, originBoardId]
+              properties:
+                name: { type: string }
+                originBoardId: { type: integer, description: Board id the sprint belongs to }
+                startDate: { type: string, format: date-time }
+                endDate: { type: string, format: date-time }
+                goal: { type: string }
+      responses:
+        "201": { description: Created }
+
+  /agile/1.0/sprint/{sprintId}:
+    get:
+      operationId: getSprint
+      summary: Get sprint details
+      parameters:
+        - name: sprintId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+    post:
+      operationId: updateSprint
+      summary: Partially update a sprint (name, dates, goal, state)
+      parameters:
+        - name: sprintId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                startDate: { type: string, format: date-time }
+                endDate: { type: string, format: date-time }
+                goal: { type: string }
+                state: { type: string, enum: [active, closed, future] }
+      responses:
+        "200": { description: OK }
+
+  /agile/1.0/sprint/{sprintId}/issue:
+    # NOTE: GET (getSprintIssues) removed — deprecated CHANGE-3193 (sunset 2026-11-01).
+    # Use searchIssues with jql "sprint = {sprintId}" instead.
+    post:
+      operationId: moveIssuesToSprint
+      summary: Move issues into a sprint
+      parameters:
+        - name: sprintId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issues]
+              properties:
+                issues:
+                  type: array
+                  items: { $ref: "#/components/schemas/IssueKey" }
+                  description: Issue keys, e.g. ["EUV-101","EUV-102"]
+      responses:
+        "204": { description: Moved (no content) }
+
+  /agile/1.0/backlog/issue:
+    post:
+      operationId: moveIssuesToBacklog
+      summary: Move issues out of any sprint, back to the backlog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issues]
+              properties:
+                issues:
+                  type: array
+                  items: { $ref: "#/components/schemas/IssueKey" }
+                  description: Issue keys, e.g. ["EUV-101","EUV-102"]
+      responses:
+        "204": { description: Moved (no content) }
+
+  # ──────────────────────────────────────────────────────────────
+  # SERVICE MANAGEMENT
+  # ──────────────────────────────────────────────────────────────
+  # NOTE: listServiceDesks removed — it lists ALL service desks (other teams).
+
+components:
+  schemas:
+    ProjectKey:
+      type: string
+      description: Allowed Jira project. Only EUV and PSSM are permitted.
+      enum: [EUV, PSSM]
+    IssueKey:
+      type: string
+      description: Issue key in an allowed project (EUV or PSSM only).
+      pattern: '^(EUV|PSSM)-[0-9]+$'
+    AdfElement:
+      type: object
+      description: A single Atlassian Document Format node.
+      properties:
+        type: { type: string }
+        text: { type: string }
+        content:
+          type: array
+          items: { type: object }
+
+    AdfDocument:
+      type: object
+      description: >
+        Atlassian Document Format. Example for the text "Hello world":
+        { "type": "doc", "version": 1, "content": [ { "type": "paragraph",
+        "content": [ { "type": "text", "text": "Hello world" } ] } ] }
+      required: [type, version, content]
+      properties:
+        type:
+          type: string
+          default: doc
+        version:
+          type: integer
+          default: 1
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdfElement"
+
+    IssueFields:
+      type: object
+      description: Jira issue fields. project + issuetype + summary are required when creating.
+      properties:
+        project:
+          type: object
+          properties:
+            key: { $ref: "#/components/schemas/ProjectKey" }
+        issuetype:
+          type: object
+          properties:
+            name: { type: string, description: 'e.g. "Epic", "Story", "Task", "Bug", "Sub-task"' }
+        summary:
+          type: string
+        description:
+          $ref: "#/components/schemas/AdfDocument"
+        parent:
+          type: object
+          description: For a Story under an Epic, or a Sub-task under a parent.
+          properties:
+            key: { $ref: "#/components/schemas/IssueKey" }
+        assignee:
+          type: object
+          properties:
+            id: { type: string, description: Atlassian accountId }
+        priority:
+          type: object
+          properties:
+            name: { type: string, description: 'e.g. "High", "Medium", "Low"' }
+        labels:
+          type: array
+          items: { type: string }
+        duedate:
+          type: string
+          description: 'Due date "YYYY-MM-DD"'
+
+    CreateIssueRequest:
+      type: object
+      required: [fields]
+      properties:
+        fields:
+          $ref: "#/components/schemas/IssueFields"

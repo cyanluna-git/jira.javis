@@ -1,0 +1,353 @@
+openapi: 3.1.0
+info:
+  title: AC AVI Bitbucket Manager
+  description: >
+    Read access to AC AVI Bitbucket Cloud — LOCKED to the "ac-avi" workspace
+    (hardcoded in every path; no other workspace is reachable). Covers
+    repositories, branches, tags, commit history, diffs, pull requests, and
+    source files via Bitbucket Cloud REST API v2.0. Most list endpoints are
+    paginated: pass page to go forward and use fields to trim the response.
+  version: 1.0.0
+
+servers:
+  - url: https://api.bitbucket.org/2.0
+
+paths:
+  # ──────────────────────────────────────────────────────────────
+  # USER / WORKSPACE
+  # ──────────────────────────────────────────────────────────────
+  /user:
+    get:
+      operationId: getCurrentUser
+      summary: Get the current authenticated Bitbucket user
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # REPOSITORIES
+  # ──────────────────────────────────────────────────────────────
+  /repositories/ac-avi:
+    get:
+      operationId: listRepositories
+      summary: List repositories in a workspace
+      parameters:
+        - name: q
+          in: query
+          description: 'BBQL filter, e.g. name ~ "plc"'
+          schema: { type: string }
+        - name: sort
+          in: query
+          description: 'e.g. -updated_on for most-recently-updated first'
+          schema: { type: string, default: -updated_on }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 25 }
+        - name: fields
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}:
+    get:
+      operationId: getRepository
+      summary: Get a single repository
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # BRANCHES / TAGS
+  # ──────────────────────────────────────────────────────────────
+  /repositories/ac-avi/{repo_slug}/refs/branches:
+    get:
+      operationId: listBranches
+      summary: List branches in a repository
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: q
+          in: query
+          description: 'Filter, e.g. name ~ "feature"'
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, default: -target.date }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: fields
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/refs/branches/{name}:
+    get:
+      operationId: getBranch
+      summary: Get a single branch (includes its head commit)
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/refs/tags:
+    get:
+      operationId: listTags
+      summary: List tags in a repository
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, default: -target.date }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # COMMITS / HISTORY
+  # ──────────────────────────────────────────────────────────────
+  /repositories/ac-avi/{repo_slug}/commits:
+    get:
+      operationId: listCommits
+      summary: List commit history (default branch)
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 30 }
+        - name: fields
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/commits/{revision}:
+    get:
+      operationId: listCommitsForRevision
+      summary: List commit history for a branch, tag, or commit hash
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: revision
+          in: path
+          required: true
+          description: Branch name, tag, or commit hash
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/commit/{commit}:
+    get:
+      operationId: getCommit
+      summary: Get details of a single commit
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: commit
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # DIFFS
+  # ──────────────────────────────────────────────────────────────
+  /repositories/ac-avi/{repo_slug}/diff/{spec}:
+    get:
+      operationId: getDiff
+      summary: Get a raw diff for a commit or a range
+      description: 'spec is a commit hash, or a range "newRev..oldRev" (URL-encode .. as %2E%2E if needed).'
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: spec
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/diffstat/{spec}:
+    get:
+      operationId: getDiffStat
+      summary: Get a summary (files changed, +/- lines) for a commit or range
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: spec
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # PULL REQUESTS
+  # ──────────────────────────────────────────────────────────────
+  /repositories/ac-avi/{repo_slug}/pullrequests:
+    get:
+      operationId: listPullRequests
+      summary: List pull requests
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string, enum: [OPEN, MERGED, DECLINED, SUPERSEDED] }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 25 }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/pullrequests/{pull_request_id}:
+    get:
+      operationId: getPullRequest
+      summary: Get a single pull request
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: pull_request_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/pullrequests/{pull_request_id}/commits:
+    get:
+      operationId: getPullRequestCommits
+      summary: List commits in a pull request
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: pull_request_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/pullrequests/{pull_request_id}/diff:
+    get:
+      operationId: getPullRequestDiff
+      summary: Get the diff of a pull request
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: pull_request_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  # ──────────────────────────────────────────────────────────────
+  # SOURCE BROWSING
+  # ──────────────────────────────────────────────────────────────
+  /repositories/ac-avi/{repo_slug}/src/{commit}/{path}:
+    get:
+      operationId: getSource
+      summary: Read a file or list a directory at a commit/branch
+      description: 'commit can be a branch name or hash. path is a file or directory path (e.g. "src/main.py" or "" for root).'
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: commit
+          in: path
+          required: true
+          schema: { type: string }
+        - name: path
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /repositories/ac-avi/{repo_slug}/filehistory/{commit}/{path}:
+    get:
+      operationId: getFileHistory
+      summary: Get the commit history of a single file
+      parameters:
+        - name: repo_slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: commit
+          in: path
+          required: true
+          schema: { type: string }
+        - name: path
+          in: path
+          required: true
+          schema: { type: string }
+        - name: pagelen
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        "200": { description: OK }

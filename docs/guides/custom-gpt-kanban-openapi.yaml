@@ -1,0 +1,150 @@
+openapi: 3.1.0
+info:
+  title: Cyanluna Kanban (Company)
+  description: >
+    Read + create-card access to the Cyanluna kanban board, SCOPED TO COMPANY
+    (Edwards) PROJECTS ONLY.
+
+    Project ids are NOT hard-coded here — discover them dynamically. ALWAYS call
+    listCompanyProjects FIRST to get the current edwards-category project ids,
+    then pass one of those ids as the `project` argument to the other operations.
+    Never use a project id that is not in the listCompanyProjects result.
+
+    Capabilities: list edwards projects, read a project's board (tasks grouped by
+    status), read a single card, and create a new card. No update / delete / move.
+
+    Task status columns: todo, plan, plan_review, impl, impl_review, test, done.
+  version: 2.0.0
+
+servers:
+  - url: https://cyanlunakanban.vercel.app
+
+components:
+  securitySchemes:
+    KanbanAuth:
+      type: apiKey
+      in: header
+      name: X-Kanban-Auth
+  schemas:
+    Project:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string }
+        purpose: { type: string }
+        stack: { type: string }
+    ProjectList:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+
+security:
+  - KanbanAuth: []
+
+paths:
+  /api/projects:
+    get:
+      operationId: listCompanyProjects
+      summary: List company (edwards) projects — call this FIRST to discover ids
+      description: >
+        Returns edwards-category projects. Use each returned `id` as the
+        `project` argument for the other operations. Dynamic source of truth
+        for in-scope projects — the list grows over time, so re-read it rather
+        than assuming a fixed set.
+      parameters:
+        - name: category
+          in: query
+          required: true
+          description: >
+            Project category filter. Always use "edwards" — the only in-scope
+            category for this assistant.
+          schema:
+            type: string
+            enum: [edwards]
+            default: edwards
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectList"
+
+  /api/board:
+    get:
+      operationId: getCompanyBoard
+      summary: Read a company project's board (tasks grouped by status column)
+      description: >
+        Returns per-status task arrays (todo, plan, plan_review, impl,
+        impl_review, test, done) plus counts. summary=true omits large text
+        fields. project must be an edwards id from listCompanyProjects.
+      parameters:
+        - name: project
+          in: query
+          required: true
+          description: An edwards-category project id from listCompanyProjects.
+          schema: { type: string }
+        - name: summary
+          in: query
+          required: false
+          schema: { type: boolean, default: true }
+      responses:
+        "200": { description: OK }
+
+  /api/task/{task_id}:
+    get:
+      operationId: getCompanyTask
+      summary: Read a single card in a company project
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: project
+          in: query
+          required: true
+          description: An edwards-category project id from listCompanyProjects.
+          schema: { type: string }
+        - name: fields
+          in: query
+          required: false
+          description: 'Comma-separated subset, e.g. title,description,status,plan'
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/task:
+    post:
+      operationId: createCompanyTask
+      summary: Create a new card in a company project
+      description: >
+        Creates a task in the todo column. project must be an edwards-category
+        project id from listCompanyProjects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, project]
+              properties:
+                title: { type: string }
+                project:
+                  type: string
+                  description: An edwards-category project id from listCompanyProjects.
+                description: { type: string, description: Requirements in markdown }
+                priority: { type: string, enum: [high, medium, low], default: medium }
+                level:
+                  type: integer
+                  enum: [1, 2, 3]
+                  default: 2
+                  description: '1=Quick, 2=Standard, 3=Full pipeline'
+                tags:
+                  type: string
+                  description: 'JSON array string, e.g. ["api","ui"]'
+      responses:
+        "200": { description: OK }
